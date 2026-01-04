@@ -1,116 +1,197 @@
-{% extends "core/base_public.html" %}
+{% extends 'core/base_public.html' %}
 {% load static %}
 
-{% block title %}Contact Us - SikshaSetu{% endblock %}
+{% block title %}Contact Us | SikshaSetu{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/contact.css' %}">
+{% endblock %}
 
 {% block content %}
-<section class="py-5 bg-light">
-    <div class="container py-4">
-        <div class="row g-5">
-            <!-- Left Side: Info -->
-            <div class="col-lg-5">
-                <div class="pe-lg-4">
-                    <h2 class="display-5 fw-bold mb-4" style="color: var(--primary-blue);">Get in <span
-                            style="color: var(--mint-green);">Touch</span></h2>
-                    <p class="lead text-muted mb-5">Have questions about our courses or need help with the platform? Our
-                        team is here to support your learning journey.</p>
+<section class="contact-section">
+    <div class="contact-container">
+        <div class="contact-wrapper">
 
-                    <div class="d-flex gap-4 mb-4">
-                        <div class="bg-white shadow-sm p-3 rounded-4 d-flex align-items-center justify-content-center"
-                            style="width: 60px; height: 60px;">
-                            <i class="fas fa-envelope fa-lg text-primary"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-bold mb-1">Email Us</h5>
-                            <p class="text-muted mb-0">support@sikshasetu.com</p>
-                        </div>
-                    </div>
+            <!-- LEFT : INFO -->
+            <div class="contact-info">
+                <h2>Get in Touch</h2>
+                <p>Have questions or want to join our teaching community? We'd love to hear from you!</p>
 
-                    <div class="d-flex gap-4 mb-4">
-                        <div class="bg-white shadow-sm p-3 rounded-4 d-flex align-items-center justify-content-center"
-                            style="width: 60px; height: 60px;">
-                            <i class="fas fa-map-marker-alt fa-lg text-danger"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-bold mb-1">Our Location</h5>
-                            <p class="text-muted mb-0">Education Hub, Kathmandu, Nepal</p>
-                        </div>
-                    </div>
-
-                    <div class="d-flex gap-4 mb-5">
-                        <div class="bg-white shadow-sm p-3 rounded-4 d-flex align-items-center justify-content-center"
-                            style="width: 60px; height: 60px;">
-                            <i class="fas fa-clock fa-lg text-warning"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-bold mb-1">Support Hours</h5>
-                            <p class="text-muted mb-0">Monday - Friday: 9am - 6pm</p>
-                        </div>
-                    </div>
-
-                    <div class="p-4 rounded-4" style="background: rgba(78, 205, 196, 0.1);">
-                        <h6 class="fw-bold mb-2">Why Contact Us?</h6>
-                        <ul class="small text-muted mb-0 ps-3">
-                            <li>Technical support for your dashboard</li>
-                            <li>Inquiries about course certifications</li>
-                            <li>Partnership opportunities for teachers</li>
-                            <li>General feedback and suggestions</li>
-                        </ul>
-                    </div>
+                <div class="info-item">
+                    <i class="fas fa-envelope"></i>
+                    <span>support@sikshasetu.com</span>
                 </div>
+                <div class="info-item">
+                    <i class="fas fa-phone-alt"></i>
+                    <span>(+977) 9808000000</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Kathmandu, Nepal</span>
+                </div>
+
+                <p class="small text-white-50 fst-italic mt-5">
+                    "Education is the passport to the future."
+                </p>
             </div>
 
-            <!-- Right Side: Form -->
-            <div class="col-lg-7">
-                <div class="card border-0 shadow-lg p-4 p-md-5 rounded-4 h-100">
-                    <h3 class="fw-bold mb-4">Send Us a Message</h3>
+            <!-- RIGHT : FORM -->
+            <div class="contact-form">
 
-                    {% if messages %}
+                {% if messages %}
                     {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4 rounded-3 border-0"
-                        role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
+                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
                     {% endfor %}
-                    {% endif %}
+                {% endif %}
 
-                    <form method="post" action="{% url 'core:contact' %}">
-                        {% csrf_token %}
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label class="form-label fw-bold">Subject</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-0"><i
-                                            class="fas fa-tag text-muted"></i></span>
-                                    <input type="text" name="subject" class="form-control bg-light border-0 py-3"
-                                        placeholder="What is this about?" required>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label fw-bold">Message</label>
-                                <textarea name="message" rows="5" class="form-control bg-light border-0 py-3"
-                                    placeholder="Write your message here..." required></textarea>
-                            </div>
-                            <div class="col-12 mt-4">
-                                {% if user.is_authenticated %}
-                                <button type="submit" class="btn btn-primary w-100 rounded-pill py-3 fw-bold shadow-sm">
-                                    <i class="fas fa-paper-plane me-2"></i>Send Message
-                                </button>
-                                {% else %}
-                                <a href="{% url 'accounts:login' %}?next={% url 'core:contact' %}"
-                                    class="btn btn-secondary w-100 rounded-pill py-3 fw-bold shadow-sm">
-                                    <i class="fas fa-lock me-2"></i>Login to Send Message
-                                </a>
-                                <p class="text-center small text-muted mt-2">Personalize your experience by joining our
-                                    community.</p>
-                                {% endif %}
+                <h3 class="mb-4 fw-bold" style="color: var(--primary-blue);">
+                    Send us a Message
+                </h3>
+
+                <form id="contactForm"
+                      method="POST"
+                      action="{% url 'core:contact' %}"
+                      enctype="multipart/form-data"
+                      novalidate>
+
+                    {% csrf_token %}
+
+                    <!-- BASIC INFO -->
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Full Name *</label>
+                            {{ form.full_name }}
+                            <div class="invalid-feedback">
+                                {{ form.full_name.errors|first|default:"Full name is required." }}
                             </div>
                         </div>
-                    </form>
-                </div>
+
+                        <div class="col-md-6 form-group">
+                            <label>Email *</label>
+                            {{ form.email }}
+                            <div class="invalid-feedback">
+                                {{ form.email.errors|first|default:"Valid email required." }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Phone (Optional)</label>
+                        {{ form.phone }}
+                    </div>
+
+                    <!-- PURPOSE -->
+                    <div class="form-group">
+                        <label>Purpose *</label>
+                        <select name="enquiry_type"
+                                id="purpose"
+                                class="form-control-custom"
+                                required
+                                onchange="toggleFields()">
+
+                            <option value=""
+                                disabled
+                                {% if not form.enquiry_type.value %}selected{% endif %}>
+                                Select purpose
+                            </option>
+
+                            <option value="GENERAL"
+                                {% if form.enquiry_type.value|default_if_none:"" == "GENERAL" %}selected{% endif %}>
+                                General Inquiry
+                            </option>
+
+                            <option value="TEACHER"
+                                {% if form.enquiry_type.value|default_if_none:"" == "TEACHER" %}selected{% endif %}>
+                                Enquiry about Teacher
+                            </option>
+
+                            <option value="instructor"
+                                {% if request.POST.enquiry_type == "instructor" %}selected{% endif %}>
+                                Apply as Instructor
+                            </option>
+                        </select>
+
+                        <div class="invalid-feedback">Please select a purpose.</div>
+                    </div>
+
+                    <!-- TEACHER SELECT -->
+                    <div id="teacherField" class="form-group d-none">
+                        <label>Select Teacher *</label>
+                        {{ form.teacher }}
+                        <div class="invalid-feedback">Please select a teacher.</div>
+                    </div>
+
+                    <!-- INSTRUCTOR ONLY -->
+                    <div id="instructorFields" class="d-none">
+                        <div class="alert alert-info small">
+                            Instructor applications are reviewed by admin.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label>Expertise *</label>
+                                {{ instructor_form.expertise }}
+                            </div>
+
+                            <div class="col-md-6 form-group">
+                                <label>Experience (Years) *</label>
+                                {{ instructor_form.experience }}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Upload CV *</label>
+                            {{ instructor_form.cv }}
+                        </div>
+                    </div>
+
+                    <!-- MESSAGE -->
+                    <div id="messageSection">
+                        <div class="form-group">
+                            <label>Subject *</label>
+                            {{ form.subject }}
+                        </div>
+
+                        <div class="form-group">
+                            <label>Message *</label>
+                            {{ form.message }}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-submit">
+                        Send Message
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 </section>
+
+<!-- JS -->
+<script>
+function toggleFields() {
+    const purpose = document.getElementById('purpose')?.value;
+    const instructor = document.getElementById('instructorFields');
+    const teacher = document.getElementById('teacherField');
+    const message = document.getElementById('messageSection');
+
+    if (!purpose) return;
+
+    instructor.classList.add('d-none');
+    teacher.classList.add('d-none');
+    message.classList.remove('d-none');
+
+    if (purpose === 'instructor') {
+        instructor.classList.remove('d-none');
+        message.classList.add('d-none');
+    }
+
+    if (purpose === 'TEACHER') {
+        teacher.classList.remove('d-none');
+    }
+}
+
+window.addEventListener('load', toggleFields);
+</script>
+
 {% endblock %}

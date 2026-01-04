@@ -5,8 +5,8 @@ from django.db.models import Count, Avg, Sum
 from courses.models import Course, Category, Enrollment
 from courses.views import get_top_rated_courses, get_trending_courses, get_recommended_courses
 from accounts.models import CustomUser, TeacherProfile
-from .models import TeacherMessage, ContactMessage
-from .forms import TeacherMessageForm, ContactForm
+from .models import TeacherMessage, ContactMessage, InstructorApplication
+from .forms import TeacherMessageForm, ContactForm, InstructorApplicationForm
 from django.contrib import messages
 
 
@@ -79,22 +79,49 @@ def course_detail(request, slug=None):
 
 
 def contact_view(request):
-    if request.method == 'POST':
-        if not request.user.is_authenticated:
-            messages.warning(request, "Please login to send a message.")
-            return redirect(f"{reverse('accounts:login')}?next={reverse('core:contact')}")
-            
-        form = ContactForm(request.POST)
-        if form.is_valid():
-            contact_msg = form.save(commit=False)
-            contact_msg.user = request.user
-            contact_msg.save()
-            messages.success(request, "Your message has been sent to the admin. We will get back to you soon.")
-            return redirect('core:home')
-    else:
-        form = ContactForm()
+    # Initialize both forms with basic user context
+    form = ContactForm(user=request.user)
+    instructor_form = InstructorApplicationForm(user=request.user)
     
-    return render(request, 'core/contact.html', {'form': form})
+    if request.method == 'POST':
+        enquiry_type = request.POST.get('enquiry_type')
+        
+        if enquiry_type == 'instructor':
+            instructor_form = InstructorApplicationForm(request.POST, request.FILES, user=request.user)
+            # form remains an empty/initial ContactForm
+            if instructor_form.is_valid():
+                application = instructor_form.save(commit=False)
+                if request.user.is_authenticated:
+                    application.user = request.user
+                application.save()
+                messages.success(request, "Your instructor application has been submitted and is under review.")
+                return redirect('core:contact')
+            else:
+                messages.error(request, "Please correct the errors in the instructor application form.")
+        else:
+            form = ContactForm(request.POST, user=request.user)
+            if form.is_valid():
+                message = form.save(commit=False)
+                if request.user.is_authenticated:
+                    message.user = request.user
+                message.save()
+                messages.success(request, "Your message has been sent successfully!")
+                return redirect('core:contact')
+            else:
+                messages.error(request, "Please correct the errors in the contact form.")
+    else:
+        # GET logic: handle pre-selected teacher
+        teacher_id = request.GET.get('teacher')
+        if teacher_id:
+            form = ContactForm(user=request.user, initial={
+                'teacher': teacher_id,
+                'enquiry_type': 'TEACHER'
+            })
+    
+    return render(request, 'core/contact.html', {
+        'form': form,
+        'instructor_form': instructor_form
+    })
 
 @login_required
 def send_teacher_message(request, teacher_id):

@@ -24,6 +24,8 @@
             <a href="{% url 'accounts:student_dashboard' %}" class="btn btn-primary rounded-pill px-4">Dashboard</a>
             {% elif user.role == 'teacher' %}
             <a href="{% url 'accounts:teacher_dashboard' %}" class="btn btn-primary rounded-pill px-4">Dashboard</a>
+            {% elif user.is_staff or user.is_superuser or user.role == 'admin' %}
+            <a href="/admin/" class="btn btn-primary rounded-pill px-4">Dashboard</a>
             {% else %}
             <a href="{% url 'core:home' %}" class="btn btn-primary rounded-pill px-4">Dashboard</a>
             {% endif %}
