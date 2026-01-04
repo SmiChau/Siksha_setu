@@ -1,0 +1,93 @@
+{% extends "courses/wizard/wizard_base.html" %}
+
+{% block wizard_step_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Step 2: Video Lessons</h2>
+    <span class="badge bg-light text-dark rounded-pill">{{ lessons.count }} Lessons</span>
+</div>
+
+<!-- Existing Lessons List -->
+<div class="mb-5">
+    {% for lesson in lessons %}
+    <div class="card border-0 bg-light rounded-4 mb-3 p-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                    style="width: 32px; height: 32px;">
+                    {{ lesson.order }}
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold">{{ lesson.title }}</h6>
+                    <small class="text-muted">YouTube ID: <code>{{ lesson.youtube_video_id }}</code> | {{
+                        lesson.video_duration }} min</small>
+                </div>
+            </div>
+            <div class="text-end">
+                {% if lesson.is_preview %}<span class="badge bg-info-subtle text-info me-2">Preview</span>{% endif %}
+                <button class="btn btn-sm btn-outline-danger border-0">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-4 border rounded-4 border-dashed">
+        <p class="text-muted mb-0">No lessons added yet. Add your first lesson below.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add New Lesson Form -->
+<div class="card border border-primary-subtle rounded-4 bg-primary-subtle bg-opacity-10 mb-5">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Add New Lesson</h5>
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label small fw-bold">Lesson Title</label>
+                    {{ form.title }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Order</label>
+                    {{ form.order }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">YouTube Video ID</label>
+                    {{ form.youtube_video_id }}
+                    <small class="text-muted fs-xs">E.g., <code>dQw4w9WgXcQ</code> from the URL.</small>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Duration (min)</label>
+                    {{ form.video_duration }}
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="form-check mb-2">
+                        {{ form.is_preview }}
+                        <label class="form-check-label small" for="{{ form.is_preview.id_for_label }}">Free
+                            Preview</label>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label small fw-bold">Short Description</label>
+                    {{ form.description }}
+                </div>
+                <div class="col-md-12 text-end mt-4">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">
+                        <i class="fas fa-plus me-2"></i> Add Lesson
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between mt-5">
+    <a href="{% url 'courses:course_edit_step1' course.slug %}" class="btn btn-light btn-lg rounded-pill px-5">
+        <i class="fas fa-arrow-left me-2"></i> Back
+    </a>
+    <a href="{% url 'courses:course_edit_step3' course.slug %}" class="btn btn-primary btn-lg rounded-pill px-5">
+        Next: Resources <i class="fas fa-arrow-right ms-2"></i>
+    </a>
+</div>
+{% endblock %}

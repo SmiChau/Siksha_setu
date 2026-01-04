@@ -1,0 +1,210 @@
+{% extends "core/base_public.html" %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} - {{ course.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .video-container {
+        position: relative;
+        padding-bottom: 56.25%;
+        /* 16:9 */
+        height: 0;
+        overflow: hidden;
+        background: #000;
+        border-radius: 12px;
+    }
+
+    .video-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: auto;
+    }
+
+    /* Simple deterrent for right-click on video overlay if needed, 
+       but direct iframe right-click is hard to block without complex JS. 
+       We'll use a transparent overlay for basic deterrent. */
+    .video-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+        pointer-events: none;
+        /* Allows interacting with iframe but we can use JS to block right click on parent */
+    }
+
+    .lesson-sidebar {
+        height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+
+    .mcq-card {
+        border-left: 4px solid var(--bs-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 min-vh-100">
+    <div class="row g-4">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Video Player -->
+            <div class="video-container shadow-lg mb-4" id="video-wrapper">
+                {% if lesson.youtube_video_id %}
+                <iframe src="{{ lesson.get_youtube_embed_url }}" frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+                <div class="video-overlay"></div>
+                {% else %}
+                <div class="d-flex align-items-center justify-content-center h-100 text-white">
+                    <p>No video available for this lesson.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold mb-0">{{ lesson.title }}</h2>
+                <form action="{% url 'courses:mark_lesson_complete' course.slug lesson.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">
+                        <i class="fas fa-check-circle me-2"></i> Mark as Completed
+                    </button>
+                </form>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h5 class="fw-bold mb-3">About this Lesson</h5>
+                <p class="text-muted">{{ lesson.description|default:"No description provided." }}</p>
+
+                {% if resources %}
+                <hr>
+                <h6 class="fw-bold mb-3">Supporting Resources</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for res in resources %}
+                    <a href="{{ res.get_resource_url }}" target="_blank"
+                        class="btn btn-light btn-sm rounded-pill border">
+                        <i
+                            class="{% if res.resource_type == 'pdf' %}far fa-file-pdf text-danger{% else %}fas fa-link text-info{% endif %} me-1"></i>
+                        {{ res.title }}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- MCQs Section -->
+            {% if mcq_questions %}
+            <div class="mt-5">
+                <h3 class="fw-bold mb-4">Lesson Assessment</h3>
+                {% for q in mcq_questions %}
+                <div class="card mcq-card border-0 shadow-sm rounded-4 p-4 mb-3" id="q{{ q.id }}">
+                    <p class="fw-bold mb-3">{{ forloop.counter }}. {{ q.question_text }}</p>
+                    <div class="row g-2">
+                        {% for opt, label in
+                        "A,B,C,D"|make_list|zip_list:"option_a,option_b,option_c,option_d"|make_list %}
+                        <!-- This logic needs careful template tag handling, simplified for direct rendering -->
+                        {% endfor %}
+
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start py-3 px-4 rounded-3 mcq-opt"
+                                data-q="{{ q.id }}" data-opt="A">A. {{ q.option_a }}</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start py-3 px-4 rounded-3 mcq-opt"
+                                data-q="{{ q.id }}" data-opt="B">B. {{ q.option_b }}</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start py-3 px-4 rounded-3 mcq-opt"
+                                data-q="{{ q.id }}" data-opt="C">C. {{ q.option_c }}</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100 text-start py-3 px-4 rounded-3 mcq-opt"
+                                data-q="{{ q.id }}" data-opt="D">D. {{ q.option_d }}</button>
+                        </div>
+                    </div>
+                    <div class="mt-3 feedback-box d-none">
+                        <div class="alert mb-0 small"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar: Lesson List -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 lesson-sidebar">
+                <div class="card-header bg-white py-3 border-0">
+                    <h6 class="mb-0 fw-bold">Course Curriculum</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for l in all_lessons %}
+                    <a href="{% url 'courses:lesson_view' course.slug l.id %}"
+                        class="list-group-item list-group-item-action py-3 border-0 {% if l.id == lesson.id %}bg-primary-subtle text-primary fw-bold{% endif %}">
+                        <div class="d-flex align-items-center">
+                            <i
+                                class="fas {% if l.id == lesson.id %}fa-play-circle{% else %}fa-check-circle text-muted{% endif %} me-3"></i>
+                            <div>
+                                <small class="d-block text-muted ls-1">LESSON {{ l.order }}</small>
+                                <span>{{ l.title }}</span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Video Security Deterrents
+    document.getElementById('video-wrapper').addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        alert('Downloading videos is prohibited for security reasons.');
+    });
+
+    // MCQ Submission Logic
+    document.querySelectorAll('.mcq-opt').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const qId = this.dataset.q;
+            const opt = this.dataset.opt;
+            const card = document.getElementById('q' + qId);
+            const feedback = card.querySelector('.feedback-box');
+            const alert = feedback.querySelector('.alert');
+
+            // Disable all options for this question
+            card.querySelectorAll('.mcq-opt').forEach(b => b.classList.add('disabled'));
+
+            // Submit via Ajax
+            const formData = new FormData();
+            formData.append('option', opt);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch(`/courses/{{ course.slug }}/lesson/{{ lesson.id }}/mcq/${qId}/submit/`, {
+                method: 'POST',
+                body: formData
+            })
+                .then(res => res.json())
+                .then(data => {
+                    feedback.classList.remove('d-none');
+                    if (data.is_correct) {
+                        this.classList.replace('btn-outline-primary', 'btn-success');
+                        alert.className = 'alert alert-success mb-0 small';
+                        alert.innerHTML = '<strong>Correct!</strong> Well done.';
+                    } else {
+                        this.classList.replace('btn-outline-primary', 'btn-danger');
+                        alert.className = 'alert alert-danger mb-0 small';
+                        alert.innerHTML = `<strong>Incorrect.</strong> Correct answer was ${data.correct_option}. <br> ${data.explanation || ''}`;
+                    }
+                });
+        });
+    });
+</script>
+{% endblock %}

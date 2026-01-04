@@ -1,0 +1,201 @@
+{% extends "core/base_public.html" %}
+{% load static %}
+
+{% block title %}SikshaSetu - Your Bridge to Boundless Knowledge{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<header class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="hero-title">
+                    Bridge to <br>
+                    <span style="color: var(--mint-green);">Boundless Knowledge</span>
+                </h1>
+                <p class="hero-subtitle">
+                    SikshaSetu connects you with world-class teachers and a vibrant community.
+                    Start your learning journey today with our curated courses.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="{% url 'courses:course_list' %}" class="btn btn-cta-login px-5 py-3">Explore Courses</a>
+                    <a href="{% url 'core:about' %}" class="btn btn-outline-dark rounded-pill px-5 py-3 fw-bold">Learn
+                        More</a>
+                </div>
+
+                <div class="mt-5 d-flex gap-4 text-muted">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-user-graduate fa-lg" style="color: var(--mint-green)"></i>
+                        <span>10k+ Students</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-chalkboard-teacher fa-lg" style="color: var(--mint-green)"></i>
+                        <span>Expert Mentors</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 position-relative">
+                <!-- image -->
+                <img src="{% static 'core/img/hero-illustratior.png' %}" alt="Learning" class="img-fluid"
+                    style="filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));">
+
+
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Features Section -->
+<section class="py-5 bg-white">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Why Choose SikshaSetu?</h2>
+            <p class="text-muted w-50 mx-auto">We provide the tools and resources you need to succeed in your
+                educational journey.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="p-4 rounded-4" style="background: var(--bg-light); height: 100%;">
+                    <div class="mb-4 d-inline-block p-3 rounded-circle" style="background: rgba(26, 83, 92, 0.1);">
+                        <i class="fas fa-video fa-2x" style="color: var(--primary-blue);"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Video-Based Learning</h4>
+                    <p class="text-muted">Learn through high-quality recorded videos anytime, anywhere at your own pace.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-4 rounded-4" style="background: var(--bg-light); height: 100%;">
+                    <div class="mb-4 d-inline-block p-3 rounded-circle" style="background: rgba(255, 224, 102, 0.2);">
+                        <i class="fas fa-certificate fa-2x" style="color: #e6c200;"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Certified Learning</h4>
+                    <p class="text-muted">Earn certificates upon completion to showcase your new skills.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-4 rounded-4" style="background: var(--bg-light); height: 100%;">
+                    <div class="mb-4 d-inline-block p-3 rounded-circle" style="background: rgba(78, 205, 196, 0.1);">
+                        <i class="fas fa-users fa-2x" style="color: var(--mint-green);"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Community Support</h4>
+                    <p class="text-muted">Learn together with a community of peers and mentors.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Popular Courses Section -->
+<section class="py-5" style="background: var(--bg-light);">
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-end mb-5">
+            <div>
+                <h2 class="section-title mb-0">Popular Courses</h2>
+            </div>
+            <a href="{% url 'courses:course_list' %}" class="btn btn-outline-dark rounded-pill px-4">View All</a>
+        </div>
+
+        <div class="row g-4">
+            {% for course in top_courses %}
+            <div class="col-md-4">
+                <div class="course-card h-100">
+                    <img src="{{ course.get_thumbnail }}" class="card-img-top" alt="{{ course.title }}">
+                    <div class="p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-light text-dark border">{{ course.category.name }}</span>
+                            <span class="text-warning"><i class="fas fa-star"></i> {{ course.get_average_rating
+                                }}</span>
+                        </div>
+                        <h5 class="fw-bold mb-2">{{ course.title }}</h5>
+                        <p class="text-muted small mb-3">{{ course.short_description|truncatechars:80 }}</p>
+                        <hr class="opacity-10">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if course.instructor.profile_picture %}
+                                <div class="bg-secondary rounded-circle"
+                                    style="width: 30px; height: 30px; overflow: hidden;">
+                                    <img src="{{ course.instructor.profile_picture.url }}" alt="Inst"
+                                        style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                {% else %}
+                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white"
+                                    style="width: 30px; height: 30px;">
+                                    {{ course.instructor.get_short_name|first }}
+                                </div>
+                                {% endif %}
+                                <small class="fw-bold">{{ course.instructor.get_full_name }}</small>
+                            </div>
+                            <h5 class="text-primary mb-0 fw-bold">{% if course.is_free %}Free{% else %}Rs.{{
+                                course.price }}{% endif %}</h5>
+                        </div>
+                        <a href="{% url 'courses:course_detail' course.slug %}" class="stretched-link"></a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center">
+                <p>No popular courses yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Top Teachers Section -->
+<section class="py-5 bg-white">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Meet Our Top Teachers</h2>
+            <p class="text-muted w-50 mx-auto">Learn from industry experts and passionate educators committed to your
+                success.</p>
+        </div>
+
+        <div class="row g-4">
+            {% for teacher in teachers %}
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm text-center p-4 h-100 rounded-4">
+                    <div class="mb-3">
+                        {% if teacher.profile_picture %}
+                        <img src="{{ teacher.profile_picture.url }}" class="rounded-circle" width="100" height="100"
+                            style="object-fit: cover;">
+                        {% else %}
+                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white mx-auto"
+                            style="width: 100px; height: 100px;">
+                            <span class="fs-1">{{ teacher.get_short_name|first }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <h5 class="fw-bold mb-1">{{ teacher.get_full_name }}</h5>
+                    <p class="text-muted small mb-3">{{ teacher.teacher_profile.location|default:"Expert Instructor" }}
+                    </p>
+                    <p class="small mb-4 text-muted">{{ teacher.bio|default:"Experienced educator specializing in their
+                        field."|truncatechars:60 }}</p>
+                    <div class="d-flex justify-content-center gap-3 text-muted mb-4">
+                        <small><i class="fas fa-video me-1"></i> {{ teacher.course_count }} Courses</small>
+                    </div>
+                    <a href="{% url 'core:teacher_profile' teacher.id %}"
+                        class="btn btn-outline-primary rounded-pill btn-sm px-4">View Profile</a>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-center text-muted">More teachers joining soon!</p>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-5">
+            <a href="{% url 'core:teachers' %}" class="btn btn-link text-decoration-none fw-bold">View All Teachers <i
+                    class="fas fa-arrow-right ms-1"></i></a>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="py-5 text-center text-white" style="background-color: var(--primary-blue);">
+    <div class="container">
+        <h2 class="fw-bold mb-3">Ready to Start Learning?</h2>
+        <p class="mb-4 opacity-75">Join thousands of students and start your journey today.</p>
+        <a href="{% url 'accounts:signup' %}" class="btn btn-cta-login px-5 py-3">Get Started for Free</a>
+    </div>
+</section>
+{% endblock %}

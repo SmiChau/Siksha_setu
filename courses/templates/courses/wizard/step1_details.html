@@ -1,0 +1,115 @@
+{% extends "courses/wizard/wizard_base.html" %}
+
+{% block wizard_step_content %}
+<h2 class="fw-bold mb-4">Step 1: Course Details & Pricing</h2>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="row g-4">
+        <div class="col-md-12">
+            <label class="form-label fw-bold">Course Title</label>
+            {{ form.title }}
+            {% if form.title.errors %}
+            <div class="text-danger small">{{ form.title.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold">Category</label>
+            {{ form.category }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-bold">Difficulty Level</label>
+            {{ form.level }}
+        </div>
+
+        <div class="col-md-12">
+            <label class="form-label fw-bold">Description</label>
+            {{ form.description }}
+        </div>
+
+        <div class="col-md-12">
+            <label class="form-label fw-bold">Short Summary (Max 500 chars)</label>
+            {{ form.short_description }}
+        </div>
+
+        <div class="col-md-12">
+            <label class="form-label fw-bold">Thumbnail Image</label>
+            {{ form.thumbnail }}
+        </div>
+
+        <!-- Pricing Section -->
+        <div class="col-md-12 py-3 border-top mt-4">
+            <h5 class="fw-bold mb-3">Pricing Options</h5>
+            <div class="d-flex gap-4 mb-3">
+                {% for radio in form.is_free %}
+                <div class="form-check">
+                    {{ radio.tag }}
+                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                        {{ radio.choice_label }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div id="price-input-wrapper" style="display: none;">
+                <label class="form-label fw-bold">Course Price (NPR)</label>
+                <div class="input-group">
+                    <span class="input-group-text">रू</span>
+                    {{ form.price }}
+                </div>
+                <small class="text-muted">Minimum price: 1 NPR for university records.</small>
+                {% if form.price.errors %}
+                <div class="text-danger small">{{ form.price.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-12">
+            <h5 class="fw-bold mb-3">Curriculum Highlights</h5>
+            <div class="mb-3">
+                <label class="form-label fw-bold">What will students learn?</label>
+                {{ form.what_you_learn_raw }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Requirements / Prerequisites</label>
+                {{ form.requirements_raw }}
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end mt-5">
+        <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5">
+            Continue to Lessons <i class="fas fa-arrow-right ms-2"></i>
+        </button>
+    </div>
+</form>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const isFreeRadios = document.querySelectorAll('input[name="is_free"]');
+        const priceWrapper = document.getElementById('price-input-wrapper');
+        const priceInput = document.querySelector('input[name="price"]');
+
+        function togglePrice() {
+            // value is string 'True' or 'False'
+            const selected = document.querySelector('input[name="is_free"]:checked').value;
+            if (selected === 'False') {
+                priceWrapper.style.display = 'block';
+            } else {
+                priceWrapper.style.display = 'none';
+                if (priceInput) priceInput.value = 0;
+            }
+        }
+
+        isFreeRadios.forEach(radio => {
+            radio.addEventListener('change', togglePrice);
+        });
+
+        // Initialize display
+        togglePrice();
+    });
+</script>
+{% endblock %}

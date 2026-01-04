@@ -1,0 +1,82 @@
+{% extends "courses/wizard/wizard_base.html" %}
+
+{% block wizard_step_content %}
+<h2 class="fw-bold mb-4">Step 3: Supporting Resources</h2>
+<p class="text-muted mb-4">Upload PDFs, documents, or provide external links for each lesson.</p>
+
+{% for lesson in lessons %}
+<div class="card border-0 bg-light rounded-4 mb-4">
+    <div class="card-header bg-transparent py-3 border-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="fas fa-video me-2 text-primary"></i> {{ lesson.title }}</h6>
+    </div>
+    <div class="card-body pt-0">
+        <!-- Resource List -->
+        <div class="mb-3">
+            {% for resource in lesson.resources.all %}
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <small class="fw-bold">
+                    <i
+                        class="{% if resource.resource_type == 'pdf' %}far fa-file-pdf text-danger{% else %}fas fa-link text-info{% endif %} me-2"></i>
+                    {{ resource.title }}
+                </small>
+                <form action="{% url 'courses:course_edit_step3' course.slug %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_resource" value="{{ resource.id }}">
+                    <button type="submit" class="btn btn-link text-danger p-0"
+                        onclick="return confirm('Delete resource?')"><i class="fas fa-times"></i></button>
+                </form>
+            </div>
+            {% empty %}
+            <small class="text-muted italic">No resources yet.</small>
+            {% endfor %}
+        </div>
+
+        <!-- Add Resource Trigger -->
+        <button class="btn btn-sm btn-outline-primary rounded-pill mt-2" data-bs-toggle="collapse"
+            data-bs-target="#addResource{{ lesson.id }}">
+            <i class="fas fa-plus me-1"></i> Add Resource
+        </button>
+
+        <div class="collapse mt-3" id="addResource{{ lesson.id }}">
+            <form method="post" enctype="multipart/form-data" class="bg-white p-3 rounded-3 shadow-sm border">
+                {% csrf_token %}
+                <input type="hidden" name="lesson_id" value="{{ lesson.id }}">
+                <div class="row g-2">
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Resource Title</label>
+                        <input type="text" name="title" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Type</label>
+                        <select name="resource_type" class="form-select form-select-sm">
+                            <option value="pdf">PDF Document</option>
+                            <option value="link">External Link</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">File (for PDF)</label>
+                        <input type="file" name="file" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">URL (for Link)</label>
+                        <input type="url" name="external_url" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-12 text-end mt-3">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3">Upload</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<div class="d-flex justify-content-between mt-5">
+    <a href="{% url 'courses:course_edit_step2' course.slug %}" class="btn btn-light btn-lg rounded-pill px-5">
+        <i class="fas fa-arrow-left me-2"></i> Back
+    </a>
+    <a href="{% url 'courses:course_edit_step4' course.slug %}" class="btn btn-primary btn-lg rounded-pill px-5">
+        Next: MCQs <i class="fas fa-arrow-right ms-2"></i>
+    </a>
+</div>
+{% endblock %}

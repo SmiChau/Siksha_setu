@@ -1,0 +1,114 @@
+{% extends "core/base_public.html" %}
+{% load static %}
+
+{% block title %}Meet Our Teachers - SikshaSetu{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/teachers.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="fw-bold display-5" style="color: var(--primary-blue);">
+                Meet Our Teachers
+            </h1>
+            <p class="text-muted lead mx-auto" style="max-width: 600px;">
+                Expert mentors committed to your success. Browse our team of industry professionals.
+            </p>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="teacher-filter-bar d-flex flex-wrap gap-3 align-items-center justify-content-center mb-4">
+            <button class="btn btn-outline-mint rounded-pill active px-4">All Experts</button>
+            <button class="btn btn-outline-mint rounded-pill px-4">Development</button>
+            <button class="btn btn-outline-mint rounded-pill px-4">Design</button>
+            <button class="btn btn-outline-mint rounded-pill px-4">Business</button>
+            <button class="btn btn-outline-mint rounded-pill px-4">Language</button>
+        </div>
+
+        <!-- Teacher Grid -->
+        <div class="row g-4 justify-content-center">
+
+            {% for teacher in teachers %}
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="teacher-card position-relative h-100">
+
+                    <!-- Avatar -->
+                    <div class="teacher-avatar-wrapper">
+                        {% if teacher.profile_picture %}
+                            <img src="{{ teacher.profile_picture.url }}"
+                                 class="teacher-avatar"
+                                 alt="{{ teacher.get_full_name }}">
+                        {% else %}
+                            <img src="https://placehold.co/150x150?text={{ teacher.first_name|first }}{{ teacher.last_name|first }}"
+                                 class="teacher-avatar"
+                                 alt="{{ teacher.get_full_name }}">
+                        {% endif %}
+                    </div>
+
+                    <!-- Name -->
+                    <h5 class="teacher-name mt-3">
+                        {{ teacher.get_full_name }}
+                    </h5>
+
+                    <!-- Location / Expertise -->
+                    <div class="teacher-expertise text-muted mb-2">
+                        {% if teacher.teacher_profile and teacher.teacher_profile.location %}
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            {{ teacher.teacher_profile.location }}
+                        {% else %}
+                            Expert Instructor
+                        {% endif %}
+                    </div>
+
+                    <!-- Short Bio -->
+                    <p class="teacher-bio-short">
+                        {{ teacher.bio|default:"No biography available."|truncatechars:100 }}
+                    </p>
+
+                    <!-- Stats -->
+                    <div class="teacher-stats-mini d-flex justify-content-between mt-3">
+
+                        <!-- Courses -->
+                        <span>
+                            <i class="fas fa-video me-1"></i>
+                            {{ teacher.course_count|default:0 }} Courses
+                        </span>
+
+                        <!-- Education -->
+                        {% if teacher.teacher_profile and teacher.teacher_profile.education %}
+                            <span>
+                                <i class="fas fa-graduation-cap me-1"></i>
+                                {{ teacher.teacher_profile.education|default:"Qualified"|truncatechars:20 }}
+                            </span>
+                        {% else %}
+                            <span>
+                                <i class="fas fa-graduation-cap me-1"></i>
+                                Qualified
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- View Profile -->
+                    <a href="{% url 'core:teacher_profile' teacher.id %}"
+                       class="btn btn-view-profile stretched-link mt-3">
+                        View Profile
+                    </a>
+
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <h3>No teachers found</h3>
+                <p class="text-muted">Check back soon!</p>
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+</section>
+{% endblock %}

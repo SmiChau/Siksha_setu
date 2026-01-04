@@ -1,0 +1,88 @@
+from django import forms
+from django.utils.text import slugify
+from .models import Course, Lesson, LessonResource, MCQQuestion
+
+class CourseDetailsForm(forms.ModelForm):
+    what_you_learn_raw = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 4, 'placeholder': 'One point per line...'}),
+        required=False,
+        label='What you will learn',
+        help_text='Enter each learning outcome on a new line.'
+    )
+    requirements_raw = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 4, 'placeholder': 'One requirement per line...'}),
+        required=False,
+        label='Requirements',
+        help_text='Enter each requirement on a new line.'
+    )
+
+    class Meta:
+        model = Course
+        fields = ['title', 'category', 'level', 'description', 'short_description', 'thumbnail', 'is_free', 'price']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 5}),
+            'short_description': forms.Textarea(attrs={'rows': 2}),
+            'price': forms.NumberInput(attrs={'min': '0', 'step': '0.01'}),
+            'is_free': forms.RadioSelect(choices=[(True, 'Free'), (False, 'Paid')]),
+        }
+
+    def clean_price(self):
+        is_free = self.cleaned_data.get('is_free')
+        price = self.cleaned_data.get('price')
+        
+        if not is_free and (price is None or price < 1):
+            raise forms.ValidationError("Paid courses must have a price of at least 1 NPR.")
+        
+        if is_free:
+            return 0
+        return price
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            if self.instance.what_you_learn:
+                self.initial['what_you_learn_raw'] = '\n'.join(self.instance.what_you_learn)
+            if self.instance.requirements:
+                self.initial['requirements_raw'] = '\n'.join(self.instance.requirements)
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.slug = slugify(instance.title)
+        
+        # Process what_you_learn
+        learn_raw = self.cleaned_data.get('what_you_learn_raw', '')
+        instance.what_you_learn = [line.strip() for line in learn_raw.split('\n') if line.strip()]
+        
+        # Process requirements
+        req_raw = self.cleaned_data.get('requirements_raw', '')
+        instance.requirements = [line.strip() for line in req_raw.split('\n') if line.strip()]
+        
+        if commit:
+            instance.save()
+        return instance
+
+class LessonForm(forms.ModelForm):
+    class Meta:
+        model = Lesson
+        fields = ['title', 'description', 'youtube_video_id', 'video_duration', 'order', 'is_preview']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+        help_texts = {
+            'youtube_video_id': 'Only the 11-character ID from the YouTube URL (e.g., dQw4w9WgXcQ).',
+            'video_duration': 'Estimated duration in minutes.',
+        }
+
+class LessonResourceForm(forms.ModelForm):
+    class Meta:
+        model = LessonResource
+        fields = ['title', 'resource_type', 'file', 'external_url']
+
+class MCQQuestionForm(forms.ModelForm):
+    class Meta:
+        model = MCQQuestion
+        fields = ['question_text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'explanation', 'order']
+        widgets = {
+            'question_text': forms.Textarea(attrs={'rows': 3}),
+            'explanation': forms.Textarea(attrs={'rows': 2}),
+        }

@@ -1,0 +1,63 @@
+{% extends 'core/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Student Dashboard - Siksha Setu{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Welcome back, {{ user.first_name }}!</h2>
+        <p class="text-muted mb-0">Ready to continue your learning journey?</p>
+    </div>
+    <a href="{% url 'courses:course_list' %}" class="btn btn-primary rounded-pill px-4">
+        <i class="fas fa-plus me-2"></i> Browse Courses
+    </a>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 text-center">
+            <div class="card-body">
+                <div class="rounded-circle bg-primary bg-opacity-10 p-3 d-inline-block mb-3">
+                    <i class="fas fa-book-open fa-2x text-primary"></i>
+                </div>
+                <h3 class="fw-bold mb-1">{{ total_courses }}</h3>
+                <p class="text-muted mb-0">Enrolled Courses</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 text-center">
+            <div class="card-body">
+                <div class="rounded-circle bg-success bg-opacity-10 p-3 d-inline-block mb-3">
+                    <i class="fas fa-check-circle fa-2x text-success"></i>
+                </div>
+                <h3 class="fw-bold mb-1">{{ completed_courses }}</h3>
+                <p class="text-muted mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 text-center">
+            <div class="card-body">
+                <div class="rounded-circle bg-warning bg-opacity-10 p-3 d-inline-block mb-3">
+                    <i class="fas fa-spinner fa-2x text-warning"></i>
+                </div>
+                <h3 class="fw-bold mb-1">{{ in_progress.count }}</h3>
+                <p class="text-muted mb-0">In Progress</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 text-center">
+            <div class="card-body">
+                <div class="rounded-circle bg-info bg-opacity-10 p-3 d-inline-block mb-3">
+                    <i class="fas fa-certificate fa-2x text-info"></i>
+                </div>
+                <h3 class="fw-bold mb-1">{{ certificates.count }}</h3>
+                <p class="text-muted mb-0">Certificates</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

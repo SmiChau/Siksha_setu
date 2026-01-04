@@ -1,0 +1,93 @@
+{% extends "core/base_public.html" %}
+{% load static %}
+
+{% block title %}Admin Dashboard - SikshaSetu{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="fw-bold mb-4">Admin Dashboard</h1>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white p-3 border-0 rounded-4">
+                <h5>Total Users</h5>
+                <h2 class="fw-bold">{{ total_users }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white p-3 border-0 rounded-4">
+                <h5>Total Courses</h5>
+                <h2 class="fw-bold">{{ total_courses }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white p-3 border-0 rounded-4">
+                <h5>Enrollments</h5>
+                <h2 class="fw-bold">{{ total_enrollments }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white p-3 border-0 rounded-4">
+                <h5>Messages</h5>
+                <h2 class="fw-bold">{{ total_messages }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
+                <h4 class="fw-bold mb-4">Trending Courses (Gravity Algorithm)</h4>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Score</th>
+                                <th>Views</th>
+                                <th>Enrollments</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in trending_courses %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.course.title }}</strong><br>
+                                    <small class="text-muted">{{ item.course.instructor.get_full_name }}</small>
+                                </td>
+                                <td><span class="badge bg-mint-green">{{ item.score }}</span></td>
+                                <td>{{ item.course.views_count }}</td>
+                                <td>{{ item.course.enrollment_count }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">No featured courses yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
+                <h4 class="fw-bold mb-4">Recent Contact Messages</h4>
+                <div class="list-group list-group-flush">
+                    {% for msg in recent_messages %}
+                    <div class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0 fw-bold">{{ msg.subject }}</h6>
+                            <small class="text-muted">{{ msg.created_at|date:"M d" }}</small>
+                        </div>
+                        <p class="small text-muted mb-1">{{ msg.message|truncatechars:80 }}</p>
+                        <small class="text-primary">{{ msg.user.get_full_name }}</small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No messages yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "courses/wizard/wizard_base.html" %}
+
+{% block wizard_step_content %}
+<h2 class="fw-bold mb-4">Step 4: MCQ Assessments</h2>
+<p class="text-muted mb-4">Add Multiple Choice Questions to your lessons. Students must score at least 60% on these to
+    complete the course.</p>
+
+{% for lesson in lessons %}
+<div class="card border-0 bg-light rounded-4 mb-4">
+    <div class="card-header bg-transparent py-3 border-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="fas fa-question-circle me-2 text-primary"></i> {{ lesson.title }}</h6>
+        <span class="badge bg-white text-dark border rounded-pill">{{ lesson.mcq_questions.count }} Questions</span>
+    </div>
+    <div class="card-body pt-0">
+        <!-- MCQ List -->
+        <div class="mb-3">
+            {% for q in lesson.mcq_questions.all %}
+            <div class="py-2 border-bottom">
+                <div class="d-flex justify-content-between">
+                    <small class="fw-bold">{{ forloop.counter }}. {{ q.question_text|truncatechars:100 }}</small>
+                    <small class="text-success fw-bold">Ans: {{ q.correct_option }}</small>
+                </div>
+            </div>
+            {% empty %}
+            <small class="text-muted italic">No questions added for this lesson.</small>
+            {% endfor %}
+        </div>
+
+        <!-- Add MCQ Trigger -->
+        <button class="btn btn-sm btn-outline-primary rounded-pill mt-2" data-bs-toggle="collapse"
+            data-bs-target="#addMCQ{{ lesson.id }}">
+            <i class="fas fa-plus me-1"></i> Add Question
+        </button>
+
+        <div class="collapse mt-3" id="addMCQ{{ lesson.id }}">
+            <form method="post" class="bg-white p-3 rounded-3 shadow-sm border">
+                {% csrf_token %}
+                <input type="hidden" name="lesson_id" value="{{ lesson.id }}">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Question</label>
+                        <textarea name="question_text" class="form-control form-control-sm" rows="2"
+                            required></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Option A</label>
+                        <input type="text" name="option_a" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Option B</label>
+                        <input type="text" name="option_b" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Option C</label>
+                        <input type="text" name="option_c" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Option D</label>
+                        <input type="text" name="option_d" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Correct Option</label>
+                        <select name="correct_option" class="form-select form-select-sm">
+                            <option value="A">Option A</option>
+                            <option value="B">Option B</option>
+                            <option value="C">Option C</option>
+                            <option value="D">Option D</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8 text-end d-flex align-items-end justify-content-end">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4">Add Question</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<div class="d-flex justify-content-between mt-5">
+    <a href="{% url 'courses:course_edit_step3' course.slug %}" class="btn btn-light btn-lg rounded-pill px-5">
+        <i class="fas fa-arrow-left me-2"></i> Back
+    </a>
+    <a href="{% url 'courses:course_edit_step5' course.slug %}" class="btn btn-primary btn-lg rounded-pill px-5">
+        Final Step: Review <i class="fas fa-arrow-right ms-2"></i>
+    </a>
+</div>
+{% endblock %}

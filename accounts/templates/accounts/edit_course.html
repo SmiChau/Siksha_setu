@@ -1,0 +1,93 @@
+{% extends "core/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Edit Course - SikshaSetu{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold">Edit Course: {{ course.title }}</h2>
+                <a href="{% url 'courses:course_edit_step1' course.slug %}" class="btn btn-primary rounded-pill px-4">
+                    Switch to Advanced Wizard <i class="fas fa-magic ms-2"></i>
+                </a>
+            </div>
+
+            <div class="row g-4">
+                <!-- Course Info Form -->
+                <div class="col-md-7">
+                    <div class="card border-0 shadow-sm rounded-4 p-4">
+                        <h5 class="fw-bold mb-4">Course Basic Info</h5>
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Title</label>
+                                <input type="text" name="title" class="form-control" value="{{ course.title }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Description</label>
+                                <textarea name="description" class="form-control"
+                                    rows="5">{{ course.description }}</textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label small fw-bold">Price (NPR)</label>
+                                    <input type="number" name="price" class="form-control" value="{{ course.price }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label small fw-bold">Level</label>
+                                    <select name="level" class="form-select">
+                                        <option value="beginner" {% if course.level=='beginner' %}selected{% endif %}>
+                                            Beginner</option>
+                                        <option value="intermediate" {% if course.level=='intermediate' %}selected{%
+                                            endif %}>Intermediate</option>
+                                        <option value="advanced" {% if course.level=='advanced' %}selected{% endif %}>
+                                            Advanced</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 mt-3">Update Basics</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Lessons & Publishing -->
+                <div class="col-md-5">
+                    <!-- Lessons List -->
+                    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                        <h5 class="fw-bold mb-3">Lessons List</h5>
+                        <div class="list-group list-group-flush mb-4">
+                            {% for lesson in lessons %}
+                            <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                                <span>{{ lesson.order }}. {{ lesson.title }}</span>
+                                <i class="fas fa-check-circle text-success"></i>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted small">No lessons added for this course.</p>
+                            {% endfor %}
+                        </div>
+                        <a href="{% url 'courses:course_edit_step2' course.slug %}"
+                            class="btn btn-outline-primary btn-sm rounded-pill">Manage Lessons in Wizard</a>
+                    </div>
+
+                    <!-- Publishing -->
+                    <div class="card border-0 shadow-sm rounded-4 p-4 bg-light">
+                        <h5 class="fw-bold mb-2">Publish Status</h5>
+                        <p class="small text-muted mb-4">Current Status: <span class="badge bg-secondary">{{
+                                course.get_status_display }}</span></p>
+                        {% if course.status == 'draft' %}
+                        <form action="{% url 'accounts:publish_course' course.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100 rounded-pill">Publish Now</button>
+                        </form>
+                        {% else %}
+                        <p class="text-success fw-bold small"><i class="fas fa-globe me-1"></i> This course is live.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

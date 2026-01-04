@@ -1,0 +1,335 @@
+{% extends 'core/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Teacher Dashboard - Siksha Setu{% endblock %}
+
+{% block extra_js %}
+<script>
+    function markAsRead(messageId) {
+        fetch(`/accounts/message/${messageId}/read/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const row = document.getElementById(`msg-${messageId}`);
+                    row.classList.remove('bg-light', 'bg-opacity-50');
+                    const btn = row.querySelector('button');
+                    if (btn) btn.remove();
+
+                    // Update unread count badge
+                    const badge = document.querySelector('.fa-envelope + span');
+                    if (badge) {
+                        let count = parseInt(badge.innerText);
+                        if (count > 1) {
+                            badge.innerText = count - 1;
+                        } else {
+                            badge.remove();
+                        }
+                    }
+                }
+            });
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Welcome, {{ user.first_name }}!</h2>
+        <p class="text-muted mb-0">Manage your courses and track student progress</p>
+    </div>
+    <a href="{% url 'accounts:create_course' %}" class="btn btn-primary rounded-pill px-4">
+        <i class="fas fa-plus me-2"></i> Create Course
+    </a>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid var(--primary-blue) !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted small mb-1">Total Courses</p>
+                        <h3 class="fw-bold mb-0">{{ total_courses }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                        <i class="fas fa-book fa-lg text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid var(--mint-green) !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted small mb-1">Total Students</p>
+                        <h3 class="fw-bold mb-0">{{ total_students }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                        <i class="fas fa-user-graduate fa-lg text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid var(--accent-yellow) !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted small mb-1">Total Revenue</p>
+                        <h3 class="fw-bold mb-0">Rs. {{ total_revenue|floatformat:0 }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+                        <i class="fas fa-rupee-sign fa-lg text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #e74c3c !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted small mb-1">Average Rating</p>
+                        <h3 class="fw-bold mb-0">{{ avg_rating }} <i class="fas fa-star text-warning small"></i></h3>
+                    </div>
+                    <div class="rounded-circle bg-danger bg-opacity-10 p-3">
+                        <i class="fas fa-star fa-lg text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0"><i class="fas fa-book-open text-primary me-2"></i>My Courses</h5>
+        <a href="{% url 'accounts:create_course' %}" class="btn btn-sm btn-outline-primary rounded-pill">
+            <i class="fas fa-plus me-1"></i> New Course
+        </a>
+    </div>
+    <div class="card-body">
+        {% if courses %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Course</th>
+                        <th>Status</th>
+                        <th>Students</th>
+                        <th>Rating</th>
+                        <th>Revenue</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if course.thumbnail %}
+                                <img src="{{ course.thumbnail.url }}" class="rounded me-3" width="60" height="40"
+                                    style="object-fit: cover;">
+                                {% elif course.thumbnail_url %}
+                                <img src="{{ course.thumbnail_url }}" class="rounded me-3" width="60" height="40"
+                                    style="object-fit: cover;">
+                                {% else %}
+                                <div class="bg-primary rounded me-3 d-flex align-items-center justify-content-center"
+                                    style="width:60px;height:40px;">
+                                    <i class="fas fa-book text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold">{{ course.title|truncatewords:5 }}</div>
+                                    <small class="text-muted">{{ course.category.name|default:"No
+                                        Category" }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if course.status == 'published' %}
+                            <span class="badge bg-success">Published</span>
+                            {% elif course.status == 'draft' %}
+                            <span class="badge bg-secondary">Draft</span>
+                            {% else %}
+                            <span class="badge bg-warning">{{ course.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <i class="fas fa-users text-muted me-1"></i>
+                            {{ course.total_students|default:0 }}
+                        </td>
+                        <td>
+                            {% if course.avg_rating %}
+                            <span class="text-warning"><i class="fas fa-star"></i></span>
+                            {{ course.avg_rating|floatformat:1 }}
+                            {% else %}
+                            <span class="text-muted">No ratings</span>
+                            {% endif %}
+                        </td>
+                        <td>Rs. {{ course.total_revenue|default:0|floatformat:0 }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'accounts:edit_course' course.id %}"
+                                    class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if course.status == 'published' %}
+                                <a href="{% url 'courses:course_detail' course.slug %}"
+                                    class="btn btn-sm btn-outline-success" title="View" target="_blank">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% elif course.status == 'draft' %}
+                                <form action="{% url 'accounts:publish_course' course.id %}" method="POST"
+                                    class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Publish">
+                                        <i class="fas fa-upload"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-book-open fa-4x text-muted mb-3"></i>
+            <h5 class="text-muted">No courses yet</h5>
+            <p class="text-muted mb-3">Start creating your first course!</p>
+            <a href="{% url 'accounts:create_course' %}" class="btn btn-primary rounded-pill px-4">
+                <i class="fas fa-plus me-2"></i> Create Course
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-12">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">
+                    <i class="fas fa-envelope text-primary me-2"></i>My Inbox
+                    {% if unread_count %}<span class="badge bg-danger rounded-pill ms-2">{{ unread_count
+                        }}</span>{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for msg in messages_received %}
+                    <div class="list-group-item px-0 py-3 {% if not msg.is_read %}bg-light bg-opacity-50{% endif %}"
+                        id="msg-{{ msg.id }}">
+                        <div class="d-flex justify-content-between">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3"
+                                    style="width:40px;height:40px;">
+                                    <i class="fas fa-user text-secondary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">{{ msg.sender.get_full_name }}</h6>
+                                    <small class="text-muted">{{ msg.sender.email }} | {{
+                                        msg.created_at|timesince }} ago</small>
+                                </div>
+                            </div>
+                            {% if not msg.is_read %}
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                onclick="markAsRead('{{ msg.id }}')">Mark as Read</button>
+                            {% endif %}
+                        </div>
+                        <p class="mb-0 ps-5 mt-2">{{ msg.message }}</p>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <p class="text-muted mb-0">No messages yet.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="fw-bold mb-0"><i class="fas fa-user-plus text-success me-2"></i>Recent
+                    Enrollments</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_enrollments %}
+                <ul class="list-unstyled mb-0">
+                    {% for enrollment in recent_enrollments|slice:":5" %}
+                    <li class="d-flex align-items-center py-2 border-bottom">
+                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3"
+                            style="width:40px;height:40px;">
+                            <span class="text-white small">{{
+                                enrollment.student.get_short_name|slice:":1"|upper }}</span>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{
+                                enrollment.student.get_full_name|default:enrollment.student.email }}
+                            </div>
+                            <small class="text-muted">{{ enrollment.course.title|truncatewords:4
+                                }}</small>
+                        </div>
+                        <small class="text-muted">{{ enrollment.enrolled_at|timesince }} ago</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">No enrollments yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="fw-bold mb-0"><i class="fas fa-star text-warning me-2"></i>Recent Reviews
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_reviews %}
+                <ul class="list-unstyled mb-0">
+                    {% for review in recent_reviews %}
+                    <li class="py-2 border-bottom">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="fw-bold">{{ review.user.get_full_name|default:review.user.email
+                                }}</span>
+                            <span class="text-warning small">
+                                {% for i in "12345" %}
+                                {% if forloop.counter <= review.rating %}<i class="fas fa-star"></i>{%
+                                    else %}<i class="far fa-star"></i>{% endif %}
+                                    {% endfor %}
+                            </span>
+                        </div>
+                        <small class="text-muted d-block">{{ review.course.title|truncatewords:5
+                            }}</small>
+                        <p class="small mb-0 mt-1">{{ review.comment|truncatewords:15 }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">No reviews yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

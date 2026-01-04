@@ -1,0 +1,196 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication - Siksha Setu</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <!-- Styles -->
+    <link rel="stylesheet" href="{% static 'accounts/auth.css' %}">
+</head>
+
+<body>
+    <div class="container {% if mode == 'signup' %}sign-up-mode{% endif %}">
+        <div class="forms-container">
+            <div class="signin-signup">
+
+                <!-- LOGIN FORM -->
+                <form action="{% url 'accounts:login' %}" method="POST" class="sign-in-form">
+                    {% csrf_token %}
+                    <h2 class="title">Sign in</h2>
+
+                    {% if messages %}
+                    {% for message in messages %}
+                    {% if mode == 'login' %}
+                    <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+
+                    {% if login_form.non_field_errors %}
+                    <div class="alert alert-error">{{ login_form.non_field_errors.0 }}</div>
+                    {% endif %}
+
+                    <div class="input-field">
+                        <i class="bx bxs-user"></i>
+                        <input type="email" name="email" placeholder="Email" required
+                            value="{{ login_form.email.value|default:'' }}">
+                    </div>
+                    {% if login_form.email.errors %}
+                    <small class="error-text">{{ login_form.email.errors.0 }}</small>
+                    {% endif %}
+
+                    <div class="input-field">
+                        <i class="bx bxs-lock-alt"></i>
+                        <input type="password" name="password" id="login-password" placeholder="Password" required>
+                        <i class="bx bx-hide password-toggle" data-target="login-password"></i>
+                    </div>
+                    {% if login_form.password.errors %}
+                    <small class="error-text">{{ login_form.password.errors.0 }}</small>
+                    {% endif %}
+
+                    <div class="login-options">
+                        <div class="remember-me-container">
+                            {{ login_form.remember_me }}
+                            <label for="rememberMe">Remember Me</label>
+                        </div>
+
+                        <a href="{% url 'accounts:forgot_password' %}" class="forgot-password">
+                            Forgot Password?
+                        </a>
+                    </div>
+
+                    <button type="submit" class="btn solid">Login</button>
+
+                    <!-- Mobile View Toggle -->
+                    <p class="social-text mobile-toggle">Don't have an account? <a href="#" id="sign-up-btn-mobile">Sign
+                            up</a></p>
+                </form>
+
+                <!-- SIGNUP FORM -->
+                <form action="{% url 'accounts:signup' %}" method="POST" class="sign-up-form">
+                    {% csrf_token %}
+                    <h2 class="title">Sign up</h2>
+
+                    {% if messages %}
+                    {% for message in messages %}
+                    {% if mode == 'signup' %}
+                    <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-error">{{ form.non_field_errors.0 }}</div>
+                    {% endif %}
+
+                    <div class="input-field">
+                        <i class="bx bxs-user"></i>
+                        <input type="text" name="first_name" placeholder="First Name" required
+                            value="{{ form.first_name.value|default:'' }}">
+                    </div>
+                    {% if form.first_name.errors %}
+                    <small class="error-text">{{ form.first_name.errors.0 }}</small>
+                    {% endif %}
+
+                    <div class="input-field">
+                        <i class="bx bxs-user"></i>
+                        <input type="text" name="last_name" placeholder="Last Name" required
+                            value="{{ form.last_name.value|default:'' }}">
+                    </div>
+                    {% if form.last_name.errors %}
+                    <small class="error-text">{{ form.last_name.errors.0 }}</small>
+                    {% endif %}
+
+                    <div class="input-field">
+                        <i class="bx bxs-envelope"></i>
+                        <input type="email" name="email" placeholder="Email" required
+                            value="{{ form.email.value|default:'' }}">
+                    </div>
+                    {% if form.email.errors %}
+                    <small class="error-text">{{ form.email.errors.0 }}</small>
+                    {% endif %}
+
+                    <div class="input-field">
+                        <i class="bx bxs-lock-alt"></i>
+                        <input type="password" name="password" id="signup-password" placeholder="Password" required
+                            class="password-input">
+                        <i class="bx bx-hide password-toggle" data-target="signup-password"></i>
+                    </div>
+                    {% if form.password.errors %}
+                    <small class="error-text">{{ form.password.errors.0 }}</small>
+                    {% endif %}
+
+                    <!-- Password Strength Meter -->
+                    <div class="password-rules">
+                        <div class="rule" data-rule="length"><i class='bx bx-circle'></i> Min 8 chars</div>
+                        <div class="rule" data-rule="uppercase"><i class='bx bx-circle'></i> Uppercase</div>
+                        <div class="rule" data-rule="lowercase"><i class='bx bx-circle'></i> Lowercase</div>
+                        <div class="rule" data-rule="number"><i class='bx bx-circle'></i> Number</div>
+                        <div class="rule" data-rule="special"><i class='bx bx-circle'></i> Special char</div>
+                    </div>
+
+                    <div class="input-field">
+                        <i class="bx bxs-lock-alt"></i>
+                        <input type="password" name="confirm_password" id="signup-confirm-password"
+                            placeholder="Confirm Password" required>
+                        <i class="bx bx-hide password-toggle" data-target="signup-confirm-password"></i>
+                    </div>
+                    {% if form.confirm_password.errors %}
+                    <small class="error-text">{{ form.confirm_password.errors.0 }}</small>
+                    {% endif %}
+
+                    <button type="submit" class="btn solid">Sign Up</button>
+
+                    <!-- Mobile View Toggle -->
+                    <p class="social-text mobile-toggle">Already have an account? <a href="#"
+                            id="sign-in-btn-mobile">Sign in</a></p>
+                </form>
+            </div>
+        </div>
+
+        <div class="panels-container">
+            <div class="panel left-panel">
+                <div class="content">
+                    <h3>New here?</h3>
+                    <p>
+                        Join Siksha Setu today and start your journey towards academic excellence with our comprehensive
+                        learning tools.
+                    </p>
+                    <button class="btn transparent" id="sign-up-btn">
+                        Sign up
+                    </button>
+                </div>
+                <img src="{% static 'accounts/img/last.png' %}" class="image" alt=""
+                    onerror="this.style.display='none'">
+            </div>
+            <div class="panel right-panel">
+                <div class="content">
+                    <h3>One of us?</h3>
+                    <p>
+                        Welcome back! Please sign in to continue accessing your dashboard and learning materials.
+                    </p>
+                    <button class="btn transparent" id="sign-in-btn">
+                        Sign in
+                    </button>
+                </div>
+                <img src="{% static 'accounts/img/demogirl2.png' %}" class="image" alt=""
+                    onerror="this.style.display='none'">
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'accounts/auth.js' %}"></script>
+</body>
+
+</html>

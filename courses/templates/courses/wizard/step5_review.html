@@ -1,0 +1,90 @@
+{% extends "courses/wizard/wizard_base.html" %}
+
+{% block wizard_step_content %}
+<div class="text-center mb-5">
+    <div class="bg-success-subtle text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+        style="width: 80px; height: 80px;">
+        <i class="fas fa-check-circle fa-3x"></i>
+    </div>
+    <h2 class="fw-bold">Ready to Publish?</h2>
+    <p class="text-muted">Review your course content one last time before making it live.</p>
+</div>
+
+<div class="row g-4">
+    <!-- Course Summary -->
+    <div class="col-md-7">
+        <div class="card border-0 bg-light rounded-4 h-100 p-4">
+            <h5 class="fw-bold mb-4">Course Details</h5>
+            <div class="d-flex align-items-center mb-4">
+                <img src="{{ course.get_thumbnail }}" class="rounded-3 me-3"
+                    style="width: 100px; height: 100px; object-fit: cover;">
+                <div>
+                    <h4 class="mb-1 fw-bold">{{ course.title }}</h4>
+                    <span class="badge bg-primary rounded-pill">{{ course.category.name }}</span>
+                    <span class="badge bg-info rounded-pill ms-1">{{ course.get_level_display }}</span>
+                </div>
+            </div>
+            <p class="text-muted small">{{ course.description|truncatechars:300 }}</p>
+            <hr>
+            <div class="row">
+                <div class="col-6">
+                    <small class="text-muted d-block uppercase ls-1">Pricing</small>
+                    <p class="fw-bold mb-0">{% if course.is_free %}Free{% else %}रू {{ course.price }}{% endif %}</p>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted d-block uppercase ls-1">Lessons</small>
+                    <p class="fw-bold mb-0">{{ course.lessons.count }} Total</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Curriculum Summary -->
+    <div class="col-md-5">
+        <div class="card border-0 bg-light rounded-4 h-100 p-4">
+            <h5 class="fw-bold mb-3">Curriculum Check</h5>
+            <ul class="list-unstyled">
+                <li class="mb-3 d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <div>
+                        <small class="text-dark d-block fw-bold">Video Content</small>
+                        <small class="text-muted">{{ course.lessons.count }} YouTube Lessons Linked</small>
+                    </div>
+                </li>
+                <li class="mb-3 d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <div>
+                        <small class="text-dark d-block fw-bold">Resources</small>
+                        {% with total_res=0 %}
+                        <small class="text-muted">Supporting documents added.</small>
+                        {% endwith %}
+                    </div>
+                </li>
+                <li class="mb-3 d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <div>
+                        <small class="text-dark d-block fw-bold">Assessments</small>
+                        <small class="text-muted">MCQs configured for lessons.</small>
+                    </div>
+                </li>
+            </ul>
+            <div class="mt-4 p-3 bg-white rounded-3 small">
+                <i class="fas fa-info-circle text-primary me-1"></i>
+                Published courses are immediately visible to students.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between mt-5 pt-4 border-top">
+    <a href="{% url 'courses:course_edit_step4' course.slug %}" class="btn btn-light btn-lg rounded-pill px-5">
+        <i class="fas fa-arrow-left me-2"></i> Step 4
+    </a>
+    <form action="{% url 'courses:course_publish' course.slug %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success btn-lg rounded-pill px-5 shadow">
+            <i class="fas fa-rocket me-2"></i> Publish Course Now
+        </button>
+    </form>
+</div>
+{% endblock %}

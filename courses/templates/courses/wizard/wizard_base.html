@@ -1,0 +1,61 @@
+{% extends "core/base_dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .wizard-step {
+        opacity: 0.5;
+        font-size: 0.9rem;
+    }
+
+    .wizard-step.active {
+        opacity: 1;
+        font-weight: bold;
+        color: var(--bs-primary);
+    }
+
+    .wizard-progress {
+        height: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+    <!-- Wizard Progress -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-2">
+                <div class="wizard-step {% if step >= 1 %}active{% endif %}">1. Details</div>
+                <div class="wizard-step {% if step >= 2 %}active{% endif %}">2. Lessons</div>
+                <div class="wizard-step {% if step >= 3 %}active{% endif %}">3. Resources</div>
+                <div class="wizard-step {% if step >= 4 %}active{% endif %}">4. MCQs</div>
+                <div class="wizard-step {% if step >= 5 %}active{% endif %}">5. Review</div>
+            </div>
+            <div class="progress wizard-progress">
+                <div class="progress-bar" id="wizard-progress-bar" data-step="{{ step|default:1 }}"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step Content -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4 p-md-5">
+            {% block wizard_step_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        document.addEventListener("DOMContentLoaded", function () {
+            const progressBar = document.getElementById('wizard-progress-bar');
+            if (progressBar) {
+                const stepValue = parseInt(progressBar.getAttribute('data-step')) || 1;
+                const progressWidth = Math.min(stepValue * 20, 100);
+                progressBar.style.width = progressWidth + '%';
+            }
+        });
+    })();
+</script>
+{% endblock %}

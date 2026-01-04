@@ -1,0 +1,68 @@
+/* Page Specific Styles for About Us */
+
+.about-hero-img {
+    max-width: 100%;
+    height: auto;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+.mission-card {
+    background: var(--white);
+    border: none;
+    border-radius: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+}
+
+.mission-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+.icon-box {
+    width: 80px;
+    height: 80px;
+    background: rgba(78, 205, 196, 0.1);
+    /* mint-green tint */
+    color: var(--mint-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    margin-bottom: 20px;
+}
+
+.testimonial-card {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.cta-section {
+    background: linear-gradient(rgba(22, 128, 128, 0.85), rgba(34, 19, 88, 0.9)),
+        url("../images/about1.jpg");
+
+    background-size: cover;
+    background-position: center;
+    color: var(--white);
+    border-radius: 30px;
+    overflow: hidden;
+    position: relative;
+}

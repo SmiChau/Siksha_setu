@@ -1,0 +1,143 @@
+{% extends "core/base_public.html" %}
+{% load static %}
+
+{% block title %}Dr. Angela Yu - SikshaSetu{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/teachers.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/courses.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Profile Section -->
+<section class="profile-hero text-center">
+    <div class="container">
+        <div class="d-flex flex-column align-items-center">
+            {% if teacher.profile_picture %}
+            <img src="{{ teacher.profile_picture.url }}" class="profile-avatar-lg mb-4"
+                alt="{{ teacher.get_full_name }}">
+            {% else %}
+            <img src="https://placehold.co/150/150?text={{ teacher.get_short_name|first }}"
+                class="profile-avatar-lg mb-4" alt="{{ teacher.get_full_name }}">
+            {% endif %}
+            <h1 class="fw-bold mb-2 display-6" style="color: var(--primary-blue);">{{ teacher.get_full_name }}</h1>
+            <p class="text-muted fw-bold text-uppercase ls-1 mb-3" style="color: var(--mint-green);">Instructor</p>
+            <p class="text-dark mb-4" style="max-width: 700px; font-size: 1.1rem; line-height: 1.6;">
+                {{ teacher.bio|default:"No biography available." }}
+            </p>
+
+            <div class="d-flex gap-4 flex-wrap justify-content-center">
+                <div class="profile-stat-box">
+                    <span class="stat-number">{{ teacher.course_count }}</span>
+                    <span class="stat-label">Courses</span>
+                </div>
+                <div class="profile-stat-box">
+                    <span class="stat-number">{{ teacher.student_count }}</span>
+                    <span class="stat-label">Students</span>
+                </div>
+                <div class="profile-stat-box">
+                    <span class="stat-number">{{ teacher.avg_rating|default:"0.0"|floatformat:1 }}</span>
+                    <span class="stat-label">Rating</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-5">
+            <!-- Left Content: Courses -->
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center mb-4">
+                    <h3 class="fw-bold mb-0">Courses by {{ teacher.first_name }}</h3>
+                    <span class="badge bg-light text-dark ms-3 rounded-pill">{{ courses.count }} Courses</span>
+                </div>
+
+                <!-- Course List -->
+                <div class="row g-4">
+                    {% for course in courses %}
+                    <div class="col-md-6">
+                        <div class="card course-card-grid h-100">
+                            <div class="course-thumb-wrapper">
+                                <span class="course-badge text-decoration-none">{{ course.get_level_display }}</span>
+                                <img src="{{ course.get_thumbnail }}" class="course-thumb"
+                                    alt="{{ course.title }} Thumbnail">
+                            </div>
+                            <div class="card-body course-content d-flex flex-column">
+                                <h5 class="card-title fw-bold mb-2">{{ course.title }}</h5>
+                                <div class="course-rating">
+                                    <i class="fas fa-star text-warning"></i>
+                                    <span class="fw-bold">{{ course.get_average_rating }}</span>
+                                    <span class="text-muted ms-1">({{ course.reviews.count }})</span>
+                                </div>
+                                <div class="course-meta mt-auto">
+                                    <span><i class="far fa-clock me-1"></i> {{ course.total_duration }} min</span>
+                                    <span><i class="fas fa-video me-1"></i> {{ course.lessons.count }} Lessons</span>
+                                </div>
+                                <a href="{% url 'courses:course_detail' course.slug %}"
+                                    class="btn btn-view-course w-100 mt-3 rounded-pill">View Course</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12">
+                        <p class="text-muted">No courses published yet.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Right Sidebar: Info -->
+            <div class="col-lg-4">
+                <div class="profile-sidebar-card">
+                    <h5 class="sidebar-title">Professional Info</h5>
+                    <ul class="list-unstyled info-list">
+                        <li><i class="fas fa-graduation-cap"></i>
+                            <div><strong>Education:</strong><br>{{ profile.education|default:"Not provided" }}</div>
+                        </li>
+                        <li><i class="fas fa-briefcase"></i>
+                            <div><strong>Experience:</strong><br>{{ profile.experience|default:"Not provided" }}</div>
+                        </li>
+                        <li><i class="fas fa-map-marker-alt"></i>
+                            <div><strong>Location:</strong><br>{{ profile.location|default:"Not provided" }}</div>
+                        </li>
+                        <li><i class="fas fa-language"></i>
+                            <div><strong>Languages:</strong><br>
+                                <div class="mt-1">
+                                    {% if profile.languages %}
+                                    <span class="text-dark big">{{ profile.languages }}</span>
+                                    {% else %}
+                                    <span class="text-muted big">Not provided</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="profile-sidebar-card">
+                    <h5 class="sidebar-title">Contact {{ teacher.first_name }}</h5>
+                    {% if user.is_authenticated %}
+                    <p class="text-muted small mb-3">Send a direct message to this instructor.</p>
+                    <form action="{% url 'core:send_teacher_message' teacher.id %}" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            {{ message_form.message }}
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary w-100 rounded-pill fw-bold">Send
+                            Message</button>
+                    </form>
+                    {% else %}
+                    <p class="text-muted small mb-3">Please login to contact this teacher.</p>
+                    <a href="{% url 'accounts:login' %}?next={{ request.path }}"
+                        class="btn btn-outline-primary w-100 rounded-pill fw-bold">Login to Contact</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

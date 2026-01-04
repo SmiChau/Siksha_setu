@@ -1,0 +1,35 @@
+{% extends "core/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Dashboard - SikshaSetu{% endblock %}
+
+{% block content %}
+<!-- Personalized Greeting (from your 3rd image) -->
+<section class="greeting py-4">
+    <h2>Namaste, {{ user.first_name|default:user.username }}! Ready to bridge the gap today?</h2>
+</section>
+
+<!-- Recommended for You (grid of courses) -->
+<section class="recommended mb-5">
+    <h3>Recommended for You</h3>
+    <div class="row">
+        <!-- Later: Loop over recommended courses -->
+        <div class="col-md-4">
+            <div class="card">
+                <video class="card-img-top" autoplay muted loop playsinline>
+                <source src="{}" type="video/mp4">
+                     Your browser does not support the video tag.
+                </video>
+                    <h5>Introduction to AI</h5>
+                    <p>Continue Learning</p>
+                    <a href="#" class="btn btn-primary">Resume Course</a>
+                </div>
+            </div>
+        </div>
+        <!-- Add more cards -->
+    </div>
+</section>
+
+<!-- Continue Learning, etc. -->
+<!-- Add more sections as per your design -->
+{% endblock %}

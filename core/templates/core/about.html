@@ -1,0 +1,203 @@
+{% extends 'core/base_public.html' %}
+{% load static %}
+
+{% block title %}About Us - SikshaSetu{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/about.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- 1. Hero Section -->
+<section class="hero-section text-center text-lg-start pt-5 pb-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="hero-title mb-3">Empowering Learning Through Technology</h1>
+                <p class="hero-subtitle mb-4">
+                    Wait less, learn more. SikshaSetu connects students and teachers seamlessly to build a bridge to
+                    knowledge and success.
+                </p>
+                <div class="d-flex gap-3 justify-content-center justify-content-lg-start">
+                    <a href="{% url 'courses:course_list' %}"
+                        class="btn btn-cta-login px-5 py-3 rounded-pill text-decoration-none"
+                        style="font-size: 1.1rem;">
+                        Explore Courses <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 mt-5 mt-lg-0 text-center">
+                <!-- image1 -->
+                <img src="{% static 'core/img/about2.png' %}" alt="Student Learning"
+                    class="about-hero-img img-fluid rounded-4 shadow-sm">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 2. Who We Are Section -->
+<section class="py-5" style="background-color: var(--white);">
+    <div class="container py-4">
+        <div class="row align-items-center flex-row-reverse">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h2 class="section-title">Who We Are</h2>
+                <p class="lead text-muted mb-4">
+                    SikshaSetu is more than just an e-learning platform; it's a community dedicated to making quality
+                    education accessible to everyone, everywhere.
+                </p>
+                <p class="mb-4" style="color: var(--text-dark); line-height: 1.8;">
+                    Founded with the vision of bridging the gap between traditional classroom teaching and modern
+                    digital accessibility, we provide a robust platform where knowledge flows freely. Our dedicated team
+                    of educators and technologists work tirelessly to create an engaging, intuitive, and effective
+                    learning environment for students of all ages.
+                </p>
+                <div class="row g-4 mt-2">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fas fa-check-circle fa-2x" style="color: var(--mint-green);"></i>
+                            <span class="fw-bold">Expert Instructors</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fas fa-infinity fa-2x" style="color: var(--mint-green);"></i>
+                            <span class="fw-bold">Lifetime Access</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <!-- image2 -->
+                <img src="{% static 'core/img/about.jpg' %}" alt="Who We Are" class="img-fluid rounded-4">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. Our Mission & Vision -->
+<section class="py-5" style="background-color: var(--bg-light);">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Our Purpose</h2>
+            <p class="text-muted col-lg-8 mx-auto">Driven by values, fueled by passion.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card mission-card p-4">
+                    <div class="card-body text-center">
+                        <div class="icon-box mx-auto">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <h3 class="fw-bold mb-3" style="color: var(--primary-blue);">Our Mission</h3>
+                        <p class="text-muted">
+                            To democratize education by providing high-quality, affordable, and accessible learning
+                            resources to students across the globe, fostering a culture of continuous growth.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mission-card p-4">
+                    <div class="card-body text-center">
+                        <div class="icon-box mx-auto">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <h3 class="fw-bold mb-3" style="color: var(--primary-blue);">Our Vision</h3>
+                        <p class="text-muted">
+                            To become the world's leading bridge to knowledge ("Setu"), empowering millions of learners
+                            to achieve their career goals and personal aspirations through technology.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 4. Student Testimonials Section -->
+<section class="py-5" style="background-color: var(--white);">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h2 class="section-title">What Our Students Say</h2>
+        </div>
+
+        <div class="row g-4">
+            <!-- Testimonial 1 -->
+            <div class="col-md-4">
+                <div class="testimonial-card h-100">
+                    <div class="d-flex text-warning mb-3">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i
+                            class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="mb-4 fst-italic">"SikshaSetu changed the way I learn. The courses are structured perfectly
+                        and the teachers are amazing!"</p>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold"
+                            style="width: 50px; height: 50px;">JD</div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">John Doe</h6>
+                            <small class="text-muted">Web Development Student</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Testimonial 2 -->
+            <div class="col-md-4">
+                <div class="testimonial-card h-100">
+                    <div class="d-flex text-warning mb-3">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i
+                            class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                    </div>
+                    <p class="mb-4 fst-italic">"The flexibility of the platform is what I needed. I can learn at my own
+                        pace without any pressure."</p>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold"
+                            style="width: 50px; height: 50px;">AS</div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Anita Sharma</h6>
+                            <small class="text-muted">Data Science Student</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Testimonial 3 -->
+            <div class="col-md-4">
+                <div class="testimonial-card h-100">
+                    <div class="d-flex text-warning mb-3">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i
+                            class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="mb-4 fst-italic">"Highly recommended! The content is up-to-date and the community support
+                        is fantastic."</p>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold"
+                            style="width: 50px; height: 50px;">RK</div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Rahul Kumar</h6>
+                            <small class="text-muted">Graphic Design Student</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 5. Call To Action (Bottom) -->
+<section class="container py-5 mb-5">
+    <div class="cta-section p-5 text-center">
+
+        <div class="position-relative z-1">
+            <h2 class="fw-bold mb-3 display-5">Start Your Learning Journey Today</h2>
+            <p class="mb-4 fs-5" style="opacity: 0.9;">Join thousands of learners and start building your future with
+                SikshaSetu.</p>
+            <a href="{% url 'courses:course_list' %}" class="btn btn-cta-login btn-lg px-5 py-3 rounded-pill">
+                Browse Courses
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

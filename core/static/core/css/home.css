@@ -1,0 +1,155 @@
+/* Public Facing Styles */
+
+/* Public Navbar Specifics */
+.public-navbar {
+    background: var(--white);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 10px 0;
+    /* Reduced padding for compact look */
+}
+.img-fluid{
+    max-width: 100%;
+    height: auto;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+.public-navbar .logo h2 {
+    font-size: 24px;
+    /* Slightly smaller logo text */
+    font-weight: 800;
+    color: var(--primary-blue);
+    margin: 0;
+}
+
+.public-navbar .logo span {
+    color: var(--mint-green);
+}
+
+.public-navbar .nav-links {
+    gap: 30px !important;
+    /* Consistent spacing */
+}
+
+.public-navbar .nav-link {
+    color: var(--primary-blue);
+    font-weight: 600;
+    text-decoration: none;
+    position: relative;
+    padding: 5px 0;
+    transition: color 0.3s ease;
+}
+
+.public-navbar .nav-link:hover {
+    color: var(--primary-blue);
+}
+
+/* Animated Underline Effect */
+.public-navbar .nav-link::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: var(--accent-yellow);
+    transition: width 0.3s ease;
+}
+
+.public-navbar .nav-link:hover::after,
+.public-navbar .nav-link.active::after {
+    width: 100%;
+}
+
+.public-navbar .nav-link.active {
+    color: var(--primary-blue);
+    font-weight: 700;
+}
+
+.btn-cta-login {
+    background-color: var(--accent-yellow);
+    color: var(--text-dark) !important;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 10px rgba(255, 224, 102, 0.4);
+    transition: transform 0.2s ease;
+}
+
+.btn-cta-login:hover {
+    transform: translateY(-2px);
+    background-color: #ffd633;
+}
+
+/* Hero Section */
+.hero-section {
+    background-color: var(--bg-light);
+    padding: 100px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-title {
+    color: var(--primary-blue);
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.hero-subtitle {
+    color: var(--text-dark);
+    font-size: 20px;
+    margin-top: 20px;
+    margin-bottom: 40px;
+}
+
+/* Course Cards */
+.course-card {
+    background: var(--white);
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    transition: 0.3s ease;
+    overflow: hidden;
+}
+
+.course-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.course-card img {
+    height: 200px;
+    object-fit: cover;
+}
+
+.section-title {
+    color: var(--primary-blue);
+    font-weight: 800;
+    position: relative;
+    display: inline-block;
+    margin-bottom: 50px;
+}
+
+.section-title::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 4px;
+    background: var(--mint-green);
+    margin: 10px auto 0;
+    border-radius: 2px;
+}

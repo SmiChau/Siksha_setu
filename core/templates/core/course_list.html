@@ -1,0 +1,105 @@
+{% extends "core/base_public.html" %}
+{% load static %}
+
+{% block title %}Explore Courses - SikshaSetu{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/courses.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <!-- Header & Filters -->
+        <div class="row align-items-center mb-4">
+            <div class="col-lg-6">
+                <h1 class="fw-bold" style="color: var(--primary-blue);">Explore Our Courses</h1>
+                <p class="text-muted">Discover new skills and passions with our expert-led courses.</p>
+            </div>
+            <div class="col-lg-6">
+                <div class="d-flex gap-2 justify-content-lg-end">
+                    <input type="text" class="form-control rounded-pill px-4 search-input"
+                        placeholder="Search courses..." style="max-width: 300px;">
+                    <button class="btn btn-search-mint rounded-circle"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="course-filter-bar d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            <div class="d-flex gap-2 overflow-auto">
+                <button class="btn btn-outline-secondary rounded-pill active">All</button>
+                <button class="btn btn-outline-secondary rounded-pill">Development</button>
+                <button class="btn btn-outline-secondary rounded-pill">Design</button>
+                <button class="btn btn-outline-secondary rounded-pill">Business</button>
+                <button class="btn btn-outline-secondary rounded-pill">Marketing</button>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Sort by: Popular
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Newest</a></li>
+                    <li><a class="dropdown-item" href="#">Highest Rated</a></li>
+                    <li><a class="dropdown-item" href="#">Price: Low to High</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Course Grid -->
+        <div class="row g-4">
+            {% for course in courses %}
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card course-card-grid h-100">
+                    <div class="course-thumb-wrapper">
+                        <span class="course-badge text-decoration-none {% if course.level == 'beginner' %}bg-success{% elif course.level == 'intermediate' %}bg-warning{% else %}bg-danger{% endif %}">{{ course.get_level_display }}</span>
+                        <img src="{{ course.get_thumbnail }}" class="course-thumb"
+                            alt="{{ course.title }} Thumbnail">
+                    </div>
+                    <div class="card-body course-content d-flex flex-column">
+                        <h5 class="card-title fw-bold mb-2">{{ course.title }}</h5>
+                        <div class="course-instructor">
+                            {% if course.instructor.profile_picture %}
+                            <img src="{{ course.instructor.profile_picture.url }}" class="instructor-avatar-sm" alt="Instructor">
+                            {% else %}
+                            <img src="https://placehold.co/50/50?text={{ course.instructor.get_short_name|first }}" class="instructor-avatar-sm" alt="Instructor">
+                            {% endif %}
+                            <span>{{ course.instructor.get_full_name }}</span>
+                        </div>
+                        <div class="course-rating">
+                            <i class="fas fa-star text-warning"></i>
+                            <span class="fw-bold">{{ course.get_average_rating }}</span>
+                            <span class="text-muted ms-1">({{ course.reviews.count }})</span>
+                        </div>
+                        <p class="card-text text-muted small flex-grow-1">{{ course.short_description|truncatechars:100 }}</p>
+                        <div class="course-meta">
+                            <span><i class="far fa-clock me-1"></i> {{ course.total_duration }} min</span>
+                            <span><i class="fas fa-video me-1"></i> {{ course.lessons.count }} Lessons</span>
+                        </div>
+                        <a href="{% url 'courses:course_detail' course.slug %}"
+                            class="btn btn-view-course w-100 mt-3 rounded-pill">View
+                            Course</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <h3>No courses found.</h3>
+                <p>Check back later for new content!</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        <nav class="mt-5 d-flex justify-content-center">
+            <ul class="pagination">
+                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item"><a class="page-link" href="#">Next</a></li>
+            </ul>
+        </nav>
+    </div>
+</section>
+{% endblock %}
