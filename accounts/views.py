@@ -412,93 +412,19 @@ def mark_message_read(request, message_id):
 
 @login_required
 def create_course_view(request):
+    """Redirect to the unified course wizard in the courses app."""
     if request.user.role != 'teacher' or not request.user.is_approved:
         messages.error(request, 'You do not have permission to create courses.')
         return redirect(get_role_redirect_url(request.user))
-    
-    categories = Category.objects.all()
-    
-    if request.method == 'POST':
-        title = request.POST.get('title')
-        description = request.POST.get('description')
-        short_description = request.POST.get('short_description', '')
-        category_id = request.POST.get('category')
-        level = request.POST.get('level', 'beginner')
-        price = request.POST.get('price', 0)
-        thumbnail_url = request.POST.get('thumbnail_url', '')
-        
-        what_you_learn = request.POST.getlist('what_you_learn[]')
-        requirements = request.POST.getlist('requirements[]')
-        
-        if not title or not description:
-            messages.error(request, 'Title and description are required.')
-            return render(request, 'accounts/create_course.html', {'categories': categories})
-        
-        slug = slugify(title)
-        counter = 1
-        original_slug = slug
-        while Course.objects.filter(slug=slug).exists():
-            slug = f"{original_slug}-{counter}"
-            counter += 1
-        
-        course = Course.objects.create(
-            title=title,
-            slug=slug,
-            description=description,
-            short_description=short_description,
-            instructor=request.user,
-            category_id=category_id if category_id else None,
-            level=level,
-            price=float(price) if price else 0,
-            thumbnail_url=thumbnail_url,
-            what_you_learn=what_you_learn,
-            requirements=requirements,
-            status='draft'
-        )
-        
-        if 'thumbnail' in request.FILES:
-            course.thumbnail = request.FILES['thumbnail']
-            course.save()
-        
-        messages.success(request, f'Course "{title}" created successfully!')
-        return redirect('accounts:edit_course', course_id=course.id)
-    
-    return render(request, 'accounts/create_course.html', {'categories': categories})
+    return redirect('courses:course_create_start')
 
 
 @login_required
 def edit_course_view(request, course_id):
+    """Redirect to the unified course wizard in the courses app."""
+    from courses.models import Course
     course = get_object_or_404(Course, id=course_id, instructor=request.user)
-    categories = Category.objects.all()
-    lessons = course.lessons.all().order_by('order')
-    
-    if request.method == 'POST':
-        course.title = request.POST.get('title', course.title)
-        course.description = request.POST.get('description', course.description)
-        course.short_description = request.POST.get('short_description', course.short_description)
-        course.category_id = request.POST.get('category') or None
-        course.level = request.POST.get('level', course.level)
-        course.price = float(request.POST.get('price', 0))
-        course.thumbnail_url = request.POST.get('thumbnail_url', course.thumbnail_url)
-        
-        what_you_learn = request.POST.getlist('what_you_learn[]')
-        requirements = request.POST.getlist('requirements[]')
-        course.what_you_learn = [item for item in what_you_learn if item]
-        course.requirements = [item for item in requirements if item]
-        
-        if 'thumbnail' in request.FILES:
-            course.thumbnail = request.FILES['thumbnail']
-        
-        course.save()
-        messages.success(request, 'Course updated successfully!')
-        return redirect('accounts:edit_course', course_id=course.id)
-    
-    context = {
-        'course': course,
-        'categories': categories,
-        'lessons': lessons,
-    }
-    return render(request, 'accounts/edit_course.html', context)
+    return redirect('courses:course_edit_step1', slug=course.slug)
 
 
 @login_required

@@ -6,23 +6,34 @@
     complete the course.</p>
 
 {% for lesson in lessons %}
-<div class="card border-0 bg-light rounded-4 mb-4">
+<div class="card border-0 bg-light rounded-4 mb-4" data-lesson-id="{{ lesson.id }}">
     <div class="card-header bg-transparent py-3 border-0 d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold"><i class="fas fa-question-circle me-2 text-primary"></i> {{ lesson.title }}</h6>
-        <span class="badge bg-white text-dark border rounded-pill">{{ lesson.mcq_questions.count }} Questions</span>
+        <span class="badge bg-white text-dark border rounded-pill mcq-counter" data-lesson-id="{{ lesson.id }}">
+            {{ lesson.mcq_questions.count }} Questions
+        </span>
     </div>
     <div class="card-body pt-0">
         <!-- MCQ List -->
-        <div class="mb-3">
+        <div class="mb-3 mcq-list" data-lesson-id="{{ lesson.id }}">
             {% for q in lesson.mcq_questions.all %}
-            <div class="py-2 border-bottom">
-                <div class="d-flex justify-content-between">
-                    <small class="fw-bold">{{ forloop.counter }}. {{ q.question_text|truncatechars:100 }}</small>
+            <div class="py-2 border-bottom d-flex justify-content-between align-items-center" data-mcq-id="{{ q.id }}">
+                <div>
+                    <small class="fw-bold">{{ forloop.counter }}. {{ q.question_text|truncatechars:80 }}</small>
+                    <br>
                     <small class="text-success fw-bold">Ans: {{ q.correct_option }}</small>
                 </div>
+                <form action="{% url 'courses:course_edit_step4' course.slug %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_mcq" value="{{ q.id }}">
+                    <button type="submit" class="btn btn-link text-danger p-0"
+                        onclick="return confirm('Delete this question?')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </form>
             </div>
             {% empty %}
-            <small class="text-muted italic">No questions added for this lesson.</small>
+            <small class="text-muted fst-italic no-questions-msg">No questions added for this lesson.</small>
             {% endfor %}
         </div>
 
@@ -33,9 +44,12 @@
         </button>
 
         <div class="collapse mt-3" id="addMCQ{{ lesson.id }}">
-            <form method="post" class="bg-white p-3 rounded-3 shadow-sm border">
+            <form method="post" class="mcq-form bg-white p-3 rounded-3 shadow-sm border"
+                data-lesson-id="{{ lesson.id }}">
                 {% csrf_token %}
                 <input type="hidden" name="lesson_id" value="{{ lesson.id }}">
+                <input type="hidden" name="explanation" value="">
+                <input type="hidden" name="order" value="0">
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label small fw-bold">Question</label>
@@ -60,7 +74,8 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small fw-bold">Correct Option</label>
-                        <select name="correct_option" class="form-select form-select-sm">
+                        <select name="correct_option" class="form-select form-select-sm" required>
+                            <option value="" disabled selected>Select an option</option>
                             <option value="A">Option A</option>
                             <option value="B">Option B</option>
                             <option value="C">Option C</option>
@@ -75,6 +90,10 @@
         </div>
     </div>
 </div>
+{% empty %}
+<div class="text-center py-5">
+    <p class="text-muted">No lessons found. Please add lessons first.</p>
+</div>
 {% endfor %}
 
 <div class="d-flex justify-content-between mt-5">
@@ -85,4 +104,106 @@
         Final Step: Review <i class="fas fa-arrow-right ms-2"></i>
     </a>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get CSRF token from the form
+        function getCsrfToken() {
+            const csrfInput = document.querySelector('[name="csrfmiddlewaretoken"]');
+            return csrfInput ? csrfInput.value : '';
+        }
+
+        // Function to attach event listener (for dynamically updated forms)
+        function attachFormListener(form) {
+            if (form._listenerAttached) return;
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                handleFormSubmit(this);
+            });
+
+            form._listenerAttached = true;
+        }
+
+        // Extract form submission logic
+        function handleFormSubmit(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (!submitButton) return;
+
+            const originalButtonText = submitButton.innerHTML;
+            const formData = new FormData(form);
+
+            // Validate form
+            const questionText = form.querySelector('[name="question_text"]').value.trim();
+            const correctOption = form.querySelector('[name="correct_option"]').value;
+
+            if (!questionText || !correctOption) {
+                showToast('Please fill all required fields', 'error');
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+
+            fetch(form.action || window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                },
+                credentials: 'same-origin'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload the page to show updated content
+                        window.location.reload();
+                    } else {
+                        throw new Error(data.error || 'Failed to add question');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast(error.message || 'Failed to add question. Please try again.', 'error');
+
+                    // Re-enable button
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText;
+                });
+        }
+
+        // Handle form submission for each MCQ form
+        document.querySelectorAll('.mcq-form').forEach(form => {
+            attachFormListener(form);
+        });
+
+        // Toast notification function
+        function showToast(message, type = 'success') {
+            // Remove existing toasts
+            const existingToasts = document.querySelectorAll('.custom-toast');
+            existingToasts.forEach(toast => toast.remove());
+
+            const toast = document.createElement('div');
+            toast.className = `custom-toast alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed shadow-lg`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 250px;';
+            toast.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.3s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    });
+</script>
 {% endblock %}

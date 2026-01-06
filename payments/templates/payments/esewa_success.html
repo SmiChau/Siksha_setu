@@ -1,0 +1,22 @@
+{% extends 'core/base_public.html' %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="card border-0 shadow-sm mx-auto p-5 rounded-4" style="max-width: 500px;">
+        <div class="mb-4 text-success">
+            <i class="fas fa-check-circle fa-5x"></i>
+        </div>
+        <h2 class="fw-bold mb-3">Payment Successful!</h2>
+        <p class="text-muted mb-4">You have successfully enrolled in <strong>{{ payment.course.title }}</strong>.</p>
+
+        <div class="d-grid gap-2">
+            <a href="{% url 'courses:course_detail' payment.course.slug %}" class="btn btn-primary rounded-pill btn-lg">
+                Go to Course
+            </a>
+            <a href="{% url 'payments:payment_history' %}" class="btn btn-outline-secondary rounded-pill">
+                View Payment History
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

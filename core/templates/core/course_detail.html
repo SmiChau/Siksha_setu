@@ -9,10 +9,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="container py-5">
+<div class="course-detail-container py-4">
 
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
+    <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
                 <a href="{% url 'courses:course_list' %}">Courses</a>
@@ -29,106 +29,219 @@
     </nav>
 
     <!-- Course Header -->
-    <h1 class="fw-bold">{{ course.title }}</h1>
-    <p class="text-muted">{{ course.short_description|default:course.description|truncatewords:30 }}</p>
+    <div class="mb-4">
+        <h1 class="fw-bold mb-3">{{ course.title }}</h1>
+        <p class="lead text-muted mb-3">
+            {{ course.short_description|default:course.description|truncatewords:30 }}
+        </p>
 
-    <div class="d-flex gap-3 text-muted small flex-wrap mb-4">
-        {% if course.instructor %}
-        <span><strong>{{ course.instructor.get_full_name }}</strong></span>
-        {% endif %}
-        <span>⭐ {{ average_rating }} ({{ total_reviews }})</span>
-        <span>{{ course.enrollment_count }} Students</span>
-        <span>{{ course.language }}</span>
-        <span class="badge bg-primary">{{ course.get_level_display }}</span>
-    </div>
-
-    <div class="row g-4">
-        <!-- MAIN CONTENT -->
-        <div class="col-lg-8">
-
-            {% if enrollment and current_lesson %}
-            <div class="ratio ratio-16x9 mb-4">
-                {% if current_lesson.youtube_video_id %}
-                <iframe src="{{ current_lesson.get_youtube_embed_url }}" allowfullscreen></iframe>
-                {% endif %}
-            </div>
-            {% else %}
-            <div class="bg-primary text-white text-center rounded p-5 mb-4">
-                <h4>Enroll to start learning</h4>
+        <div class="course-header-meta">
+            {% if course.instructor %}
+            <div class="meta-item">
+                <i class="fas fa-user-tie"></i>
+                <strong>{{ course.instructor.get_full_name }}</strong>
             </div>
             {% endif %}
-
-            <!-- About -->
-            <div class="card p-4 mb-4">
-                <h4>About This Course</h4>
-                <p>{{ course.description }}</p>
+            <div class="meta-item">
+                <i class="fas fa-star"></i>
+                <span>{{ average_rating|default:"0.0" }} ({{ total_reviews|default:0 }} reviews)</span>
             </div>
+            <div class="meta-item">
+                <i class="fas fa-users"></i>
+                <span>{{ course.enrollment_count|default:0 }} students</span>
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-globe"></i>
+                <span>{{ course.language }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="badge bg-primary px-3 py-2">{{ course.get_level_display }}</span>
+            </div>
+        </div>
+    </div>
 
-            <!-- Reviews -->
-            {% if reviews %}
-            <div class="card p-4">
-                <h4>Student Reviews</h4>
-                {% for review in reviews %}
-                <div class="border-bottom pb-3 mb-3">
-                    <strong>{{ review.user.get_full_name }}</strong>
-                    <div class="text-warning">
-                        {% for i in "12345" %}
-                        {% if forloop.counter <= review.rating %}
-                        ★
-                        {% else %}
-                        ☆
-                        {% endif %}
-                        {% endfor %}
+    <!-- Video + Sidebar -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            {% if enrollment and current_lesson and current_lesson.youtube_video_id %}
+            <div class="course-video-hero">
+                <div class="video-container-native">
+
+                    <div class="custom-play-overlay" id="customPlayOverlay">
+                        <div class="play-button-circle">
+                            <div class="play-icon"></div>
+                        </div>
+                        <div class="play-overlay-text">Click to Start Learning</div>
                     </div>
-                    <p>{{ review.comment }}</p>
+
+                    <div class="video-loading" id="videoLoading">
+                        <div class="loading-spinner"></div>
+                    </div>
+
+                    <div class="video-mask-top-extended" title="Video Protected"></div>
+
+                    <div id="player"></div>
+
+                    <div id="video-error" class="video-error-native d-none">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h5>Video Unavailable</h5>
+                        <p>Unable to play this video right now.</p>
+                    </div>
+
                 </div>
-                {% endfor %}
+            </div>
+            {% else %}
+            <div class="course-video-hero">
+                <div class="video-container-native">
+                    <div class="custom-play-overlay d-flex">
+                        <div class="play-button-circle" style="background: rgba(255,255,255,0.3);">
+                            <i class="fas fa-lock text-white fs-3"></i>
+                        </div>
+                        <div class="play-overlay-text">Enroll to Start Learning</div>
+                    </div>
+                </div>
             </div>
             {% endif %}
         </div>
 
-        <!-- SIDEBAR -->
+        <!-- Sidebar -->
         <div class="col-lg-4">
-            <div class="card mb-4 p-3">
-                {% if not enrollment %}
-                    <h3 class="text-center">
-                        {% if course.is_free %}FREE{% else %}Rs. {{ course.price }}{% endif %}
-                    </h3>
-                    <a href="{% url 'courses:enroll' course.slug %}" class="btn btn-primary w-100">
-                        Enroll Now
-                    </a>
-                {% else %}
-                    <div class="alert alert-success text-center">
-                        You're enrolled
-                    </div>
-                {% endif %}
-            </div>
+            <div class="course-content-sidebar">
 
-            <!-- Lessons -->
-            <div class="card">
-                <div class="card-header fw-bold">Course Content</div>
-                <ul class="list-group list-group-flush">
-                    {% for lesson in lessons %}
+                {% if not enrollment %}
+                <div class="enrollment-card mb-3">
+                    <div class="price-tag">
+                        {% if course.is_free %}FREE{% else %}NPR {{ course.price }}{% endif %}
+                    </div>
+                    {% if course.is_free %}
+                    <a href="{% url 'courses:enroll_course' course.slug %}" class="btn btn-enroll">
+                        <i class="fas fa-graduation-cap me-2"></i>Enroll Now
+                    </a>
+                    {% else %}
+                    <a href="{% url 'payments:esewa_checkout' course.slug %}"
+                        class="btn btn-success w-100 py-2 rounded-pill fw-bold shadow-sm">
+                        <img src="{% static 'core/img/esewalogo.png' %}" alt="eSewa" height="30"
+                            class="me-2 bg-white rounded px-1">
+                        Pay with eSewa
+                    </a>
+                    <a href="{% url 'payments:khalti_initiate' course.slug %}"
+                        class="btn btn-primary w-100 py-2 rounded-pill fw-bold shadow-sm mt-2"
+                        style="background-color: #5C2D91 !important; border-color: #5C2D91 !important; color: white !important; position: relative !important; z-index: 9999 !important; pointer-events: auto !important;">
+                        <img src="{% static 'core/img/khaltilogo.png' %}" alt="Khalti" height="25"
+                            class="me-2 bg-white rounded px-1">
+                        <span>Pay with Khalti</span>
+                    </a>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="card p-3 mb-3">
+                    <div class="alert alert-success text-center mb-0">
+                        <i class="fas fa-check-circle me-2"></i>You're Enrolled
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="card course-info-card">
+                    <div class="card-header bg-white fw-bold border-0">
+                        <i class="fas fa-list-ul me-2"></i>Course Content
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for lesson in lessons %}
                         {% with progress=lesson_progress|get_item:lesson.id %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             {% if enrollment %}
-                            <a href="{% url 'courses:lesson' course.slug lesson.id %}">
-                                {{ lesson.title|truncatewords:5 }}
+                            <a href="{% url 'courses:lesson_view' course.slug lesson.id %}"
+                                class="text-decoration-none">
+                                <i class="fas fa-play-circle me-2 text-primary"></i>
+                                {{ lesson.title|truncatewords:6 }}
                             </a>
                             {% else %}
-                                {{ lesson.title|truncatewords:5 }}
+                            <span class="text-muted">
+                                <i class="fas fa-lock me-2"></i>{{ lesson.title|truncatewords:6 }}
+                            </span>
                             {% endif %}
                             {% if progress and progress.is_completed %}
-                                <span class="text-success">✔</span>
+                            <span class="badge bg-success">✓</span>
                             {% endif %}
                         </li>
                         {% endwith %}
-                    {% empty %}
-                        <li class="list-group-item text-muted text-center">No lessons yet</li>
-                    {% endfor %}
-                </ul>
+                        {% empty %}
+                        <li class="list-group-item text-center text-muted">No lessons yet</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
             </div>
         </div>
     </div>
+
+    <!-- About -->
+    <div class="card p-4 mb-4">
+        <h4>About This Course</h4>
+        <p>{{ course.description }}</p>
+    </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if enrollment and current_lesson and current_lesson.youtube_video_id %}
+<script>
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.body.appendChild(tag);
+
+    var player;
+    var playerReady = false;
+
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+            height: '100%',
+            width: '100%',
+            videoId: '{{ current_lesson.youtube_video_id }}',
+            playerVars: {
+                playsinline: 1,
+                rel: 0,
+                modestbranding: 1,
+                origin: "{{ request.scheme }}://{{ request.get_host }}"
+            },
+            events: {
+                onReady: onPlayerReady,
+                onError: onPlayerError,
+                onStateChange: onPlayerStateChange
+            }
+        });
+    }
+
+    function onPlayerReady() {
+        playerReady = true;
+        document.getElementById('videoLoading')?.classList.add('d-none');
+    }
+
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            document.getElementById('customPlayOverlay')?.classList.add('d-none');
+        }
+    }
+
+    function onPlayerError() {
+        document.getElementById('video-error')?.classList.remove('d-none');
+        document.getElementById('player')?.classList.add('d-none');
+        document.getElementById('customPlayOverlay')?.classList.add('d-none');
+        document.getElementById('videoLoading')?.classList.add('d-none');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const overlay = document.getElementById('customPlayOverlay');
+        if (overlay) {
+            overlay.addEventListener('click', function () {
+                if (playerReady) {
+                    player.playVideo();
+                    overlay.classList.add('d-none');
+                }
+            });
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

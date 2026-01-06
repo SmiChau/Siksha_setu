@@ -147,182 +147,428 @@
 
 /* --- Course Detail Page --- */
 
-.video-player-wrapper {
+/* Video Section - Updated for 16:9 aspect ratio */
+.course-video-hero {
     position: relative;
-    padding-bottom: 56.25%;
-    /* 16:9 Aspect Ratio */
-    height: 0;
-    background: #000;
-    border-radius: 15px;
+    width: 100%;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, #1a2a6c 0%, #2d3561 100%);
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
-.video-player-wrapper iframe,
-.video-player-wrapper video,
-.video-placeholder {
+/* Fixed 16:9 aspect ratio video container */
+.video-container-native {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    background: #000;
+    overflow: hidden;
+}
+
+/* YouTube player container */
+.video-container-native #player {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    border: none;
+}
+
+/* Custom Play Button Overlay */
+.custom-play-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    background: linear-gradient(135deg, rgba(26, 42, 108, 0.85) 0%, rgba(45, 53, 97, 0.85) 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.custom-play-overlay:hover {
+    background: linear-gradient(135deg, rgba(26, 42, 108, 0.75) 0%, rgba(45, 53, 97, 0.75) 100%);
+}
+
+.custom-play-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.play-button-circle {
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-size: 1.5rem;
-    background: linear-gradient(45deg, #1a2a6c, #b21f1f, #fdbb2d);
-    /* Fallback gradient */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
 }
 
-/* Sidebar Syllabus */
-.course-sidebar {
-    background: var(--white);
-    border-radius: 15px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
+.custom-play-overlay:hover .play-button-circle {
+    transform: scale(1.1);
+    background: #fff;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
 }
 
-.sidebar-header {
-    background: var(--primary-blue);
-    color: var(--white);
-    padding: 15px 20px;
-    font-weight: 700;
+.play-button-circle::before {
+    content: '';
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.lesson-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 500px;
-    overflow-y: auto;
+@keyframes pulse-ring {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1.3);
+        opacity: 0;
+    }
 }
 
-.lesson-item {
-    padding: 15px 20px;
-    border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
+.play-icon {
+    width: 0;
+    height: 0;
+    border-left: 30px solid var(--primary-blue);
+    border-top: 20px solid transparent;
+    border-bottom: 20px solid transparent;
+    margin-left: 8px;
+}
+
+.play-overlay-text {
+    margin-top: 1.5rem;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Video Loading State */
+.video-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #1a1a1a;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    transition: background 0.2s;
+    justify-content: center;
+    z-index: 5;
 }
 
-.lesson-item:hover {
-    background: #f8f9fa;
+.video-loading.hidden {
+    display: none;
 }
 
-.lesson-item.active {
-    background: rgba(78, 205, 196, 0.1);
-    /* Mint tint */
-    border-left: 4px solid var(--mint-green);
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--mint-green);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
 
-.lesson-item .fa-play-circle {
-    color: #cbd3da;
-    margin-right: 10px;
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
-.lesson-item.active .fa-play-circle {
+/* Extended Top Mask for Better YouTube Hiding */
+.video-mask-top-extended {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    z-index: 10;
+    background: transparent;
+    pointer-events: auto;
+    cursor: default;
+}
+
+/* Video Error State */
+.video-error-native {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #fff;
+    z-index: 20;
+    padding: 2rem;
+}
+
+.video-error-native i {
+    font-size: 3rem;
+    color: var(--accent-yellow);
+    margin-bottom: 1rem;
+}
+
+.video-error-native h5 {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.video-error-native p {
+    font-size: 0.9rem;
+    color: #ccc;
+    max-width: 80%;
+}
+
+/* Course Detail Specific Layout */
+.course-detail-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.course-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.course-header-meta .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    color: #6c757d;
+}
+
+.course-header-meta .meta-item i {
     color: var(--mint-green);
 }
 
-/* Comments Section */
-.comments-section {
-    margin-top: 40px;
-}
-
-.comment-input-box {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
-}
-
-.user-avatar-md {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    object-fit: cover;
-    background-color: #ddd;
-}
-
-.comment-input-wrapper {
-    flex-grow: 1;
-}
-
-.comment-input {
-    width: 100%;
-    border: none;
-    border-bottom: 2px solid #e0e0e0;
-    padding: 10px 0;
-    outline: none;
-    transition: border-color 0.3s;
-    background: transparent;
-}
-
-.comment-input:focus {
-    border-color: var(--primary-blue);
-}
-
-.comment-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 10px;
-    gap: 10px;
-}
-
-.student-comment {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 25px;
-}
-
-.comment-body h6 {
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin-bottom: 2px;
-}
-
-.comment-time {
-    font-size: 0.8rem;
-    color: #888;
-    font-weight: 400;
-    margin-left: 5px;
-}
-
-.comment-text {
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin-bottom: 8px;
+.course-header-meta .meta-item strong {
     color: var(--text-dark);
 }
 
-.comment-interactions {
-    display: flex;
-    gap: 15px;
-    font-size: 0.85rem;
-    color: #666;
+/* Course Content Sidebar */
+.course-content-sidebar {
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
 }
 
-.interaction-item {
-    cursor: pointer;
+/* Enrollment Card */
+.enrollment-card {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, #1a4d5c 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(26, 83, 92, 0.3);
+    margin-bottom: 1.5rem;
+}
+
+.enrollment-card .price-tag {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.enrollment-card .btn-enroll {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    border: none;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 5px;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
-.interaction-item:hover {
+.enrollment-card .btn-enroll:hover {
+    background: #ffd633;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 224, 102, 0.4);
+}
+
+/* Course Info Cards */
+.course-info-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.course-info-card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.course-info-card h4 {
     color: var(--primary-blue);
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
 }
 
-/* Scrollbar for lesson list */
-.lesson-list::-webkit-scrollbar {
+/* Course Content Card */
+.course-content-card {
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+.course-lessons-list {
+    overflow-y: auto;
+    max-height: 500px;
+}
+
+.course-lessons-list::-webkit-scrollbar {
     width: 6px;
 }
 
-.lesson-list::-webkit-scrollbar-thumb {
+.course-lessons-list::-webkit-scrollbar-thumb {
     background-color: #ccc;
     border-radius: 3px;
+}
+
+.course-lessons-list::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+}
+
+.lesson-title {
+    line-height: 1.4;
+    transition: color 0.2s ease;
+}
+
+.lesson-title:hover {
+    color: var(--primary-blue);
+}
+
+/* Responsive Design */
+@media (max-width: 991px) {
+    .course-video-hero {
+        margin-bottom: 1.5rem;
+        border-radius: 12px;
+    }
+    
+    .video-container-native {
+        border-radius: 12px;
+    }
+    
+    .play-button-circle {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .play-icon {
+        border-left: 24px solid var(--primary-blue);
+        border-top: 16px solid transparent;
+        border-bottom: 16px solid transparent;
+    }
+    
+    .course-content-sidebar {
+        position: relative;
+        top: 0;
+        max-height: none;
+    }
+    
+    .course-content-card {
+        max-height: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .course-detail-container {
+        padding: 0 10px;
+    }
+    
+    .course-header-meta {
+        gap: 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .video-container-native {
+        padding-bottom: 60%; /* Slightly taller on mobile */
+    }
+    
+    .enrollment-card {
+        padding: 1rem;
+    }
+    
+    .enrollment-card .price-tag {
+        font-size: 1.8rem;
+    }
+    
+    .play-button-circle {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .play-icon {
+        border-left: 20px solid var(--primary-blue);
+        border-top: 14px solid transparent;
+        border-bottom: 14px solid transparent;
+    }
+}
+
+@media (max-width: 576px) {
+    .course-thumb-wrapper {
+        height: 150px;
+    }
+    
+    .video-container-native {
+        padding-bottom: 65%; /* Even taller on small mobile */
+    }
+    
+    .play-button-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .play-icon {
+        border-left: 16px solid var(--primary-blue);
+        border-top: 12px solid transparent;
+        border-bottom: 12px solid transparent;
+    }
+    
+    .play-overlay-text {
+        font-size: 1rem;
+        margin-top: 1rem;
+    }
 }
 
 /* Pagination Styles */
@@ -354,4 +600,14 @@
 .pagination .page-item.disabled .page-link {
     background-color: transparent;
     color: #cbd3da;
+}
+
+/* Scrollbar for lesson list */
+.lesson-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.lesson-list::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
 }

@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Avg, Count
 from django.core.paginator import Paginator
 from django.utils.text import slugify
@@ -67,11 +67,23 @@ def course_list_view(request):
 
 
 def course_detail_view(request, slug):
-    course = get_object_or_404(
-        Course.objects.select_related('instructor', 'category').prefetch_related('lessons', 'reviews'),
-        slug=slug,
-        status='published'
-    )
+    if slug in ["manage", "my-courses"]:
+        raise Http404("Invalid course slug")
+
+    # If owner, they can see drafts
+    if request.user.is_authenticated and request.user.role == 'teacher':
+        course = get_object_or_404(
+            Course.objects.select_related('instructor', 'category').prefetch_related('lessons', 'reviews'),
+            slug=slug,
+            instructor=request.user
+        )
+    else:
+        # Students or public only see published
+        course = get_object_or_404(
+            Course.objects.select_related('instructor', 'category').prefetch_related('lessons', 'reviews'),
+            slug=slug,
+            status='published'
+        )
     
     Course.objects.filter(pk=course.pk).update(views_count=course.views_count + 1)
     
@@ -323,17 +335,20 @@ def my_courses_view(request):
     }
     return render(request, 'courses/my_courses.html', context)
 @login_required
+@user_passes_test(lambda u: u.role == 'teacher', login_url='core:home')
 def teacher_dashboard_view(request):
-    if request.user.role != 'teacher':
-        messages.error(request, "Access denied. Only teachers can access the management dashboard.")
-        return redirect('core:home')
     
     courses = Course.objects.filter(instructor=request.user).annotate(
         enrolled_students=Count('enrollments')
     )
     
+    published_count = courses.filter(status='published').count()
+    draft_count = courses.filter(status='draft').count()
+    
     context = {
         'courses': courses,
+        'published_count': published_count,
+        'draft_count': draft_count,
     }
     return render(request, 'courses/teacher_dashboard.html', context)
 
@@ -355,6 +370,8 @@ def course_create_step1_view(request, slug=None):
             course.save()
             messages.success(request, "Step 1: Course details saved.")
             return redirect('courses:course_edit_step2', slug=course.slug)
+        else:
+            messages.warning(request, "Please correct the errors below to proceed.")
     else:
         from .forms import CourseDetailsForm
         form = CourseDetailsForm(instance=course)
@@ -373,6 +390,13 @@ def course_create_step2_view(request, slug):
     
     from .forms import LessonForm
     if request.method == 'POST':
+        if 'delete_lesson' in request.POST:
+            lesson_id = request.POST.get('delete_lesson')
+            lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
+            lesson.delete()
+            messages.success(request, "Lesson deleted.")
+            return redirect('courses:course_edit_step2', slug=course.slug)
+        
         form = LessonForm(request.POST)
         if form.is_valid():
             lesson = form.save(commit=False)
@@ -399,6 +423,13 @@ def course_create_step3_view(request, slug):
     
     from .forms import LessonResourceForm
     if request.method == 'POST':
+        if 'delete_resource' in request.POST:
+            resource_id = request.POST.get('delete_resource')
+            resource = get_object_or_404(LessonResource, id=resource_id, lesson__course=course)
+            resource.delete()
+            messages.success(request, "Resource deleted.")
+            return redirect('courses:course_edit_step3', slug=course.slug)
+
         lesson_id = request.POST.get('lesson_id')
         lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
         form = LessonResourceForm(request.POST, request.FILES)
@@ -423,16 +454,49 @@ def course_create_step4_view(request, slug):
     course = get_object_or_404(Course, slug=slug, instructor=request.user)
     
     from .forms import MCQQuestionForm
+    from django.http import JsonResponse
+    
     if request.method == 'POST':
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('X-CSRFToken')
+        
+        if 'delete_mcq' in request.POST:
+            mcq_id = request.POST.get('delete_mcq')
+            mcq = get_object_or_404(MCQQuestion, id=mcq_id, lesson__course=course)
+            mcq.delete()
+            messages.success(request, "Question deleted.")
+            
+            if is_ajax:
+                return JsonResponse({'success': True, 'message': 'Question deleted successfully'})
+            return redirect('courses:course_edit_step4', slug=course.slug)
+
         lesson_id = request.POST.get('lesson_id')
         lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
         form = MCQQuestionForm(request.POST)
+        
         if form.is_valid():
             mcq = form.save(commit=False)
             mcq.lesson = lesson
             mcq.save()
             messages.success(request, f"MCQ added to {lesson.title}.")
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'MCQ added to {lesson.title}',
+                    'mcq_count': lesson.mcq_questions.count()
+                })
             return redirect('courses:course_edit_step4', slug=course.slug)
+        else:
+            # Form validation failed
+            if is_ajax:
+                errors = {field: error[0] for field, error in form.errors.items()}
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Validation failed',
+                    'errors': errors
+                }, status=400)
+            # For non-AJAX, continue to render with errors
             
     lessons = course.lessons.all().prefetch_related('mcq_questions')
     context = {

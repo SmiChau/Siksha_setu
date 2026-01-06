@@ -59,9 +59,10 @@ class Payment(models.Model):
         self.save()
         
         from courses.models import Enrollment
-        Enrollment.objects.get_or_create(
+        Enrollment.objects.update_or_create(
             student=self.user,
-            course=self.course
+            course=self.course,
+            defaults={'is_paid': True}
         )
     
     def mark_failed(self, gateway_response=None):

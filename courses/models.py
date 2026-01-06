@@ -156,7 +156,7 @@ class Lesson(models.Model):
     youtube_video_id = models.CharField(
         max_length=20,
         blank=True,
-        help_text='YouTube video ID (e.g., dQw4w9WgXcQ)'
+        help_text='YouTube video ID (e.g., dQw4w9WgXcQ) or full URL'
     )
     video_duration = models.PositiveIntegerField(default=0, help_text='Duration in minutes')
     
@@ -171,10 +171,34 @@ class Lesson(models.Model):
     
     def __str__(self):
         return f"{self.course.title} - {self.title}"
+
+    def clean(self):
+        """Sanitize YouTube ID before saving."""
+        if self.youtube_video_id:
+            import re
+            # Regex to catch:
+            # - youtube.com/watch?v=ID
+            # - youtube.com/embed/ID
+            # - youtu.be/ID
+            # - youtube.com/v/ID
+            # - youtube.com/shorts/ID
+            pattern = r'(?:v=|\/)([0-9A-Za-z_-]{11}).*'
+            match = re.search(pattern, self.youtube_video_id)
+            if match:
+                self.youtube_video_id = match.group(1)
+            # If no match but it's 11 chars, assume it's already an ID
+            # If not 11 chars and no match, it might be invalid, but we'll leave it 
+            # for the frontend error handler or admin validation to catch strictly if needed.
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
     
     def get_youtube_embed_url(self):
         if self.youtube_video_id:
-            return f"https://www.youtube.com/embed/{self.youtube_video_id}?rel=0&modestbranding=1"
+            # Using youtube-nocookie.com for privacy and adding enablejsapi=1 for error handling
+            return f"https://www.youtube-nocookie.com/embed/{self.youtube_video_id}?rel=0&modestbranding=1&enablejsapi=1"
         return None
 
 
@@ -238,6 +262,7 @@ class Enrollment(models.Model):
         related_name='enrollments'
     )
     
+    is_paid = models.BooleanField(default=False)
     enrolled_at = models.DateTimeField(auto_now_add=True)
     is_completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)

@@ -32,6 +32,18 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Payment Gateway Configuration
+# Khalti ePayment API v2
+KHALTI_PUBLIC_KEY = os.getenv('KHALTI_PUBLIC_KEY', '')
+KHALTI_SECRET_KEY = os.getenv('KHALTI_SECRET_KEY', '')
+KHALTI_INITIATE_URL = os.getenv('KHALTI_INITIATE_URL', 'https://a.khalti.com/api/v2/epayment/initiate/')
+KHALTI_VERIFY_URL = os.getenv('KHALTI_VERIFY_URL', 'https://a.khalti.com/api/v2/epayment/lookup/')
+
+# eSewa Configuration (RC/Test)
+ESEWA_MERCHANT_CODE = os.getenv('ESEWA_MERCHANT_CODE', 'EPAYTEST')
+ESEWA_SECRET_KEY = os.getenv('ESEWA_SECRET_KEY', '8gBm/:&EnhH.1/q')
+ESEWA_FORM_URL = os.getenv('ESEWA_FORM_URL', 'https://rc-epay.esewa.com.np/api/epay/main/v2/form')
+
 
 # Application definition
 

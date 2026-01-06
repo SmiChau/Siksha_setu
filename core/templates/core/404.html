@@ -1,0 +1,36 @@
+{% extends "core/base_public.html" %}
+
+{% block title %}404 - Page Not Found | SikshaSetu{% endblock %}
+
+{% block content %}
+<div class="container py-5 my-5 text-center">
+    <div class="mb-4">
+        <div class="bg-warning-subtle text-warning rounded-circle d-inline-flex align-items-center justify-content-center"
+            style="width: 120px; height: 120px;">
+            <i class="fas fa-exclamation-triangle fa-4x"></i>
+        </div>
+    </div>
+    <h1 class="display-5 fw-bold mb-3">Oops! Course Not Found</h1>
+    <p class="lead text-muted mb-5 mx-auto" style="max-width: 600px;">
+        The course you are looking for might have been moved, deleted, or is currently unpublished by the instructor.
+    </p>
+    <div class="d-flex justify-content-center gap-3">
+        <a href="{% url 'core:home_public' %}" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
+            <i class="fas fa-home me-2"></i> Back to Home
+        </a>
+        <a href="{% url 'courses:course_list' %}" class="btn btn-outline-primary btn-lg rounded-pill px-5">
+            <i class="fas fa-book-open me-2"></i> Browse Courses
+        </a>
+    </div>
+</div>
+
+<style>
+    .bg-warning-subtle {
+        background-color: #fff3cd !important;
+    }
+
+    .text-warning {
+        color: #856404 !important;
+    }
+</style>
+{% endblock %}

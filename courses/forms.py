@@ -45,9 +45,31 @@ class CourseDetailsForm(forms.ModelForm):
             if self.instance.requirements:
                 self.initial['requirements_raw'] = '\n'.join(self.instance.requirements)
 
+        # Add form-control class and is-invalid if field has errors
+        for field_name, field in self.fields.items():
+            classes = field.widget.attrs.get('class', '')
+            if 'form-control' not in classes and 'form-check-input' not in classes and 'form-select' not in classes:
+                if isinstance(field.widget, (forms.Select, forms.RadioSelect)):
+                    if not isinstance(field.widget, forms.RadioSelect):
+                        field.widget.attrs['class'] = f"{classes} form-select".strip()
+                else:
+                    field.widget.attrs['class'] = f"{classes} form-control".strip()
+            
+            if self.errors.get(field_name):
+                classes = field.widget.attrs.get('class', '')
+                if 'is-invalid' not in classes:
+                    field.widget.attrs['class'] = f"{classes} is-invalid".strip()
+
     def save(self, commit=True):
         instance = super().save(commit=False)
-        instance.slug = slugify(instance.title)
+        if not instance.slug:
+            slug = slugify(instance.title)
+            unique_slug = slug
+            counter = 1
+            while Course.objects.filter(slug=unique_slug).exists():
+                unique_slug = f"{slug}-{counter}"
+                counter += 1
+            instance.slug = unique_slug
         
         # Process what_you_learn
         learn_raw = self.cleaned_data.get('what_you_learn_raw', '')
@@ -73,10 +95,47 @@ class LessonForm(forms.ModelForm):
             'video_duration': 'Estimated duration in minutes.',
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add is-invalid class if field has errors
+        for field_name, field in self.fields.items():
+            if self.errors.get(field_name):
+                classes = field.widget.attrs.get('class', '')
+                if 'is-invalid' not in classes:
+                    field.widget.attrs['class'] = f"{classes} is-invalid".strip()
+
+    def clean_youtube_video_id(self):
+        video_id = self.cleaned_data.get('youtube_video_id')
+        if not video_id:
+            return video_id
+        
+        # Extract ID from various YouTube URL formats
+        import re
+        patterns = [
+            r'(?:v=|\/embed\/|\/1\/|\/v\/|youtu\.be\/|\/v=)([a-zA-Z0-9_-]{11})',
+            r'(?:^|[\/|=])([a-zA-Z0-9_-]{11})(?:$|[?&])', # 11-char ID surrounded by separators
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, video_id)
+            if match:
+                return match.group(1)
+        
+        return video_id
+
 class LessonResourceForm(forms.ModelForm):
     class Meta:
         model = LessonResource
         fields = ['title', 'resource_type', 'file', 'external_url']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add is-invalid class if field has errors
+        for field_name, field in self.fields.items():
+            if self.errors.get(field_name):
+                classes = field.widget.attrs.get('class', '')
+                if 'is-invalid' not in classes:
+                    field.widget.attrs['class'] = f"{classes} is-invalid".strip()
 
 class MCQQuestionForm(forms.ModelForm):
     class Meta:
@@ -86,3 +145,12 @@ class MCQQuestionForm(forms.ModelForm):
             'question_text': forms.Textarea(attrs={'rows': 3}),
             'explanation': forms.Textarea(attrs={'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add is-invalid class if field has errors
+        for field_name, field in self.fields.items():
+            if self.errors.get(field_name):
+                classes = field.widget.attrs.get('class', '')
+                if 'is-invalid' not in classes:
+                    field.widget.attrs['class'] = f"{classes} is-invalid".strip()

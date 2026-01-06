@@ -5,12 +5,15 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-1 fw-bold">Teacher Dashboard</h1>
+            <h1 class="h3 mb-1 fw-bold" style="color: var(--primary-blue);">Teacher Dashboard</h1>
             <p class="text-muted">Manage your courses and track student engagement.</p>
         </div>
-        <a href="{% url 'courses:course_create_start' %}" class="btn btn-primary rounded-pill px-4">
+        <a href="{% url 'courses:course_create_start' %}" 
+           class="btn btn-primary rounded-pill px-4 py-2"
+           style="background-color: var(--mint-green); border-color: var(--mint-green);">
             <i class="fas fa-plus me-2"></i> Create New Course
         </a>
     </div>
@@ -18,21 +21,58 @@
     <!-- Stats Overview -->
     <div class="row g-3 mb-5">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 rounded-4 bg-primary text-white">
+            <div class="card border-0 shadow-sm p-3 rounded-4 text-white"
+                 style="background: linear-gradient(135deg, var(--primary-blue) 0%, #1a4d5c 100%);">
                 <p class="mb-0 small opacity-75">Total Courses</p>
                 <h2 class="mb-0 fw-bold">{{ courses.count }}</h2>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 rounded-4 bg-success text-white">
+            <div class="card border-0 shadow-sm p-3 rounded-4 text-white"
+                 style="background: linear-gradient(135deg, var(--mint-green) 0%, #3dbdb3 100%);">
                 <p class="mb-0 small opacity-75">Published</p>
-                <h2 class="mb-0 fw-bold">{{ courses.filter.status == 'published'|length }}</h2>
+                <h2 class="mb-0 fw-bold">{{ published_count }}</h2>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 rounded-4 bg-info text-white">
+            <div class="card border-0 shadow-sm p-3 rounded-4 text-white"
+                 style="background: linear-gradient(135deg, var(--accent-yellow) 0%, #e6c200 100%);">
                 <p class="mb-0 small opacity-75">Drafts</p>
-                <h2 class="mb-0 fw-bold">{{ courses.filter.status == 'draft'|length }}</h2>
+                <h2 class="mb-0 fw-bold">{{ draft_count }}</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 rounded-4 text-white"
+                 style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                <p class="mb-0 small opacity-75">Total Students</p>
+                <h2 class="mb-0 fw-bold">{{ total_students|default:"0" }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 p-3">
+                <h6 class="fw-bold mb-3" style="color: var(--primary-blue);">Quick Actions</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'courses:course_list' %}" class="btn btn-outline-primary rounded-pill px-3"
+                       style="border-color: var(--mint-green); color: var(--mint-green);">
+                        <i class="fas fa-search me-1"></i> Browse All Courses
+                    </a>
+                    <a href="#" class="btn btn-outline-primary rounded-pill px-3"
+                       style="border-color: var(--mint-green); color: var(--mint-green);">
+                        <i class="fas fa-chart-line me-1"></i> View Analytics
+                    </a>
+                    <a href="#" class="btn btn-outline-primary rounded-pill px-3"
+                       style="border-color: var(--mint-green); color: var(--mint-green);">
+                        <i class="fas fa-comments me-1"></i> Student Messages
+                    </a>
+                    <a href="#" class="btn btn-outline-primary rounded-pill px-3"
+                       style="border-color: var(--mint-green); color: var(--mint-green);">
+                        <i class="fas fa-file-invoice-dollar me-1"></i> Earnings
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -40,7 +80,13 @@
     <!-- Course List -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-header bg-white py-3 border-0">
-            <h5 class="mb-0 fw-bold">My Courses</h5>
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold" style="color: var(--primary-blue);">My Courses</h5>
+                <span class="badge rounded-pill px-3 py-1" 
+                      style="background-color: rgba(78, 205, 196, 0.1); color: var(--mint-green);">
+                    {{ courses.count }} Total
+                </span>
+            </div>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -50,51 +96,104 @@
                         <th>Category</th>
                         <th>Status</th>
                         <th>Students</th>
-                        <th>Ranking</th>
+                        <th>Rating</th>
                         <th class="pe-4 text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for course in courses %}
-                    <tr>
+                    <tr class="course-row">
                         <td class="ps-4">
                             <div class="d-flex align-items-center">
-                                <img src="{{ course.get_thumbnail }}" class="rounded-3 me-3"
-                                    style="width: 50px; height: 50px; object-fit: cover;">
+                                <div class="course-thumb-container me-3">
+                                    <img src="{{ course.get_thumbnail }}" class="rounded-3"
+                                         style="width: 60px; height: 60px; object-fit: cover;"
+                                         alt="{{ course.title }} thumbnail">
+                                    {% if not course.is_free %}
+                                    <span class="price-badge">₹{{ course.price }}</span>
+                                    {% endif %}
+                                </div>
                                 <div>
-                                    <p class="mb-0 fw-bold">{{ course.title }}</p>
-                                    <small class="text-muted">{{ course.get_level_display }}</small>
+                                    <p class="mb-0 fw-bold" style="color: var(--primary-blue);">{{ course.title }}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-chart-bar me-1"></i>{{ course.get_level_display }}
+                                        • {{ course.created_at|date:"M d, Y" }}
+                                    </small>
                                 </div>
                             </div>
                         </td>
-                        <td>{{ course.category.name|default:"Uncategorized" }}</td>
                         <td>
-                            <span
-                                class="badge rounded-pill {% if course.status == 'published' %}bg-success-subtle text-success{% elif course.status == 'draft' %}bg-warning-subtle text-warning{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                            {% if course.category %}
+                            <span class="badge rounded-pill px-3 py-1" 
+                                  style="background-color: rgba(26, 83, 92, 0.1); color: var(--primary-blue);">
+                                {{ course.category.name }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">Uncategorized</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill px-3 py-1 
+                                {% if course.status == 'published' %}
+                                    bg-success bg-opacity-10 text-success
+                                {% elif course.status == 'draft' %}
+                                    bg-warning bg-opacity-10 text-warning
+                                {% else %}
+                                    bg-secondary bg-opacity-10 text-secondary
+                                {% endif %}">
+                                <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>
                                 {{ course.get_status_display }}
                             </span>
                         </td>
-                        <td>{{ course.enrolled_students }}</td>
-                        <td><small class="fw-bold">{{ course.calculate_weighted_score }}</small></td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-users me-2 text-muted"></i>
+                                <span class="fw-bold">{{ course.enrolled_students|default:"0" }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-star text-warning me-1"></i>
+                                <span class="fw-bold">{{ course.get_average_rating|default:"0.0"|floatformat:1 }}</span>
+                                <small class="text-muted ms-1">({{ course.reviews.count|default:"0" }})</small>
+                            </div>
+                        </td>
                         <td class="pe-4 text-end">
                             <div class="dropdown">
-                                <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
+                                <button class="btn btn-sm rounded-circle action-btn" 
+                                        data-bs-toggle="dropdown"
+                                        style="width: 32px; height: 32px; border: 1px solid #dee2e6;">
                                     <i class="fas fa-ellipsis-v"></i>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
-                                    <li><a class="dropdown-item"
-                                            href="{% url 'courses:course_edit_step1' course.slug %}"><i
-                                                class="fas fa-edit me-2"></i> Edit Course</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'courses:course_detail' course.slug %}"><i
-                                                class="fas fa-eye me-2"></i> View Public Page</a></li>
                                     <li>
-                                        <hr class="dropdown-divider">
+                                        <a class="dropdown-item" href="{% url 'courses:course_edit_step1' course.slug %}">
+                                            <i class="fas fa-edit me-2 text-primary"></i> Edit Course
+                                        </a>
                                     </li>
-                                    <li><a class="dropdown-item text-danger"
-                                            href="{% url 'courses:course_delete' course.slug %}"
-                                            onclick="return confirm('Are you sure you want to delete this course?')">
-                                            <i class="fas fa-trash-alt me-2"></i> Delete
-                                        </a></li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'courses:course_detail' course.slug %}">
+                                            <i class="fas fa-eye me-2 text-info"></i> View Public Page
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#">
+                                            <i class="fas fa-chart-line me-2 text-success"></i> View Analytics
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#">
+                                            <i class="fas fa-users me-2 text-warning"></i> Manage Students
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" 
+                                           href="{% url 'courses:course_delete' course.slug %}"
+                                           onclick="return confirm('Are you sure you want to delete this course? This action cannot be undone.')">
+                                            <i class="fas fa-trash-alt me-2"></i> Delete Course
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </td>
@@ -102,7 +201,16 @@
                     {% empty %}
                     <tr>
                         <td colspan="6" class="text-center py-5">
-                            <p class="text-muted mb-0">No courses created yet. Start by creating one!</p>
+                            <div class="py-4">
+                                <i class="fas fa-book-open fa-3x text-muted mb-3 opacity-25"></i>
+                                <h5 class="text-muted mb-2">No courses created yet</h5>
+                                <p class="text-muted mb-3">Start by creating your first course!</p>
+                                <a href="{% url 'courses:course_create_start' %}" 
+                                   class="btn btn-primary rounded-pill px-4"
+                                   style="background-color: var(--mint-green); border-color: var(--mint-green);">
+                                    <i class="fas fa-plus me-2"></i> Create First Course
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -111,4 +219,42 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .course-row:hover {
+        background-color: rgba(78, 205, 196, 0.05);
+    }
+    
+    .course-thumb-container {
+        position: relative;
+    }
+    
+    .price-badge {
+        position: absolute;
+        bottom: -5px;
+        right: -5px;
+        background: var(--accent-yellow);
+        color: var(--text-dark);
+        font-size: 0.7rem;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .action-btn {
+        transition: all 0.2s ease;
+    }
+    
+    .action-btn:hover {
+        background-color: rgba(78, 205, 196, 0.1);
+        border-color: var(--mint-green);
+    }
+    
+    .dropdown-item:hover {
+        background-color: rgba(78, 205, 196, 0.1);
+    }
+</style>
 {% endblock %}

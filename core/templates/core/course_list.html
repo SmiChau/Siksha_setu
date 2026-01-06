@@ -51,34 +51,46 @@
             {% for course in courses %}
             <div class="col-md-6 col-lg-4 col-xl-3">
                 <div class="card course-card-grid h-100">
-                    <div class="course-thumb-wrapper">
-                        <span class="course-badge text-decoration-none {% if course.level == 'beginner' %}bg-success{% elif course.level == 'intermediate' %}bg-warning{% else %}bg-danger{% endif %}">{{ course.get_level_display }}</span>
-                        <img src="{{ course.get_thumbnail }}" class="course-thumb"
-                            alt="{{ course.title }} Thumbnail">
+                    <div class="course-thumb-wrapper position-relative">
+                        <span class="course-badge position-absolute top-0 start-0 m-2 
+                            {% if course.level == 'beginner' %}bg-success
+                            {% elif course.level == 'intermediate' %}bg-warning
+                            {% else %}bg-danger{% endif %}">
+                            {{ course.get_level_display }}
+                        </span>
+                        <img src="{{ course.get_thumbnail }}" class="course-thumb" alt="{{ course.title }} Thumbnail">
                     </div>
                     <div class="card-body course-content d-flex flex-column">
                         <h5 class="card-title fw-bold mb-2">{{ course.title }}</h5>
-                        <div class="course-instructor">
+                        <div class="course-instructor d-flex align-items-center mb-2">
                             {% if course.instructor.profile_picture %}
-                            <img src="{{ course.instructor.profile_picture.url }}" class="instructor-avatar-sm" alt="Instructor">
+                            <img src="{{ course.instructor.profile_picture.url }}" class="instructor-avatar-sm me-2"
+                                alt="Instructor {{ course.instructor.get_full_name }}">
                             {% else %}
-                            <img src="https://placehold.co/50/50?text={{ course.instructor.get_short_name|first }}" class="instructor-avatar-sm" alt="Instructor">
+                            <div class="instructor-avatar-sm me-2 bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white"
+                                style="width: 30px; height: 30px;">
+                                {{ course.instructor.get_short_name|first }}
+                            </div>
                             {% endif %}
-                            <span>{{ course.instructor.get_full_name }}</span>
+                            <span class="small">{{ course.instructor.get_full_name }}</span>
                         </div>
-                        <div class="course-rating">
+                        <div class="course-rating mb-2">
                             <i class="fas fa-star text-warning"></i>
-                            <span class="fw-bold">{{ course.get_average_rating }}</span>
-                            <span class="text-muted ms-1">({{ course.reviews.count }})</span>
+                            <span class="fw-bold ms-1">{{ course.get_average_rating|default:"0.0" }}</span>
+                            <span class="text-muted ms-1">({{ course.reviews.count|default:0 }})</span>
                         </div>
-                        <p class="card-text text-muted small flex-grow-1">{{ course.short_description|truncatechars:100 }}</p>
-                        <div class="course-meta">
-                            <span><i class="far fa-clock me-1"></i> {{ course.total_duration }} min</span>
-                            <span><i class="fas fa-video me-1"></i> {{ course.lessons.count }} Lessons</span>
+                        <p class="card-text text-muted small flex-grow-1">{{ course.short_description|truncatechars:100|default:"No description available" }}</p>
+                        <div class="course-meta d-flex justify-content-between text-muted small mt-2">
+                            <span><i class="far fa-clock me-1"></i> {{ course.total_duration|default:"0" }} min</span>
+                            <span><i class="fas fa-video me-1"></i> {{ course.lessons.count|default:"0" }} Lessons</span>
                         </div>
-                        <a href="{% url 'courses:course_detail' course.slug %}"
-                            class="btn btn-view-course w-100 mt-3 rounded-pill">View
-                            Course</a>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <h5 class="text-primary mb-0 fw-bold">
+                                {% if course.is_free %}Free{% else %}₹{{ course.price }}{% endif %}
+                            </h5>
+                            <a href="{% url 'courses:course_detail' course.slug %}"
+                                class="btn btn-view-course rounded-pill">View Course</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -91,15 +103,43 @@
         </div>
 
         <!-- Pagination -->
+        {% if courses.paginator.num_pages > 1 %}
         <nav class="mt-5 d-flex justify-content-center">
             <ul class="pagination">
-                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                <li class="page-item"><a class="page-link" href="#">Next</a></li>
+                {% if courses.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ courses.previous_page_number }}">Previous</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+                {% endif %}
+
+                {% for num in courses.paginator.page_range %}
+                    {% if courses.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > courses.number|add:'-3' and num < courses.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if courses.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ courses.next_page_number }}">Next</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next</span>
+                </li>
+                {% endif %}
             </ul>
         </nav>
+        {% endif %}
     </div>
 </section>
 {% endblock %}

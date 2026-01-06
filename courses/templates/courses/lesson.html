@@ -5,39 +5,6 @@
 
 {% block extra_css %}
 <style>
-    .video-container {
-        position: relative;
-        padding-bottom: 56.25%;
-        /* 16:9 */
-        height: 0;
-        overflow: hidden;
-        background: #000;
-        border-radius: 12px;
-    }
-
-    .video-container iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: auto;
-    }
-
-    /* Simple deterrent for right-click on video overlay if needed, 
-       but direct iframe right-click is hard to block without complex JS. 
-       We'll use a transparent overlay for basic deterrent. */
-    .video-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 10;
-        pointer-events: none;
-        /* Allows interacting with iframe but we can use JS to block right click on parent */
-    }
-
     .lesson-sidebar {
         height: calc(100vh - 100px);
         overflow-y: auto;
@@ -45,6 +12,10 @@
 
     .mcq-card {
         border-left: 4px solid var(--bs-primary);
+    }
+    
+    .hidden {
+        display: none !important;
     }
 </style>
 {% endblock %}
@@ -55,12 +26,32 @@
         <!-- Main Content -->
         <div class="col-lg-8">
             <!-- Video Player -->
-            <div class="video-container shadow-lg mb-4" id="video-wrapper">
+            <div class="video-container-native lesson-mode shadow-lg mb-4" id="video-wrapper">
                 {% if lesson.youtube_video_id %}
-                <iframe src="{{ lesson.get_youtube_embed_url }}" frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen></iframe>
-                <div class="video-overlay"></div>
+
+                <!-- Custom Play Button Overlay -->
+                <div class="custom-play-overlay" id="customPlayOverlay">
+                    <div class="play-button-circle">
+                        <div class="play-icon"></div>
+                    </div>
+                    <div class="play-overlay-text">Start Lesson</div>
+                </div>
+
+                <!-- Loading State -->
+                <div class="video-loading" id="videoLoading">
+                    <div class="loading-spinner"></div>
+                </div>
+
+                <!-- Extended Interaction Mask (80px) -->
+                <div class="video-mask-top-extended" title="Video Protected"></div>
+
+                <div id="player"></div>
+
+                <div id="video-error" class="video-error-native d-none">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h5>Video Unavailable</h5>
+                    <p>We're unable to play this video right now. It may have been removed or is restricted.</p>
+                </div>
                 {% else %}
                 <div class="d-flex align-items-center justify-content-center h-100 text-white">
                     <p>No video available for this lesson.</p>
@@ -106,10 +97,6 @@
                 <div class="card mcq-card border-0 shadow-sm rounded-4 p-4 mb-3" id="q{{ q.id }}">
                     <p class="fw-bold mb-3">{{ forloop.counter }}. {{ q.question_text }}</p>
                     <div class="row g-2">
-                        {% for opt, label in
-                        "A,B,C,D"|make_list|zip_list:"option_a,option_b,option_c,option_d"|make_list %}
-                        <!-- This logic needs careful template tag handling, simplified for direct rendering -->
-                        {% endfor %}
 
                         <div class="col-md-6">
                             <button class="btn btn-outline-primary w-100 text-start py-3 px-4 rounded-3 mcq-opt"
@@ -165,45 +152,137 @@
 
 <script>
     // Video Security Deterrents
-    document.getElementById('video-wrapper').addEventListener('contextmenu', function (e) {
-        e.preventDefault();
-        alert('Downloading videos is prohibited for security reasons.');
-    });
+    const videoWrapper = document.getElementById('video-wrapper');
+    if (videoWrapper) {
+        videoWrapper.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            // Optional: show a subtle toast instead of alert
+        });
+    }
 
-    // MCQ Submission Logic
-    document.querySelectorAll('.mcq-opt').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const qId = this.dataset.q;
-            const opt = this.dataset.opt;
-            const card = document.getElementById('q' + qId);
-            const feedback = card.querySelector('.feedback-box');
-            const alert = feedback.querySelector('.alert');
+    // YouTube IFrame API
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-            // Disable all options for this question
-            card.querySelectorAll('.mcq-opt').forEach(b => b.classList.add('disabled'));
+    var player;
+    var playerReady = false;
 
-            // Submit via Ajax
-            const formData = new FormData();
-            formData.append('option', opt);
-            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    function onYouTubeIframeAPIReady() {
+        if ("{{ lesson.youtube_video_id|escapejs }}") {
+            player = new YT.Player('player', {
+                height: '100%',
+                width: '100%',
+                videoId: '{{ lesson.youtube_video_id|escapejs }}',
+                playerVars: {
+                    'playsinline': 1,
+                    'rel': 0,
+                    'modestbranding': 1,
+                    'enablejsapi': 1,
+                    'origin': window.location.origin,
+                    'fs': 1,
+                    'iv_load_policy': 3,
+                    'cc_load_policy': 0,
+                    'disablekb': 0
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onError': onPlayerError,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+    }
 
-            fetch(`/courses/{{ course.slug }}/lesson/{{ lesson.id }}/mcq/${qId}/submit/`, {
-                method: 'POST',
-                body: formData
-            })
-                .then(res => res.json())
-                .then(data => {
-                    feedback.classList.remove('d-none');
-                    if (data.is_correct) {
-                        this.classList.replace('btn-outline-primary', 'btn-success');
-                        alert.className = 'alert alert-success mb-0 small';
-                        alert.innerHTML = '<strong>Correct!</strong> Well done.';
-                    } else {
-                        this.classList.replace('btn-outline-primary', 'btn-danger');
-                        alert.className = 'alert alert-danger mb-0 small';
-                        alert.innerHTML = `<strong>Incorrect.</strong> Correct answer was ${data.correct_option}. <br> ${data.explanation || ''}`;
-                    }
-                });
+    function onPlayerReady(event) {
+        playerReady = true;
+        // Hide loading spinner
+        const loadingEl = document.getElementById('videoLoading');
+        if (loadingEl) {
+            loadingEl.classList.add('hidden');
+        }
+    }
+
+    function onPlayerStateChange(event) {
+        // Hide custom overlay when video starts playing
+        if (event.data === YT.PlayerState.PLAYING) {
+            const overlay = document.getElementById('customPlayOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        }
+    }
+
+    function onPlayerError(event) {
+        // Errors: 2 (invalid param), 5 (HTML5 error), 100 (not found/removed), 101/150 (not embeddable)
+        console.error("YouTube Player Error:", event.data);
+        const errorBox = document.getElementById('video-error');
+        const playerEl = document.getElementById('player');
+        const overlay = document.getElementById('customPlayOverlay');
+        const loading = document.getElementById('videoLoading');
+
+        if (errorBox && playerEl) {
+            errorBox.classList.remove('d-none');
+            playerEl.classList.add('d-none');
+            if (overlay) overlay.classList.add('hidden');
+            if (loading) loading.classList.add('hidden');
+        }
+    }
+
+    // Custom Play Button Handler
+    document.addEventListener('DOMContentLoaded', function () {
+        const playOverlay = document.getElementById('customPlayOverlay');
+        if (playOverlay && "{{ lesson.youtube_video_id|escapejs }}") {
+            playOverlay.addEventListener('click', function () {
+                if (playerReady && player) {
+                    player.playVideo();
+                    this.classList.add('hidden');
+                }
+            });
+        }
+
+        // MCQ Submission Logic
+        document.querySelectorAll('.mcq-opt').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const qId = this.dataset.q;
+                const opt = this.dataset.opt;
+                const card = document.getElementById('q' + qId);
+                const feedback = card.querySelector('.feedback-box');
+                const alertDiv = feedback.querySelector('.alert');
+
+                // Disable all options for this question
+                card.querySelectorAll('.mcq-opt').forEach(b => b.classList.add('disabled'));
+
+                // Submit via Ajax
+                const formData = new FormData();
+                formData.append('option', opt);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch(`/courses/{{ course.slug }}/lesson/{{ lesson.id }}/mcq/${qId}/submit/`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        feedback.classList.remove('d-none');
+                        if (data.is_correct) {
+                            this.classList.replace('btn-outline-primary', 'btn-success');
+                            alertDiv.className = 'alert alert-success mb-0 small';
+                            alertDiv.innerHTML = '<strong>Correct!</strong> Well done.';
+                        } else {
+                            this.classList.replace('btn-outline-primary', 'btn-danger');
+                            alertDiv.className = 'alert alert-danger mb-0 small';
+                            alertDiv.innerHTML = `<strong>Incorrect.</strong> Correct answer was ${data.correct_option}. <br> ${data.explanation || ''}`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error submitting MCQ:', error);
+                        feedback.classList.remove('d-none');
+                        alertDiv.className = 'alert alert-danger mb-0 small';
+                        alertDiv.innerHTML = '<strong>Error!</strong> Could not submit answer.';
+                    });
+            });
         });
     });
 </script>

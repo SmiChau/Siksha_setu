@@ -24,9 +24,14 @@
             </div>
             <div class="text-end">
                 {% if lesson.is_preview %}<span class="badge bg-info-subtle text-info me-2">Preview</span>{% endif %}
-                <button class="btn btn-sm btn-outline-danger border-0">
-                    <i class="fas fa-trash"></i>
-                </button>
+                <form action="{% url 'courses:course_edit_step2' course.slug %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_lesson" value="{{ lesson.id }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger border-0"
+                        onclick="return confirm('Delete this lesson and all its content?')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
             </div>
         </div>
     </div>

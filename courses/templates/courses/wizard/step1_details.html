@@ -6,38 +6,61 @@
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger mb-4">
+        {% for error in form.non_field_errors %}
+        {{ error }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="row g-4">
         <div class="col-md-12">
             <label class="form-label fw-bold">Course Title</label>
             {{ form.title }}
             {% if form.title.errors %}
-            <div class="text-danger small">{{ form.title.errors }}</div>
+            <div class="text-danger small">{{ form.title.errors|join:", " }}</div>
             {% endif %}
         </div>
 
         <div class="col-md-6">
             <label class="form-label fw-bold">Category</label>
             {{ form.category }}
+            {% if form.category.errors %}
+            <div class="text-danger small">{{ form.category.errors|join:", " }}</div>
+            {% endif %}
         </div>
 
         <div class="col-md-6">
             <label class="form-label fw-bold">Difficulty Level</label>
             {{ form.level }}
+            {% if form.level.errors %}
+            <div class="text-danger small">{{ form.level.errors|join:", " }}</div>
+            {% endif %}
         </div>
 
         <div class="col-md-12">
             <label class="form-label fw-bold">Description</label>
             {{ form.description }}
+            {% if form.description.errors %}
+            <div class="text-danger small">{{ form.description.errors|join:", " }}</div>
+            {% endif %}
         </div>
 
         <div class="col-md-12">
             <label class="form-label fw-bold">Short Summary (Max 500 chars)</label>
             {{ form.short_description }}
+            {% if form.short_description.errors %}
+            <div class="text-danger small">{{ form.short_description.errors|join:", " }}</div>
+            {% endif %}
         </div>
 
         <div class="col-md-12">
             <label class="form-label fw-bold">Thumbnail Image</label>
             {{ form.thumbnail }}
+            {% if form.thumbnail.errors %}
+            <div class="text-danger small">{{ form.thumbnail.errors|join:", " }}</div>
+            {% endif %}
         </div>
 
         <!-- Pricing Section -->
@@ -53,6 +76,9 @@
                 </div>
                 {% endfor %}
             </div>
+            {% if form.is_free.errors %}
+            <div class="text-danger small mb-2">{{ form.is_free.errors|join:", " }}</div>
+            {% endif %}
 
             <div id="price-input-wrapper" style="display: none;">
                 <label class="form-label fw-bold">Course Price (NPR)</label>
@@ -60,9 +86,9 @@
                     <span class="input-group-text">रू</span>
                     {{ form.price }}
                 </div>
-                <small class="text-muted">Minimum price: 1 NPR for university records.</small>
+                <small class="text-muted d-block mt-1">Minimum price: 1 NPR for university records.</small>
                 {% if form.price.errors %}
-                <div class="text-danger small">{{ form.price.errors }}</div>
+                <div class="text-danger small">{{ form.price.errors|join:", " }}</div>
                 {% endif %}
             </div>
         </div>
@@ -72,10 +98,16 @@
             <div class="mb-3">
                 <label class="form-label fw-bold">What will students learn?</label>
                 {{ form.what_you_learn_raw }}
+                {% if form.what_you_learn_raw.errors %}
+                <div class="text-danger small">{{ form.what_you_learn_raw.errors|join:", " }}</div>
+                {% endif %}
             </div>
             <div class="mb-3">
                 <label class="form-label fw-bold">Requirements / Prerequisites</label>
                 {{ form.requirements_raw }}
+                {% if form.requirements_raw.errors %}
+                <div class="text-danger small">{{ form.requirements_raw.errors|join:", " }}</div>
+                {% endif %}
             </div>
         </div>
     </div>

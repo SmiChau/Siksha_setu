@@ -1,200 +1,102 @@
-/* Teachers Listing & Profile Styles */
-
-/* --- Teacher Listing Page --- */
-
-.teacher-filter-bar {
-    background: var(--white);
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-    margin-bottom: 40px;
-}
-
-.teacher-card {
-    background: var(--white);
-    border: none;
-    border-radius: 15px;
-    overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    text-align: center;
-    padding: 30px 20px;
-    height: 100%;
-}
-
-.teacher-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-}
-
-.teacher-avatar-wrapper {
-    width: 120px;
-    height: 120px;
-    margin: 0 auto 20px;
-    position: relative;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 4px solid #f8f9fa;
-    transition: border-color 0.3s ease;
-}
-
-.teacher-card:hover .teacher-avatar-wrapper {
-    border-color: var(--mint-green);
-}
-
-.teacher-avatar {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.teacher-name {
-    font-weight: 700;
-    color: var(--primary-blue);
-    margin-bottom: 5px;
-}
-
-.teacher-expertise {
-    font-size: 0.9rem;
-    color: var(--mint-green);
-    font-weight: 600;
-    margin-bottom: 15px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.teacher-bio-short {
-    font-size: 0.9rem;
-    color: var(--text-dark);
-    opacity: 0.8;
-    margin-bottom: 20px;
-    line-height: 1.5;
-}
-
-.teacher-stats-mini {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    font-size: 0.85rem;
-    color: #6c757d;
-    margin-bottom: 25px;
-    padding-top: 15px;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.btn-view-profile {
-    background-color: transparent;
-    border: 2px solid var(--primary-blue);
-    color: var(--primary-blue);
-    font-weight: 700;
-    border-radius: 50px;
-    padding: 8px 25px;
-    transition: all 0.3s ease;
-}
-
-.btn-outline-mint {
-    color: var(--mint-green);
-    border: 2px solid var(--mint-green);
-    background-color: transparent;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.btn-outline-mint:hover,
-.btn-outline-mint.active {
-    color: #fff;
-    background-color: var(--mint-green);
-    box-shadow: 0 4px 10px rgba(78, 205, 196, 0.3);
-}
-
-.teacher-card:hover .btn-view-profile {
-    background-color: var(--primary-blue);
-    color: white;
-}
-
-/* --- Teacher Profile Page --- */
+/* Teacher Profile Page Styles */
 
 .profile-hero {
-    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-    padding: 60px 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 4rem 0;
 }
 
 .profile-avatar-lg {
     width: 180px;
     height: 180px;
-    border-radius: 50%;
     object-fit: cover;
-    border: 6px solid #fff;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-.profile-social-links a {
-    width: 40px;
-    height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    border: 5px solid white;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     border-radius: 50%;
-    background: #fff;
-    color: var(--text-dark);
-    margin-right: 10px;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-
-.profile-social-links a:hover {
-    background: var(--primary-blue);
-    color: white;
-    transform: translateY(-3px);
 }
 
 .profile-stat-box {
-    background: #fff;
-    padding: 15px 25px;
+    background: white;
+    padding: 1rem 1.5rem;
     border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     text-align: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    min-width: 120px;
+    transition: transform 0.3s ease;
+}
+
+.profile-stat-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .stat-number {
     display: block;
-    font-size: 1.5rem;
-    font-weight: 800;
+    font-size: 2rem;
+    font-weight: 700;
     color: var(--primary-blue);
+    line-height: 1;
 }
 
 .stat-label {
-    font-size: 0.85rem;
-    color: #6c757d;
-    text-transform: uppercase;
-    font-weight: 600;
+    display: block;
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.5rem;
 }
 
 .profile-sidebar-card {
-    background: #fff;
-    border-radius: 15px;
-    padding: 25px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-    margin-bottom: 30px;
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #eee;
 }
 
 .sidebar-title {
+    color: var(--primary-blue);
     font-weight: 700;
-    font-size: 1.1rem;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--mint-green);
 }
 
 .info-list li {
-    margin-bottom: 15px;
     display: flex;
-    gap: 15px;
-    font-size: 0.95rem;
-    color: var(--text-dark);
+    align-items: flex-start;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.info-list li:last-child {
+    border-bottom: none;
 }
 
 .info-list i {
-    color: var(--mint-green);
-    margin-top: 4px;
+    font-size: 1.2rem;
+    margin-top: 0.25rem;
+    min-width: 30px;
+}
+
+.info-list div {
+    flex: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .profile-hero {
+        padding: 2.5rem 0;
+    }
+    
+    .profile-avatar-lg {
+        width: 140px;
+        height: 140px;
+    }
+    
+    .profile-stat-box {
+        min-width: 100px;
+        padding: 0.75rem 1rem;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
 }

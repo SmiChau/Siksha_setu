@@ -56,7 +56,7 @@
 }
 
 .cta-section {
-    background: linear-gradient(rgba(22, 128, 128, 0.85), rgba(34, 19, 88, 0.9)),
+    background: linear-gradient(rgba(73, 107, 139, 0.85), rgba(34, 19, 88, 0.9)),
         url("../images/about1.jpg");
 
     background-size: cover;

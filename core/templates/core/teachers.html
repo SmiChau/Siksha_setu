@@ -23,11 +23,21 @@
 
         <!-- Filter Bar -->
         <div class="teacher-filter-bar d-flex flex-wrap gap-3 align-items-center justify-content-center mb-4">
-            <button class="btn btn-outline-mint rounded-pill active px-4">All Experts</button>
-            <button class="btn btn-outline-mint rounded-pill px-4">Development</button>
-            <button class="btn btn-outline-mint rounded-pill px-4">Design</button>
-            <button class="btn btn-outline-mint rounded-pill px-4">Business</button>
-            <button class="btn btn-outline-mint rounded-pill px-4">Language</button>
+            <button class="btn btn-outline-primary rounded-pill active px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
+                All Experts
+            </button>
+            <button class="btn btn-outline-primary rounded-pill px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
+                Development
+            </button>
+            <button class="btn btn-outline-primary rounded-pill px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
+                Design
+            </button>
+            <button class="btn btn-outline-primary rounded-pill px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
+                Business
+            </button>
+            <button class="btn btn-outline-primary rounded-pill px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
+                Language
+            </button>
         </div>
 
         <!-- Teacher Grid -->
@@ -35,67 +45,71 @@
 
             {% for teacher in teachers %}
             <div class="col-md-6 col-lg-4 col-xl-3">
-                <div class="teacher-card position-relative h-100">
+                <div class="teacher-card card border-0 shadow-sm h-100 position-relative p-4 text-center rounded-4">
 
                     <!-- Avatar -->
-                    <div class="teacher-avatar-wrapper">
+                    <div class="teacher-avatar-wrapper mb-3">
                         {% if teacher.profile_picture %}
                             <img src="{{ teacher.profile_picture.url }}"
-                                 class="teacher-avatar"
-                                 alt="{{ teacher.get_full_name }}">
+                                 class="teacher-avatar rounded-circle"
+                                 alt="{{ teacher.get_full_name }}"
+                                 style="width: 150px; height: 150px; object-fit: cover;">
                         {% else %}
-                            <img src="https://placehold.co/150x150?text={{ teacher.first_name|first }}{{ teacher.last_name|first }}"
-                                 class="teacher-avatar"
-                                 alt="{{ teacher.get_full_name }}">
+                            <div class="teacher-avatar-placeholder rounded-circle mx-auto d-flex align-items-center justify-content-center"
+                                 style="width: 150px; height: 150px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%); color: white; font-size: 3rem;">
+                                {{ teacher.get_short_name|first }}
+                            </div>
                         {% endif %}
                     </div>
 
                     <!-- Name -->
-                    <h5 class="teacher-name mt-3">
+                    <h5 class="teacher-name fw-bold mb-2">
                         {{ teacher.get_full_name }}
                     </h5>
 
                     <!-- Location / Expertise -->
-                    <div class="teacher-expertise text-muted mb-2">
+                    <div class="teacher-expertise text-muted mb-2 small">
                         {% if teacher.teacher_profile and teacher.teacher_profile.location %}
                             <i class="fas fa-map-marker-alt me-1"></i>
                             {{ teacher.teacher_profile.location }}
                         {% else %}
+                            <i class="fas fa-star me-1"></i>
                             Expert Instructor
                         {% endif %}
                     </div>
 
                     <!-- Short Bio -->
-                    <p class="teacher-bio-short">
-                        {{ teacher.bio|default:"No biography available."|truncatechars:100 }}
+                    <p class="teacher-bio-short text-muted mb-3">
+                        {{ teacher.bio|default:"Experienced educator specializing in their field."|truncatechars:120 }}
                     </p>
 
                     <!-- Stats -->
-                    <div class="teacher-stats-mini d-flex justify-content-between mt-3">
+                    <div class="teacher-stats-mini d-flex justify-content-between text-muted small mb-3">
 
                         <!-- Courses -->
-                        <span>
+                        <span class="d-flex align-items-center">
                             <i class="fas fa-video me-1"></i>
                             {{ teacher.course_count|default:0 }} Courses
                         </span>
 
+                        <!-- Divider -->
+                        <span class="mx-2">•</span>
+
                         <!-- Education -->
-                        {% if teacher.teacher_profile and teacher.teacher_profile.education %}
-                            <span>
-                                <i class="fas fa-graduation-cap me-1"></i>
-                                {{ teacher.teacher_profile.education|default:"Qualified"|truncatechars:20 }}
-                            </span>
-                        {% else %}
-                            <span>
-                                <i class="fas fa-graduation-cap me-1"></i>
+                        <span class="d-flex align-items-center">
+                            <i class="fas fa-graduation-cap me-1"></i>
+                            {% if teacher.teacher_profile and teacher.teacher_profile.education %}
+                                {{ teacher.teacher_profile.education|truncatechars:15 }}
+                            {% else %}
                                 Qualified
-                            </span>
-                        {% endif %}
+                            {% endif %}
+                        </span>
                     </div>
 
                     <!-- View Profile -->
                     <a href="{% url 'core:teacher_profile' teacher.id %}"
-                       class="btn btn-view-profile stretched-link mt-3">
+                       class="btn btn-outline-primary rounded-pill px-4 mt-2"
+                       style="border-color: var(--mint-green); color: var(--mint-green);">
                         View Profile
                     </a>
 
