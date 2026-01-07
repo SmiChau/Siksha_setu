@@ -23,6 +23,7 @@ urlpatterns = [
     path('<slug:slug>/enroll/', views.enroll_course_view, name='enroll_course'),
     path('<slug:course_slug>/lesson/<int:lesson_id>/', views.lesson_view, name='lesson_view'),
     path('<slug:course_slug>/lesson/<int:lesson_id>/complete/', views.mark_lesson_complete_view, name='mark_lesson_complete'),
-    path('<slug:course_slug>/lesson/<int:lesson_id>/mcq/<int:question_id>/submit/', views.submit_mcq_answer_view, name='submit_mcq_answer'),
+    path('<slug:course_slug>/submit-mcq/', views.submit_mcq_answer, name='submit_mcq_answer'),
     path('<slug:course_slug>/review/', views.submit_review_view, name='submit_review'),
+    path('<slug:course_slug>/review/<int:review_id>/delete/', views.delete_review_view, name='delete_review'),
 ]

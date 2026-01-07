@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Avg, Sum
+from django.db.models import Count, Avg, Sum, Q
 
 from courses.models import Course, Category, Enrollment
 from courses.views import get_top_rated_courses, get_trending_courses, get_recommended_courses
@@ -20,7 +20,7 @@ def home(request):
         is_approved=True,
         is_active=True
     ).select_related('teacher_profile').annotate(
-        course_count=Count('courses_created')
+        course_count=Count('courses_created', filter=Q(courses_created__status='published'), distinct=True)
     ).order_by('-course_count')[:4]
     
     context = {
@@ -60,7 +60,7 @@ def teachers(request):
         is_approved=True,
         is_active=True
     ).select_related('teacher_profile').annotate(
-        course_count=Count('courses_created'),
+        course_count=Count('courses_created', filter=Q(courses_created__status='published'), distinct=True),
         student_count=Count('courses_created__enrollments'),
         avg_rating=Avg('courses_created__reviews__rating')
     ).order_by('-course_count')
@@ -141,7 +141,7 @@ def send_teacher_message(request, teacher_id):
 def teacher_profile(request, teacher_id):
     teacher = get_object_or_404(
         CustomUser.objects.annotate(
-            course_count=Count('courses_created'),
+            course_count=Count('courses_created', filter=Q(courses_created__status='published'), distinct=True),
             student_count=Count('courses_created__enrollments'),
             avg_rating=Avg('courses_created__reviews__rating')
         ),

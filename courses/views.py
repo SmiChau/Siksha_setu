@@ -11,7 +11,14 @@ from .models import (
     Category, Course, Lesson, LessonResource, 
     MCQQuestion, Enrollment, LessonProgress, MCQAttempt
 )
+from .models import (
+    Category, Course, Lesson, LessonResource, 
+    MCQQuestion, Enrollment, LessonProgress, MCQAttempt
+)
 from reviews.models import Review, Certificate
+from payments.models import Payment
+from django.db.models import OuterRef, Subquery, DecimalField, Sum, Value
+from django.db.models.functions import Coalesce
 
 
 def course_list_view(request):
@@ -88,12 +95,28 @@ def course_detail_view(request, slug):
     Course.objects.filter(pk=course.pk).update(views_count=course.views_count + 1)
     
     lessons = course.lessons.all()
-    reviews = course.reviews.filter(is_approved=True).order_by('-created_at')[:10]
     
+    # Handle Reviews
+    user_review = None
+    other_reviews = course.reviews.filter(is_approved=True).select_related('user').order_by('-created_at')
+    
+    if request.user.is_authenticated:
+        user_review = other_reviews.filter(user=request.user).first()
+        if user_review:
+            other_reviews = other_reviews.exclude(user=request.user)
+    
+    # Enrollment & Progress
     enrollment = None
     lesson_progress = {}
     current_lesson = None
     can_access = False
+    
+    # Progress Vars
+    unit_progress = 0
+    quiz_score = 0
+    mastery_score = 0
+    mastery_status = "In Progress"
+    is_mastered = False
     
     if request.user.is_authenticated:
         enrollment = Enrollment.objects.filter(student=request.user, course=course).first()
@@ -102,20 +125,72 @@ def course_detail_view(request, slug):
             progress_records = LessonProgress.objects.filter(enrollment=enrollment)
             lesson_progress = {p.lesson_id: p for p in progress_records}
             
-            for lesson in lessons:
-                if lesson.id not in lesson_progress:
-                    current_lesson = lesson
-                    break
-            if not current_lesson and lessons.exists():
-                current_lesson = lessons.first()
-    
+            # Recalculate if needed to be fresh
+            enrollment.check_completion() 
+            unit_progress = enrollment.progress_percentage
+            quiz_score = enrollment.mcq_score
+            mastery_score = enrollment.overall_score
+            is_mastered = enrollment.overall_score >= 80
+            mastery_status = "Mastered" if is_mastered else "In Progress"
+            
+    # Determine current lesson
+    if can_access:
+        for lesson in lessons:
+            if lesson.id not in lesson_progress or not lesson_progress[lesson.id].is_completed:
+                current_lesson = lesson
+                break
+    if not current_lesson and lessons.exists():
+        current_lesson = lessons.first()
+
     what_you_learn = course.what_you_learn if isinstance(course.what_you_learn, list) else []
     requirements = course.requirements if isinstance(course.requirements, list) else []
     
+    # Pre-serialize lessons for JS to avoid AJAX calls for simple switching
+    # We need resources too
+    lessons_data = []
+    for lesson in lessons:
+        resources = lesson.resources.all()
+        res_data = [{'title': r.title, 'url': r.get_resource_url(), 'type': r.resource_type} for r in resources]
+        
+        is_completed = False
+        if enrollment and lesson.id in lesson_progress:
+            is_completed = lesson_progress[lesson.id].is_completed
+            
+        lessons_data.append({
+            'id': lesson.id,
+            'title': lesson.title,
+            'description': lesson.description,
+            'video_id': lesson.youtube_video_id,
+            'duration': lesson.video_duration,
+            'is_preview': lesson.is_preview,
+            'resources': res_data,
+            'is_completed': is_completed,
+            'has_quiz': lesson.mcq_questions.exists(),
+            'quiz_count': lesson.mcq_questions.count(),
+            'questions': [
+                {
+                    'id': q.id,
+                    'text': q.question_text,
+                    'options': [
+                        {'key': 'A', 'text': q.option_a},
+                        {'key': 'B', 'text': q.option_b},
+                        {'key': 'C', 'text': q.option_c},
+                        {'key': 'D', 'text': q.option_d},
+                    ]
+                } for q in lesson.mcq_questions.all()
+            ]
+        })
+
+    
+    import json
+    lessons_json = json.dumps(lessons_data)
+
     context = {
         'course': course,
         'lessons': lessons,
-        'reviews': reviews,
+        'lessons_json': lessons_json, # FOR JS
+        'user_review': user_review,
+        'other_reviews': other_reviews,
         'enrollment': enrollment,
         'lesson_progress': lesson_progress,
         'current_lesson': current_lesson,
@@ -123,7 +198,14 @@ def course_detail_view(request, slug):
         'what_you_learn': what_you_learn,
         'requirements': requirements,
         'average_rating': course.get_average_rating(),
-        'total_reviews': course.reviews.count(),
+        'total_reviews': course.reviews.filter(is_approved=True).count(),
+        
+        # WSM Context
+        'unit_progress': unit_progress,
+        'quiz_score': quiz_score,
+        'mastery_score': mastery_score,
+        'mastery_status': mastery_status,
+        'is_mastered': is_mastered,
     }
     return render(request, 'core/course_detail.html', context)
 
@@ -277,6 +359,22 @@ def submit_review_view(request, course_slug):
     return redirect('courses:course_detail', slug=course_slug)
 
 
+@login_required
+@require_POST
+def delete_review_view(request, course_slug, review_id):
+    course = get_object_or_404(Course, slug=course_slug)
+    review = get_object_or_404(Review, id=review_id, course=course)
+    
+    # Allow deletion if user is the owner OR is a superuser (admin)
+    if request.user == review.user or request.user.is_superuser:
+        review.delete()
+        messages.success(request, "Review deleted.")
+    else:
+        messages.error(request, "You are not authorized to delete this review.")
+    
+    return redirect('courses:course_detail', slug=course_slug)
+
+
 def get_top_rated_courses(limit=6):
     courses = Course.objects.filter(status='published')
     sorted_courses = sorted(courses, key=lambda c: c.calculate_weighted_score(), reverse=True)
@@ -338,17 +436,62 @@ def my_courses_view(request):
 @user_passes_test(lambda u: u.role == 'teacher', login_url='core:home')
 def teacher_dashboard_view(request):
     
+    # Subquery to calculate revenue for each course
+    revenue_subquery = Payment.objects.filter(
+        course=OuterRef('pk'),
+        status='completed'
+    ).values('course').annotate(
+        total=Sum('amount')
+    ).values('total')
+    
     courses = Course.objects.filter(instructor=request.user).annotate(
-        enrolled_students=Count('enrollments')
+        enrolled_students=Count('enrollments__student', distinct=True),
+        revenue_total=Coalesce(
+            Subquery(revenue_subquery, output_field=DecimalField()), 
+            Value(0, output_field=DecimalField())
+        )
     )
     
     published_count = courses.filter(status='published').count()
     draft_count = courses.filter(status='draft').count()
     
+    # Calculate totals from the annotated QuerySet to ensure consistency
+    total_students = sum(c.enrolled_students for c in courses)
+    total_revenue = sum(c.revenue_total for c in courses)
+    
+    # Calculate average rating across all courses
+    # We can't easily aggregate the model method get_average_rating in DB
+    # So we do it in python for consistency with the displayed cards if needed, 
+    # OR we can keep the separate aggregation if it was working.
+    # For now, let's trust the existing aggregation if it exists, or add one.
+    # The previous view simplified this. Let's add a robust average rating calculation.
+    
+    from django.db.models import Avg
+    # Re-querying for rating to be safe or iterating. Iterating is fine for dashboard scale.
+    # But wait, courses doesn't have rating annotated.
+    # Let's annotate rating too for efficiency if we want to display it or sum it?
+    # Actually, the table uses course.get_average_rating.
+    # The card uses... we need to see what the card used.
+    # The template used {{ avg_rating }} but it wasn't passed in context in the snippet I saw!
+    # Let's calculate it.
+    
+    total_rating_sum = 0
+    rated_courses_count = 0
+    for course in courses:
+        r = course.get_average_rating()
+        if r > 0:
+            total_rating_sum += r
+            rated_courses_count += 1
+            
+    avg_rating = round(total_rating_sum / rated_courses_count, 1) if rated_courses_count > 0 else 0.0
+
     context = {
         'courses': courses,
         'published_count': published_count,
         'draft_count': draft_count,
+        'total_students': total_students,
+        'total_revenue': total_revenue,
+        'avg_rating': avg_rating,
     }
     return render(request, 'courses/teacher_dashboard.html', context)
 
@@ -538,3 +681,54 @@ def course_delete_view(request, slug):
     course.delete()
     messages.success(request, "Course deleted successfully.")
     return redirect('courses:teacher_dashboard')
+
+
+@login_required
+@require_POST
+def submit_mcq_answer(request, course_slug):
+    import json
+    try:
+        data = json.loads(request.body)
+        question_id = data.get('question_id')
+        selected_option = data.get('selected_option')
+        
+        course = get_object_or_404(Course, slug=course_slug)
+        question = get_object_or_404(MCQQuestion, id=question_id, lesson__course=course)
+        enrollment = get_object_or_404(Enrollment, student=request.user, course=course)
+        
+        # Save or update attempt
+        attempt, created = MCQAttempt.objects.update_or_create(
+            enrollment=enrollment,
+            question=question,
+            defaults={'selected_option': selected_option}
+        )
+        
+        # Recalculate Course MCQ Score
+        total_questions = MCQQuestion.objects.filter(lesson__course=course).count()
+        correct_attempts = MCQAttempt.objects.filter(
+            enrollment=enrollment, 
+            question__lesson__course=course,
+            is_correct=True
+        ).count()
+        
+        if total_questions > 0:
+            new_mcq_score = (correct_attempts / total_questions) * 100
+        else:
+            new_mcq_score = 100.0
+            
+        enrollment.mcq_score = round(new_mcq_score, 1)
+        enrollment.save()
+        
+        enrollment.check_completion()
+        
+        return JsonResponse({
+            'success': True,
+            'is_correct': attempt.is_correct,
+            'explanation': question.explanation,
+            'correct_option': question.correct_option,
+            'new_mcq_score': enrollment.mcq_score,
+            'mastery_score': enrollment.overall_score,
+            'is_mastered': enrollment.overall_score >= 80,
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)

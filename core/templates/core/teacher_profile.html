@@ -17,19 +17,20 @@
             <!-- Profile Avatar -->
             <div class="profile-avatar-container mb-4">
                 {% if teacher.profile_picture %}
-                <img src="{{ teacher.profile_picture.url }}" class="profile-avatar-lg" alt="{{ teacher.get_full_name }}">
+                <img src="{{ teacher.profile_picture.url }}" class="profile-avatar-lg"
+                    alt="{{ teacher.get_full_name }}">
                 {% else %}
                 <div class="profile-avatar-placeholder d-flex align-items-center justify-content-center mx-auto"
-                     style="width: 180px; height: 180px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%); color: white; font-size: 4rem; border-radius: 50%;">
+                    style="width: 180px; height: 180px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%); color: white; font-size: 4rem; border-radius: 50%;">
                     {{ teacher.get_short_name|first }}
                 </div>
                 {% endif %}
             </div>
-            
+
             <!-- Name and Title -->
             <h1 class="fw-bold mb-2 display-5" style="color: var(--primary-blue);">{{ teacher.get_full_name }}</h1>
             <p class="text-muted fw-bold text-uppercase ls-1 mb-3" style="color: var(--mint-green);">Instructor</p>
-            
+
             <!-- Bio -->
             <p class="text-dark mb-4 mx-auto" style="max-width: 700px; font-size: 1.1rem; line-height: 1.6;">
                 {{ teacher.bio|default:"Experienced educator with a passion for teaching and sharing knowledge." }}
@@ -64,8 +65,10 @@
             <div class="col-lg-8">
                 <!-- Courses Header -->
                 <div class="d-flex align-items-center mb-4">
-                    <h3 class="fw-bold mb-0" style="color: var(--primary-blue);">Courses by {{ teacher.first_name }}</h3>
-                    <span class="badge bg-light text-dark ms-3 rounded-pill" style="border: 1px solid var(--mint-green);">
+                    <h3 class="fw-bold mb-0" style="color: var(--primary-blue);">Courses by {{ teacher.first_name }}
+                    </h3>
+                    <span class="badge bg-light text-dark ms-3 rounded-pill"
+                        style="border: 1px solid var(--mint-green);">
                         {{ courses.count }} Courses
                     </span>
                 </div>
@@ -96,15 +99,17 @@
                                     {{ course.short_description|truncatechars:100|default:"No description available" }}
                                 </p>
                                 <div class="course-meta d-flex justify-content-between text-muted small mt-2">
-                                    <span><i class="far fa-clock me-1"></i> {{ course.total_duration|default:"0" }} min</span>
-                                    <span><i class="fas fa-video me-1"></i> {{ course.lessons.count|default:"0" }} Lessons</span>
+                                    <span><i class="far fa-clock me-1"></i> {{ course.total_duration_display }}</span>
+                                    <span><i class="fas fa-video me-1"></i> {{ course.lessons.count|default:"0" }}
+                                        Lessons</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mt-3">
                                     <h5 class="text-primary mb-0 fw-bold">
                                         {% if course.is_free %}Free{% else %}₹{{ course.price }}{% endif %}
                                     </h5>
                                     <a href="{% url 'courses:course_detail' course.slug %}"
-                                        class="btn btn-view-course rounded-pill" style="background-color: var(--mint-green); border-color: var(--mint-green); color: white;">
+                                        class="btn btn-view-course rounded-pill"
+                                        style="background-color: var(--mint-green); border-color: var(--mint-green); color: white;">
                                         View Course
                                     </a>
                                 </div>
@@ -165,20 +170,20 @@
                     <form action="{% url 'core:send_teacher_message' teacher.id %}" method="post">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <textarea name="message" class="form-control rounded-3" rows="4" 
-                                      placeholder="Type your message here..." 
-                                      style="border: 1px solid #dee2e6; resize: none;"></textarea>
+                            <textarea name="message" class="form-control rounded-3" rows="4"
+                                placeholder="Type your message here..."
+                                style="border: 1px solid #dee2e6; resize: none;"></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2"
-                                style="background-color: var(--mint-green); border-color: var(--mint-green);">
+                            style="background-color: var(--mint-green); border-color: var(--mint-green);">
                             Send Message
                         </button>
                     </form>
                     {% else %}
                     <p class="text-muted small mb-3">Please login to contact this teacher.</p>
                     <a href="{% url 'accounts:login' %}?next={{ request.path }}"
-                       class="btn btn-outline-primary w-100 rounded-pill fw-bold py-2"
-                       style="border-color: var(--mint-green); color: var(--mint-green);">
+                        class="btn btn-outline-primary w-100 rounded-pill fw-bold py-2"
+                        style="border-color: var(--mint-green); color: var(--mint-green);">
                         Login to Contact
                     </a>
                     {% endif %}

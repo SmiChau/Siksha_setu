@@ -2,246 +2,830 @@
 {% load static %}
 {% load course_extras %}
 
-{% block title %}{{ course.title }} - SikshaSetu{% endblock %}
+{% block title %}{{ course.title }} - Siksha Setu{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'core/css/courses.css' %}">
+<style>
+    :root {
+        --primary-purple: #6a1b9a;
+        --sidebar-bg: #f8f9fa;
+        --active-lesson-bg: #e1bee7;
+    }
+
+    /* Layout */
+    .course-wrapper {
+        display: grid;
+        grid-template-columns: 280px 1fr 320px;
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    @media (max-width: 1200px) {
+        .course-wrapper {
+            grid-template-columns: 1fr 300px;
+        }
+
+        .left-progress-sidebar {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .left-progress-sidebar .card {
+            flex: 1;
+            min-width: 250px;
+        }
+    }
+
+    @media (max-width: 991px) {
+        .course-wrapper {
+            display: block;
+        }
+
+        .right-content-sidebar {
+            margin-top: 2rem;
+        }
+    }
+
+    /* Progress Circle */
+    .progress-circle {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .progress-circle::before {
+        content: "";
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: white;
+    }
+
+    .progress-value {
+        position: relative;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--primary-purple);
+    }
+
+    /* Video Player Area */
+    .video-section {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        background: #000;
+    }
+
+    .video-wrapper {
+        position: relative;
+        padding-bottom: 56.25%;
+        height: 0;
+    }
+
+    .video-wrapper iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Custom Cover Overlay */
+    .video-cover {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 5;
+        cursor: pointer;
+    }
+
+    .video-cover::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+    }
+
+    .play-btn {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 6;
+        transition: transform 0.2s;
+    }
+
+    .video-cover:hover .play-btn {
+        transform: scale(1.1);
+    }
+
+    .play-btn i {
+        font-size: 30px;
+        color: var(--primary-purple);
+        margin-left: 4px;
+    }
+
+    /* Quiz Container (Swapped with Video) */
+    .quiz-interface {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #fff;
+        z-index: 10;
+        padding: 2rem;
+        overflow-y: auto;
+        display: none;
+        /* Hidden by default */
+    }
+
+    /* Minimized Player */
+    .minimized-player {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 320px;
+        height: 180px;
+        padding-bottom: 0;
+        z-index: 1050;
+        border: 2px solid white;
+    }
+
+    /* Sidebar Items */
+    .lesson-item {
+        cursor: pointer;
+        padding: 12px 15px;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+        background: #fff;
+    }
+
+    .lesson-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .lesson-item.active {
+        background-color: #f3e5f5;
+        border-left-color: var(--primary-purple);
+        font-weight: 600;
+    }
+
+    .quiz-subitem {
+        padding: 8px 15px 8px 35px;
+        border-left: 3px solid transparent;
+        font-size: 0.9rem;
+        cursor: pointer;
+        color: #555;
+    }
+
+    .quiz-subitem:hover {
+        background-color: #f8f9fa;
+        color: var(--primary-purple);
+    }
+
+    .quiz-subitem.active {
+        background-color: #e1bee7;
+        color: #000;
+        font-weight: 600;
+        border-left: 3px solid var(--primary-purple);
+    }
+
+    .quiz-subitem.locked {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Tabs */
+    .nav-tabs .nav-link {
+        color: #555;
+        border: none;
+        border-bottom: 3px solid transparent;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: var(--primary-purple);
+        border-bottom-color: var(--primary-purple);
+        font-weight: bold;
+    }
+
+    /* Reviews */
+    .review-card.user-review {
+        border-left: 4px solid var(--primary-purple);
+        background-color: #fbfbfc;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="course-detail-container py-4">
+<div class="container-fluid px-4 py-4">
 
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
+    <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{% url 'courses:course_list' %}">Courses</a>
-            </li>
+            <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}"
+                    class="text-decoration-none">Courses</a></li>
             {% if course.category %}
-            <li class="breadcrumb-item">
-                <a href="{% url 'courses:course_list' %}?category={{ course.category.slug }}">
-                    {{ course.category.name }}
-                </a>
-            </li>
+            <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}?category={{ course.category.slug }}"
+                    class="text-decoration-none">{{ course.category.name }}</a></li>
             {% endif %}
             <li class="breadcrumb-item active">{{ course.title|truncatewords:5 }}</li>
         </ol>
     </nav>
 
-    <!-- Course Header -->
-    <div class="mb-4">
-        <h1 class="fw-bold mb-3">{{ course.title }}</h1>
-        <p class="lead text-muted mb-3">
-            {{ course.short_description|default:course.description|truncatewords:30 }}
-        </p>
+    <div class="course-wrapper">
 
-        <div class="course-header-meta">
-            {% if course.instructor %}
-            <div class="meta-item">
-                <i class="fas fa-user-tie"></i>
-                <strong>{{ course.instructor.get_full_name }}</strong>
-            </div>
-            {% endif %}
-            <div class="meta-item">
-                <i class="fas fa-star"></i>
-                <span>{{ average_rating|default:"0.0" }} ({{ total_reviews|default:0 }} reviews)</span>
-            </div>
-            <div class="meta-item">
-                <i class="fas fa-users"></i>
-                <span>{{ course.enrollment_count|default:0 }} students</span>
-            </div>
-            <div class="meta-item">
-                <i class="fas fa-globe"></i>
-                <span>{{ course.language }}</span>
-            </div>
-            <div class="meta-item">
-                <span class="badge bg-primary px-3 py-2">{{ course.get_level_display }}</span>
-            </div>
-        </div>
-    </div>
+        <!-- 1. LEFT SIDEBAR: Progress -->
+        <div class="left-progress-sidebar">
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body text-center">
+                    <h6 class="text-muted text-uppercase small mb-3">Your Progress</h6>
 
-    <!-- Video + Sidebar -->
-    <div class="row g-4 mb-4">
-        <div class="col-lg-8">
-            {% if enrollment and current_lesson and current_lesson.youtube_video_id %}
-            <div class="course-video-hero">
-                <div class="video-container-native">
+                    {% if enrollment %}
+                    <div class="progress-circle mb-3"
+                        style="background: conic-gradient(var(--primary-purple) {{ mastery_score }}%, #e9ecef 0);">
+                        <span class="progress-value">{{ mastery_score|floatformat:0 }}%</span>
+                    </div>
 
-                    <div class="custom-play-overlay" id="customPlayOverlay">
-                        <div class="play-button-circle">
-                            <div class="play-icon"></div>
+                    <div class="d-flex justify-content-between small text-muted mb-3">
+                        <div>Unit Comp.<br><strong class="text-dark">{{ unit_progress|floatformat:0 }}%</strong></div>
+                        <div>Quiz Perf.<br><strong class="text-dark">{{ quiz_score|floatformat:0 }}%</strong></div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {% if is_mastered %}
+                        <div class="badge bg-success p-2"><i class="fas fa-check-circle me-1"></i> Mastered</div>
+                        <a href="#" class="btn btn-outline-primary btn-sm rounded-pill mt-2">
+                            <i class="fas fa-certificate me-1"></i> Download Certificate
+                        </a>
+                        {% else %}
+                        <div class="badge bg-secondary p-2"><i class="fas fa-spinner me-1"></i> {{ mastery_status }}
                         </div>
-                        <div class="play-overlay-text">Click to Start Learning</div>
+                        <button class="btn btn-outline-secondary btn-sm rounded-pill mt-2" disabled>
+                            <i class="fas fa-lock me-1"></i> Certificate Locked
+                        </button>
+                        {% endif %}
                     </div>
-
-                    <div class="video-loading" id="videoLoading">
-                        <div class="loading-spinner"></div>
-                    </div>
-
-                    <div class="video-mask-top-extended" title="Video Protected"></div>
-
-                    <div id="player"></div>
-
-                    <div id="video-error" class="video-error-native d-none">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <h5>Video Unavailable</h5>
-                        <p>Unable to play this video right now.</p>
-                    </div>
-
-                </div>
-            </div>
-            {% else %}
-            <div class="course-video-hero">
-                <div class="video-container-native">
-                    <div class="custom-play-overlay d-flex">
-                        <div class="play-button-circle" style="background: rgba(255,255,255,0.3);">
-                            <i class="fas fa-lock text-white fs-3"></i>
-                        </div>
-                        <div class="play-overlay-text">Enroll to Start Learning</div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Sidebar -->
-        <div class="col-lg-4">
-            <div class="course-content-sidebar">
-
-                {% if not enrollment %}
-                <div class="enrollment-card mb-3">
-                    <div class="price-tag">
-                        {% if course.is_free %}FREE{% else %}NPR {{ course.price }}{% endif %}
-                    </div>
-                    {% if course.is_free %}
-                    <a href="{% url 'courses:enroll_course' course.slug %}" class="btn btn-enroll">
-                        <i class="fas fa-graduation-cap me-2"></i>Enroll Now
-                    </a>
                     {% else %}
-                    <a href="{% url 'payments:esewa_checkout' course.slug %}"
-                        class="btn btn-success w-100 py-2 rounded-pill fw-bold shadow-sm">
-                        <img src="{% static 'core/img/esewalogo.png' %}" alt="eSewa" height="30"
-                            class="me-2 bg-white rounded px-1">
-                        Pay with eSewa
-                    </a>
-                    <a href="{% url 'payments:khalti_initiate' course.slug %}"
-                        class="btn btn-primary w-100 py-2 rounded-pill fw-bold shadow-sm mt-2"
-                        style="background-color: #5C2D91 !important; border-color: #5C2D91 !important; color: white !important; position: relative !important; z-index: 9999 !important; pointer-events: auto !important;">
-                        <img src="{% static 'core/img/khaltilogo.png' %}" alt="Khalti" height="25"
-                            class="me-2 bg-white rounded px-1">
-                        <span>Pay with Khalti</span>
-                    </a>
+                    <div class="text-center py-4">
+                        <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                        <p class="text-muted small">Enroll to track your mastery.</p>
+                    </div>
                     {% endif %}
                 </div>
+            </div>
+
+            <!-- Instructor -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body d-flex align-items-center">
+                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3"
+                        style="width: 45px; height: 45px;">
+                        <i class="fas fa-user text-secondary"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ course.instructor.get_full_name|default:course.instructor.email|default:"Instructor" }}
+                        </div>
+                        <div class="small text-muted">Teacher</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. CENTER: Video & Tabs -->
+        <div class="center-content">
+
+            <!-- Player Area -->
+            <div class="video-section mb-4" id="mainPlayerSection">
+                {% if enrollment or course.is_free or current_lesson.is_preview %}
+                <div class="video-wrapper" id="videoWrapper">
+                    <!-- Custom Cover -->
+                    <div id="videoCover" class="video-cover" onclick="startVideo()"
+                        style="background-image: url('{{ course.get_thumbnail }}');">
+                        <div class="play-btn"><i class="fas fa-play"></i></div>
+                    </div>
+
+                    <!-- YouTube Player (Hidden Initially) -->
+                    <div id="player"></div>
+
+                    <!-- Quiz Interface (Hidden Initially) -->
+                    <div id="quizInterface" class="quiz-interface">
+                        <h4 id="quizTitle" class="fw-bold mb-3">Quiz</h4>
+                        <div id="quizContent">
+                            <!-- Questions Injected Here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-2">
+                    <button class="btn btn-sm btn-link text-muted text-decoration-none" onclick="toggleTheaterMode()">
+                        <i class="fas fa-expand me-1"></i> Theater Mode
+                    </button>
+                </div>
+
                 {% else %}
-                <div class="card p-3 mb-3">
-                    <div class="alert alert-success text-center mb-0">
-                        <i class="fas fa-check-circle me-2"></i>You're Enrolled
+                <div
+                    class="video-wrapper d-flex align-items-center justify-content-center bg-dark text-white text-center p-4">
+                    <div>
+                        <i class="fas fa-lock fa-4x mb-3 text-white-50"></i>
+                        <h3>Content Locked</h3>
+                        <p>Enroll to access this course.</p>
                     </div>
                 </div>
                 {% endif %}
+            </div>
 
-                <div class="card course-info-card">
-                    <div class="card-header bg-white fw-bold border-0">
-                        <i class="fas fa-list-ul me-2"></i>Course Content
+            <!-- Title & Tabs -->
+            <h2 class="h3 fw-bold mb-3" id="currentLessonTitle">
+                {{ current_lesson.title|default:course.title }}
+            </h2>
+
+            <ul class="nav nav-tabs mb-4" id="courseTabs" role="tablist">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab"
+                        data-bs-target="#overview">Description</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#curriculum">What
+                        You'll Learn</button></li>
+                {% if requirements %}
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#requirements">Requirements</button></li>
+                {% endif %}
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#resources">Resources</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#reviews">Reviews</button></li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- Description -->
+                <div class="tab-pane fade show active" id="overview">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="fw-bold">Lesson Description</h5>
+                        <p class="text-muted" id="currentLessonDesc">
+                            {{ current_lesson.description|default:course.description|linebreaks }}
+                        </p>
+                        <hr>
+                        <h6 class="fw-bold">Course Summary</h6>
+                        <p class="text-muted">{{ course.short_description|default:course.description|truncatewords:30 }}
+                        </p>
                     </div>
-                    <ul class="list-group list-group-flush">
-                        {% for lesson in lessons %}
-                        {% with progress=lesson_progress|get_item:lesson.id %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {% if enrollment %}
-                            <a href="{% url 'courses:lesson_view' course.slug lesson.id %}"
-                                class="text-decoration-none">
-                                <i class="fas fa-play-circle me-2 text-primary"></i>
-                                {{ lesson.title|truncatewords:6 }}
-                            </a>
-                            {% else %}
-                            <span class="text-muted">
-                                <i class="fas fa-lock me-2"></i>{{ lesson.title|truncatewords:6 }}
-                            </span>
-                            {% endif %}
-                            {% if progress and progress.is_completed %}
-                            <span class="badge bg-success">✓</span>
-                            {% endif %}
-                        </li>
-                        {% endwith %}
-                        {% empty %}
-                        <li class="list-group-item text-center text-muted">No lessons yet</li>
-                        {% endfor %}
-                    </ul>
                 </div>
 
+                <!-- What You'll Learn -->
+                <div class="tab-pane fade" id="curriculum">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="fw-bold">Learning Outcomes</h5>
+                        <ul class="list-unstyled row">
+                            {% for item in what_you_learn %}
+                            <li class="col-md-6 mb-2"><i class="fas fa-check text-success me-2"></i> {{ item }}</li>
+                            {% empty %}
+                            <li class="text-muted">No specific outcomes listed.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Requirements -->
+                <div class="tab-pane fade" id="requirements">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="fw-bold">Requirements</h5>
+                        <ul>
+                            {% for req in requirements %}
+                            <li class="mb-1">{{ req }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Resources -->
+                <div class="tab-pane fade" id="resources">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="fw-bold">Downloads & Links</h5>
+                        <div id="resourceList">
+                            <p class="text-muted">Select a lesson to view resources.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reviews -->
+                <div class="tab-pane fade" id="reviews">
+                    <div class="card border-0 shadow-sm p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <div>
+                                <h2 class="display-4 fw-bold mb-0">{{ average_rating }}</h2>
+                                <div class="text-warning">
+                                    {% for i in "12345" %}
+                                    {% if forloop.counter <= average_rating|add:0 %} <i class="fas fa-star"></i>
+                                        {% elif forloop.counter|add:-0.5 <= average_rating|add:0 %} <i
+                                            class="fas fa-star-half-alt"></i>
+                                            {% else %}
+                                            <i class="far fa-star"></i>
+                                            {% endif %}
+                                            {% endfor %}
+                                </div>
+                                <small class="text-muted">Average Rating</small>
+                            </div>
+                            {% if enrollment %}
+                            <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#reviewForm">
+                                <i class="fas fa-pencil-alt me-2"></i>Write Review
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        <!-- Review Form -->
+                        <div class="collapse mb-4" id="reviewForm">
+                            <form method="post" action="{% url 'courses:submit_review' course.slug %}"
+                                class="card card-body bg-light border-0">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label class="form-label">Your Rating</label>
+                                    <div class="rating-input">
+                                        {% for i in "54321" %}
+                                        <input type="radio" name="rating" value="{{ i }}" id="rate-{{ i }}"
+                                            {% if user_review.rating|add:0 == i|add:0 %}checked{% endif %}>
+                                        <label for="rate-{{ i }}"><i class="fas fa-star"></i></label>
+                                        {% endfor %}
+                                    </div>
+                                    <style>
+                                        .rating-input {
+                                            display: flex;
+                                            flex-direction: row-reverse;
+                                            justify-content: flex-end;
+                                        }
+
+                                        .rating-input input {
+                                            display: none;
+                                        }
+
+                                        .rating-input label {
+                                            cursor: pointer;
+                                            color: #ddd;
+                                            font-size: 1.5rem;
+                                            margin-right: 5px;
+                                        }
+
+                                        .rating-input input:checked~label,
+                                        .rating-input label:hover,
+                                        .rating-input label:hover~label {
+                                            color: #ffc107;
+                                        }
+                                    </style>
+                                </div>
+                                <textarea name="comment" class="form-control mb-3" rows="3" required
+                                    placeholder="Your experience...">{{ user_review.comment|default:"" }}</textarea>
+                                <button type="submit" class="btn btn-primary">Submit</button>
+                            </form>
+                        </div>
+
+                        <!-- Review List -->
+                        {% if user_review %}
+                        <div class="card mb-3 review-card user-review">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="fw-bold">You</h6>
+                                    <form method="post"
+                                        action="{% url 'courses:delete_review' course.slug user_review.id %}"
+                                        onsubmit="return confirm('Delete review?')">
+                                        {% csrf_token %}
+                                        <button class="btn btn-sm text-danger border-0 bg-transparent"><i
+                                                class="fas fa-trash-alt"></i></button>
+                                    </form>
+                                </div>
+                                <p class="mb-0 text-secondary">{{ user_review.comment }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% for review in other_reviews %}
+                        <div class="card mb-3 review-card">
+                            <div class="card-body">
+                                <h6 class="fw-bold">{{ review.user.get_full_name|default:review.user.email }}</h6>
+                                <p class="mb-0 text-secondary">{{ review.comment }}</p>
+                            </div>
+                        </div>
+                        {% empty %}
+                        {% if not user_review %}<p class="text-center text-muted">No reviews yet.</p>{% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. RIGHT SIDEBAR -->
+        <div class="right-content-sidebar">
+            {% if not enrollment %}
+            <div class="card border-0 shadow-sm mb-4 bg-white sticky-top" style="top:80px; z-index:100;">
+                <div class="card-body p-4">
+                    <h2 class="fw-bold mb-3">
+                        {% if course.is_free %}Free{% else %}NPR {{ course.price|floatformat:0 }}{% endif %}
+                    </h2>
+                    {% if course.is_free %}
+                    <a href="{% url 'courses:enroll_course' course.slug %}"
+                        class="btn btn-primary w-100 rounded-pill">Enroll Now</a>
+                    {% else %}
+                    <a href="{% url 'payments:esewa_checkout' course.slug %}"
+                        class="btn btn-success w-100 rounded-pill mb-2">Pay with eSewa</a>
+                    <a href="{% url 'payments:khalti_initiate' course.slug %}"
+                        class="btn btn-primary w-100 rounded-pill" style="background:#5C2D91; border:none;">Pay with
+                        Khalti</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0">Course Content</h6>
+                </div>
+                <div class="list-group list-group-flush" id="lessonList">
+                    {% for lesson in lessons %}
+                    <!-- Lesson Item -->
+                    <div class="list-group-item lesson-item {% if current_lesson.id == lesson.id %}active{% endif %}"
+                        data-id="{{ lesson.id }}" onclick="playLesson({{ lesson.id }})" id="lesson-{{ lesson.id }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-play-circle text-primary me-2"></i>
+                                <span class="small fw-bold">{{ lesson.title }}</span>
+                            </div>
+                            <small class="text-muted">{{ lesson.video_duration }}m</small>
+                        </div>
+                    </div>
+
+                    <!-- Nested Quiz Item (JS will show/hide/lock) -->
+                    <div class="list-group-item quiz-subitem d-none" id="quiz-item-{{ lesson.id }}"
+                        onclick="loadQuiz({{ lesson.id }})">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-question-circle me-2"></i>
+                            <span>Quiz: {{ lesson.title|truncatewords:3 }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
-
-    <!-- About -->
-    <div class="card p-4 mb-4">
-        <h4>About This Course</h4>
-        <p>{{ course.description }}</p>
-    </div>
-
 </div>
 {% endblock %}
 
 {% block extra_js %}
-{% if enrollment and current_lesson and current_lesson.youtube_video_id %}
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    var tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.body.appendChild(tag);
+    const lessonsData = {{ lessons_json|safe }};
+    const isEnrolled = {{ enrollment|yesno:"true,false" }};
+    const courseSlug = "{{ course.slug }}";
+    let player;
+    let currentLessonId = {{ current_lesson.id|default:"null" }};
 
-    var player;
-    var playerReady = false;
 
+    // Initial State Setup
+    document.addEventListener('DOMContentLoaded', () => {
+        if (currentLessonId) {
+            updateLessonUI(currentLessonId);
+            renderSidebarQuizzes();
+        }
+    });
+
+    // YouTube API
     function onYouTubeIframeAPIReady() {
-        player = new YT.Player('player', {
-            height: '100%',
-            width: '100%',
-            videoId: '{{ current_lesson.youtube_video_id }}',
-            playerVars: {
-                playsinline: 1,
-                rel: 0,
-                modestbranding: 1,
-                origin: "{{ request.scheme }}://{{ request.get_host }}"
-            },
-            events: {
-                onReady: onPlayerReady,
-                onError: onPlayerError,
-                onStateChange: onPlayerStateChange
+        // Player will be initialized on distinct action or if forced
+        // We defer player creation to the "Start Video" click to support custom cover
+        // But if we want to retain state, we can init hidden. 
+        // Let's init only when needed to save resources.
+    }
+
+    function initPlayer(videoId) {
+        if (player) {
+            player.loadVideoById(videoId);
+        } else {
+            player = new YT.Player('player', {
+                height: '100%', width: '100%', videoId: videoId,
+                playerVars: {
+                    'playsinline': 1,
+                    'controls': 1,
+                    'modestbranding': 1,
+                    'rel': 0,
+                    'autoplay': 1,
+                    'iv_load_policy': 3,
+                    'fs': 1
+                },
+                events: { 'onStateChange': onPlayerStateChange }
+            });
+        }
+    }
+
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.ENDED) {
+            markLessonComplete(currentLessonId);
+        }
+    }
+
+    // Video & UI Logic
+    function startVideo() {
+        const lesson = lessonsData.find(l => l.id === currentLessonId);
+        if (!lesson) return;
+
+        if (!isEnrolled && !lesson.is_preview) {
+            alert("Enroll to watch this lesson.");
+            return;
+        }
+
+        document.getElementById('videoCover').style.display = 'none';
+        document.getElementById('quizInterface').style.display = 'none';
+        document.getElementById('player').style.display = 'block';
+
+        initPlayer(lesson.video_id);
+    }
+
+    window.playLesson = function (lessonId) {
+        const lesson = lessonsData.find(l => l.id === lessonId);
+        if (!lesson) return;
+
+        // Reset View
+        document.getElementById('videoCover').style.display = 'flex';
+        document.getElementById('videoCover').style.backgroundImage = `url('{{ course.get_thumbnail }}')`;
+        document.getElementById('player').style.display = 'none';
+
+        if (player) player.stopVideo();
+
+        // Update active class
+        document.querySelectorAll('.lesson-item').forEach(el => el.classList.remove('active'));
+        document.getElementById(`lesson-${lessonId}`)?.classList.add('active');
+        document.querySelectorAll('.quiz-subitem').forEach(el => el.classList.remove('active'));
+
+        // Update Text
+        currentLessonId = lessonId;
+        document.getElementById('currentLessonTitle').innerText = lesson.title;
+        document.getElementById('currentLessonDesc').innerText = lesson.description || "No description.";
+
+        // Update Resources
+        updateResources(lesson);
+
+        // Ensure Quiz interface is hidden
+        document.getElementById('quizInterface').style.display = 'none';
+    };
+
+    function updateResources(lesson) {
+        const list = document.getElementById('resourceList');
+        if (lesson.resources && lesson.resources.length > 0) {
+            let html = '<div class="list-group">';
+            lesson.resources.forEach(r => {
+                html += `<a href="${r.url}" target="_blank" class="list-group-item list-group-item-action">
+                            <i class="fas fa-file me-2"></i> ${r.title}
+                          </a>`;
+            });
+            html += '</div>';
+            list.innerHTML = html;
+        } else {
+            list.innerHTML = '<p class="text-muted">No resources.</p>';
+        }
+    }
+
+    // Quiz Logic
+    function renderSidebarQuizzes() {
+        lessonsData.forEach(l => {
+            const quizItem = document.getElementById(`quiz-item-${l.id}`);
+            if (l.has_quiz) {
+                quizItem.classList.remove('d-none');
+                // Lock logic: If not completed, add locked class
+                if (l.is_completed) {
+                    quizItem.classList.remove('locked');
+                } else {
+                    quizItem.classList.add('locked');
+                }
             }
         });
     }
 
-    function onPlayerReady() {
-        playerReady = true;
-        document.getElementById('videoLoading')?.classList.add('d-none');
-    }
+    window.loadQuiz = function (lessonId) {
+        const lesson = lessonsData.find(l => l.id === lessonId);
 
-    function onPlayerStateChange(event) {
-        if (event.data === YT.PlayerState.PLAYING) {
-            document.getElementById('customPlayOverlay')?.classList.add('d-none');
+        // Highlight Sidebar
+        document.querySelectorAll('.lesson-item').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.quiz-subitem').forEach(el => el.classList.remove('active'));
+        document.getElementById(`quiz-item-${lessonId}`).classList.add('active');
+
+        // Swap UI
+        if (player) player.stopVideo();
+        document.getElementById('videoCover').style.display = 'none';
+        document.getElementById('player').style.display = 'none';
+        document.getElementById('quizInterface').style.display = 'block';
+
+        renderQuizQuestions(lesson);
+    };
+
+    function renderQuizQuestions(lesson) {
+        const container = document.getElementById('quizContent');
+        if (!lesson.questions || lesson.questions.length === 0) {
+            container.innerHTML = "<p>No questions found.</p>";
+            return;
         }
+
+        let html = "";
+        lesson.questions.forEach((q, index) => {
+            html += `<div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="fw-bold">${index + 1}. ${q.text}</h6>
+                            <div class="options-list mt-3">`;
+            q.options.forEach(opt => {
+                html += `<div class="form-check">
+                            <input class="form-check-input" type="radio" name="q-${q.id}" id="opt-${q.id}-${opt.key}" value="${opt.key}">
+                            <label class="form-check-label" for="opt-${q.id}-${opt.key}">
+                                ${opt.text}
+                            </label>
+                         </div>`;
+            });
+            html += `</div>
+                     <div id="feedback-${q.id}" class="mt-2 small fw-bold"></div>
+                     <button class="btn btn-sm btn-primary mt-2" onclick="submitAnswer(${lesson.id}, ${q.id})">Check Answer</button>
+                     </div></div>`;
+        });
+        container.innerHTML = html;
     }
 
-    function onPlayerError() {
-        document.getElementById('video-error')?.classList.remove('d-none');
-        document.getElementById('player')?.classList.add('d-none');
-        document.getElementById('customPlayOverlay')?.classList.add('d-none');
-        document.getElementById('videoLoading')?.classList.add('d-none');
-    }
+    window.submitAnswer = function (lessonId, questionId) {
+        const selected = document.querySelector(`input[name="q-${questionId}"]:checked`);
+        if (!selected) { alert("Select an option!"); return; }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const overlay = document.getElementById('customPlayOverlay');
-        if (overlay) {
-            overlay.addEventListener('click', function () {
-                if (playerReady) {
-                    player.playVideo();
-                    overlay.classList.add('d-none');
+        const val = selected.value;
+        const feedback = document.getElementById(`feedback-${questionId}`);
+
+        fetch(`/${courseSlug}/submit-mcq/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                question_id: questionId,
+                selected_option: val
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.is_correct) {
+                        feedback.className = "mt-2 small fw-bold text-success";
+                        feedback.innerText = "Correct! " + (data.explanation || "");
+                    } else {
+                        feedback.className = "mt-2 small fw-bold text-danger";
+                        feedback.innerText = "Incorrect. Try again.";
+                    }
+                } else {
+                    alert("Error: " + data.error);
                 }
             });
+    };
+
+    function markLessonComplete(lessonId) {
+        if (!isEnrolled) return;
+        fetch(`/${courseSlug}/lesson/${lessonId}/complete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(res => {
+            if (res.ok) {
+                // Update local state to unlock quiz
+                const lesson = lessonsData.find(l => l.id === lessonId);
+                lesson.is_completed = true;
+                const quizItem = document.getElementById(`quiz-item-${lessonId}`);
+                if (quizItem) quizItem.classList.remove('locked');
+            }
+        });
+    }
+
+    function toggleTheaterMode() {
+        document.getElementById('videoWrapper').classList.toggle('minimized-player');
+    }
+
+    // Helper to update UI on page load
+    function updateLessonUI(lessonId) {
+        const lesson = lessonsData.find(l => l.id === lessonId);
+        if (lesson) {
+            document.getElementById('currentLessonTitle').innerText = lesson.title;
+            document.getElementById('currentLessonDesc').innerText = lesson.description || "";
+            updateResources(lesson);
         }
-    });
+    }
 </script>
-{% endif %}
 {% endblock %}

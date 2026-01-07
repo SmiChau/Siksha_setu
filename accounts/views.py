@@ -9,7 +9,8 @@ from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
-from django.db.models import Count, Avg, Sum, Max, Q
+from django.db.models import Count, Avg, Sum, Max, Q, Value, OuterRef, Subquery, DecimalField
+from django.db.models.functions import Coalesce
 from django.db import models
 from django.utils.text import slugify
 from datetime import timedelta
@@ -358,23 +359,42 @@ def teacher_dashboard_view(request):
     if not request.user.is_approved:
         return redirect('accounts:pending_approval')
     
+    # Subquery to calculate revenue for each course safely
+    revenue_subquery = Payment.objects.filter(
+        course=OuterRef('pk'),
+        status='completed'
+    ).values('course').annotate(
+        total=Sum('amount')
+    ).values('total')
+
     courses = Course.objects.filter(
         instructor=request.user
     ).annotate(
-        total_students=Count('enrollments'),
+        enrolled_students=Count('enrollments__student', distinct=True),
         avg_rating=Avg('reviews__rating'),
-        total_revenue=Sum('payments__amount', filter=Q(payments__status='completed'))
+        revenue_total=Coalesce(
+            Subquery(revenue_subquery, output_field=DecimalField()), 
+            Value(0, output_field=DecimalField())
+        )
     ).order_by('-created_at')
     
-    total_students = Enrollment.objects.filter(course__instructor=request.user).count()
-    total_revenue = Payment.objects.filter(
-        course__instructor=request.user,
-        status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    # Calculate totals from the annotated QuerySet to ensure consistency
+    total_students = sum(c.enrolled_students for c in courses)
+    total_revenue = sum(c.revenue_total for c in courses)
     
-    avg_rating = Review.objects.filter(
-        course__instructor=request.user
-    ).aggregate(avg=Avg('rating'))['avg'] or 0
+    # Calculate average rating
+    total_rating_sum = 0
+    rated_courses_count = 0
+    for course in courses:
+        r = course.avg_rating or 0
+        if r > 0:
+            total_rating_sum += r
+            rated_courses_count += 1
+            
+    avg_rating = round(total_rating_sum / rated_courses_count, 1) if rated_courses_count > 0 else 0.0
+    
+    published_count = courses.filter(status='published').count()
+    draft_count = courses.filter(status='draft').count()
     
     recent_enrollments = Enrollment.objects.filter(
         course__instructor=request.user
@@ -391,9 +411,11 @@ def teacher_dashboard_view(request):
         'user': request.user,
         'courses': courses,
         'total_courses': courses.count(),
+        'published_count': published_count,
+        'draft_count': draft_count,
         'total_students': total_students,
         'total_revenue': total_revenue,
-        'avg_rating': round(avg_rating, 1),
+        'avg_rating': avg_rating,
         'recent_enrollments': recent_enrollments,
         'recent_reviews': recent_reviews,
         'messages_received': messages_received,

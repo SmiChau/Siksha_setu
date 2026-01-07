@@ -100,6 +100,23 @@ class Course(models.Model):
     def get_total_lessons(self):
         return self.lessons.count()
     
+    @property
+    def total_duration_display(self):
+        from django.db.models import Sum
+        total_minutes = self.lessons.aggregate(
+            total=Sum('video_duration')
+        )['total'] or 0
+        
+        if total_minutes == 0:
+            return "0m"
+            
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        
+        if hours > 0:
+            return f"{hours}h {minutes}m"
+        return f"{minutes}m"
+    
     def get_completion_rate(self):
         if self.enrollment_count == 0:
             return 0
@@ -309,10 +326,11 @@ class Enrollment(models.Model):
         return round((correct / total) * 100, 1) if total > 0 else 0
     
     def calculate_overall_score(self):
-        video_progress = self.progress_percentage
+        unit_progress = self.progress_percentage
         mcq_score = self.mcq_score
         
-        overall = (video_progress * 0.5) + (mcq_score * 0.5)
+        # Weighted Scoring Model (WSM): 60% Progress, 40% Quiz
+        overall = (unit_progress * 0.6) + (mcq_score * 0.4)
         return round(overall, 1)
     
     def check_completion(self):
@@ -320,11 +338,11 @@ class Enrollment(models.Model):
         self.mcq_score = self.calculate_mcq_score()
         self.overall_score = self.calculate_overall_score()
         
-        if (self.progress_percentage >= 100 and 
-            self.mcq_score >= 60 and 
-            self.overall_score >= 80):
+        # Mastery Threshold: 80%
+        if self.overall_score >= 80:
             self.is_completed = True
-            self.completed_at = timezone.now()
+            if not self.completed_at:
+                self.completed_at = timezone.now()
         
         self.save()
         return self.is_completed

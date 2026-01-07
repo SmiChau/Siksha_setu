@@ -79,9 +79,7 @@
                     </div>
 
                     <!-- Short Bio -->
-                    <p class="teacher-bio-short text-muted mb-3">
-                        {{ teacher.bio|default:"Experienced educator specializing in their field."|truncatechars:120 }}
-                    </p>
+                    <p class="teacher-bio-short text-muted mb-3">{{ teacher.bio|default:"Experienced educator specializing in their field."|truncatechars:120 }}</p>
 
                     <!-- Stats -->
                     <div class="teacher-stats-mini d-flex justify-content-between text-muted small mb-3">
