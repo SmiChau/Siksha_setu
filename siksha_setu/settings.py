@@ -40,9 +40,9 @@ KHALTI_INITIATE_URL = os.getenv('KHALTI_INITIATE_URL', 'https://a.khalti.com/api
 KHALTI_VERIFY_URL = os.getenv('KHALTI_VERIFY_URL', 'https://a.khalti.com/api/v2/epayment/lookup/')
 
 # eSewa Configuration (RC/Test)
-ESEWA_MERCHANT_CODE = os.getenv('ESEWA_MERCHANT_CODE', 'EPAYTEST')
-ESEWA_SECRET_KEY = os.getenv('ESEWA_SECRET_KEY', '8gBm/:&EnhH.1/q')
-ESEWA_FORM_URL = os.getenv('ESEWA_FORM_URL', 'https://rc-epay.esewa.com.np/api/epay/main/v2/form')
+ESEWA_MERCHANT_CODE = os.getenv('ESEWA_MERCHANT_CODE') or 'EPAYTEST'
+ESEWA_SECRET_KEY = os.getenv('ESEWA_SECRET_KEY') or '8gBm/:&EnhH.1/q'
+ESEWA_FORM_URL = os.getenv('ESEWA_FORM_URL') or 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
 
 
 # Application definition

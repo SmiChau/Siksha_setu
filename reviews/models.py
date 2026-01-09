@@ -92,7 +92,7 @@ class Certificate(models.Model):
             course_title=enrollment.course.title,
             instructor_name=enrollment.course.instructor.get_full_name(),
             completion_date=timezone.now().date(),
-            final_score=enrollment.overall_score
+            final_score=enrollment.mastery_score
         )
         return certificate
     

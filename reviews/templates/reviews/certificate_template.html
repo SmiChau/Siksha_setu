@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #0f1c3f;
+            overflow: hidden;
+            width: 297mm;
+            height: 210mm;
+            position: relative;
+        }
+
+        .certificate-container {
+            width: 297mm;
+            height: 210mm;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0d1b38 0%, #1a2847 100%);
+        }
+
+        /* Geometric shapes background */
+        .bg-shape {
+            position: absolute;
+            z-index: 0;
+        }
+
+        .shape-1 {
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 0 400px 300px;
+            border-color: transparent transparent #1e3a8a transparent;
+            bottom: 0;
+            left: 0;
+            opacity: 0.6;
+        }
+
+        .shape-2 {
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 350px 250px 0 0;
+            border-color: #2563eb transparent transparent transparent;
+            top: 0;
+            right: 0;
+            opacity: 0.7;
+        }
+
+        .shape-3 {
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 200px 300px 0;
+            border-color: transparent #3b82f6 transparent transparent;
+            top: 20%;
+            right: 15%;
+            opacity: 0.5;
+        }
+
+        .shape-4 {
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 250px 0 0 180px;
+            border-color: transparent transparent transparent #1d4ed8;
+            bottom: 10%;
+            left: 5%;
+            opacity: 0.4;
+        }
+
+        /* Main card */
+        .certificate-card {
+            position: absolute;
+            top: 50%;
+            left: 8%;
+            transform: translateY(-50%);
+            width: 70%;
+            height: 85%;
+            background: #ffffff;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            z-index: 2;
+            overflow: hidden;
+        }
+
+        /* Top accent bar */
+        .accent-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+        }
+
+        /* Corner accents */
+        .corner-accent {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            z-index: 1;
+        }
+
+        .corner-accent::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #6366f1, transparent);
+        }
+
+        .corner-accent::after {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(180deg, #6366f1, transparent);
+        }
+
+        .corner-tl {
+            top: 15px;
+            left: 15px;
+        }
+
+        .corner-tl::before {
+            top: 0;
+            left: 0;
+        }
+
+        .corner-tl::after {
+            top: 0;
+            left: 0;
+        }
+
+        .corner-tr {
+            top: 15px;
+            right: 15px;
+            transform: scaleX(-1);
+        }
+
+        .corner-bl {
+            bottom: 15px;
+            left: 15px;
+            transform: scaleY(-1);
+        }
+
+        .corner-br {
+            bottom: 15px;
+            right: 15px;
+            transform: scale(-1);
+        }
+
+        /* Content wrapper */
+        .content {
+            position: relative;
+            padding: 40px 60px;
+            height: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Header with logo */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .logo-text {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .certificate-type {
+            font-size: 16px;
+            font-weight: 600;
+            color: #6366f1;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+
+        .main-title {
+            font-size: 72px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        /* Award section */
+        .award-section {
+            text-align: center;
+            margin: 25px 0;
+        }
+
+        .presented-to {
+            font-size: 18px;
+            color: #64748b;
+            font-weight: 500;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
+        .student-name {
+            font-size: 56px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 15px 0;
+            font-family: 'Georgia', serif;
+            position: relative;
+            display: inline-block;
+        }
+
+        .student-name::before,
+        .student-name::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #6366f1, transparent);
+        }
+
+        .student-name::before {
+            left: -100px;
+            right: 100%;
+            width: 80px;
+        }
+
+        .student-name::after {
+            right: -100px;
+            left: 100%;
+            width: 80px;
+        }
+
+        /* Achievement details */
+        .achievement {
+            text-align: center;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        .achievement-text {
+            font-size: 19px;
+            color: #475569;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .course-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #6366f1;
+            margin: 20px 0;
+            padding: 20px 30px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08));
+            border-radius: 12px;
+            border-left: 4px solid #6366f1;
+            display: inline-block;
+        }
+
+        .completion-info {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #64748b;
+            font-size: 15px;
+        }
+
+        .info-icon {
+            width: 20px;
+            height: 20px;
+            background: #6366f1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        /* Signatures */
+        .signatures {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .signature {
+            text-align: center;
+            flex: 1;
+        }
+
+        .signature-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-family: 'Brush Script MT', cursive;
+        }
+
+        .signature-line {
+            width: 140px;
+            height: 1.5px;
+            background: #cbd5e1;
+            margin: 0 auto 10px;
+        }
+
+        .signature-title {
+            font-size: 13px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 0 60px;
+        }
+
+        .certificate-id {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f1f5f9;
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #475569;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .id-icon {
+            width: 18px;
+            height: 18px;
+            background: #6366f1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+        }
+
+        .verify-link {
+            font-size: 12px;
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .verify-link:hover {
+            color: #4f46e5;
+            text-decoration: underline;
+        }
+
+        /* Badge */
+        .excellence-badge {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+            z-index: 3;
+        }
+
+        .badge-content {
+            text-align: center;
+            color: white;
+        }
+
+        .badge-icon {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .badge-text {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Decorative elements */
+        .decoration-circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px dashed #e2e8f0;
+            opacity: 0.5;
+        }
+
+        .circle-1 {
+            width: 300px;
+            height: 300px;
+            top: -150px;
+            left: -150px;
+        }
+
+        .circle-2 {
+            width: 200px;
+            height: 200px;
+            bottom: -100px;
+            right: -100px;
+        }
+
+        @media print {
+            body {
+                width: 297mm;
+                height: 210mm;
+                margin: 0;
+                padding: 0;
+                background: #0a0e27;
+            }
+
+            .certificate-card {
+                box-shadow:
+                    0 0 0 1px rgba(255, 255, 255, 0.1),
+                    0 10px 30px rgba(0, 0, 0, 0.3);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="certificate-container">
+        <div class="bg-gradient"></div>
+        <div class="grid-pattern"></div>
+
+        <div class="certificate-card">
+            <!-- Accent bar -->
+            <div class="accent-bar"></div>
+
+            <!-- Corner accents -->
+            <div class="corner-accent corner-tl"></div>
+            <div class="corner-accent corner-tr"></div>
+            <div class="corner-accent corner-bl"></div>
+            <div class="corner-accent corner-br"></div>
+
+            <!-- Decorative circles -->
+            <div class="decoration-circle circle-1"></div>
+            <div class="decoration-circle circle-2"></div>
+
+            <!-- Excellence badge -->
+            <div class="excellence-badge">
+                <div class="badge-content">
+                    <span class="badge-icon">★</span>
+                    <span class="badge-text">Excellence</span>
+                </div>
+            </div>
+
+            <div class="content">
+                <!-- Header -->
+                <div class="header">
+                    <div class="logo">
+                        <div class="logo-icon">S</div>
+                        <div class="logo-text">SIKSHA SETU</div>
+                    </div>
+                    <div class="certificate-type">Certificate of Achievement</div>
+                    <h1 class="main-title">Certificate</h1>
+                </div>
+
+                <!-- Award section -->
+                <div class="award-section">
+                    <div class="presented-to">PROUDLY PRESENTED TO</div>
+                    <div class="student-name">{{ certificate.student_name }}</div>
+                </div>
+
+                <!-- Achievement details -->
+                <div class="achievement">
+                    <p class="achievement-text">
+                        For successfully completing and demonstrating exceptional mastery in
+                    </p>
+                    <div class="course-title">{{ certificate.course_title }}</div>
+
+                    <div class="completion-info">
+                        <div class="info-item">
+                            <div class="info-icon">📅</div>
+                            <span>Completed: {{ certificate.completion_date|date:"F d, Y" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon">🏆</div>
+                            <span>Mastery Score: {{ certificate.final_score|floatformat:1 }}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signatures -->
+                <div class="signatures">
+                    <div class="signature">
+                        <div class="signature-name">{{ certificate.ceo_name }}</div>
+                        <div class="signature-line"></div>
+                        <div class="signature-title">CEO & Founder</div>
+                    </div>
+
+                    <div class="signature">
+                        <div class="signature-name">{{ certificate.instructor_name }}</div>
+                        <div class="signature-line"></div>
+                        <div class="signature-title">Course Instructor</div>
+                    </div>
+                </div>
+
+                
+            </div>
+
+
+        </div>
+    </div>
+
+    <script>
+        window.onload = function () {
+            if (window.location.search.includes('print=true')) {
+                window.print();
+            }
+        };
+    </script>
+</body>
+
+</html>

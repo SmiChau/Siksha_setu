@@ -95,7 +95,7 @@ class MCQQuestionAdmin(admin.ModelAdmin):
 
 @admin.register(Enrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ('student', 'course', 'progress_percentage', 'mcq_score', 'overall_score', 'is_completed', 'enrolled_at')
+    list_display = ('student', 'course', 'unit_progress', 'quiz_score', 'mastery_score', 'certificate_unlocked', 'enrolled_at')
     list_filter = ('is_completed', 'course')
     search_fields = ('student__email', 'course__title')
     ordering = ('-enrolled_at',)

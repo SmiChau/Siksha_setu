@@ -7,11 +7,12 @@
         <div class="col-md-6">
             <div class="card shadow-lg border-0 rounded-4">
                 <div class="card-header bg-success text-white py-3 rounded-top-4">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-wallet me-2"></i> Confirm Verification</h5>
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-wallet me-2"></i> Pay with eSewa</h5>
                 </div>
                 <div class="card-body p-4">
                     <div class="text-center mb-4">
-                        <img src="{% static 'core/img/esewalogo.png' %}" alt="eSewa Payment Gateway" height="50" class="mb-3">
+                        <img src="{% static 'core/img/esewalogo.png' %}" alt="eSewa Payment Gateway" height="50"
+                            class="mb-3">
                         <h4 class="fw-bold">{{ course.title }}</h4>
                         <p class="text-muted">Payment amount: <span class="fw-bold text-dark fs-5">NPR {{ total_amount }}</span></p>
                     </div>
@@ -31,17 +32,19 @@
                         </div>
                     </div>
 
+                    <!-- eSewa v2 Form -->
                     <form action="{{ esewa_url }}" method="POST" id="esewa-form">
                         <input type="hidden" name="amount" value="{{ amount }}">
-                        <input type="hidden" name="tax_amount" value="0">
+                        <input type="hidden" name="tax_amount" value="{{ tax_amount }}">
                         <input type="hidden" name="total_amount" value="{{ total_amount }}">
                         <input type="hidden" name="transaction_uuid" value="{{ transaction_uuid }}">
-                        <input type="hidden" name="product_code" value="EPAYTEST">
-                        <input type="hidden" name="product_service_charge" value="0">
-                        <input type="hidden" name="product_delivery_charge" value="0">
+                        <input type="hidden" name="product_code" value="{{ product_code }}">
+                        <input type="hidden" name="product_service_charge" value="{{ product_service_charge }}">
+                        <input type="hidden" name="product_delivery_charge" value="{{ product_delivery_charge }}">
                         <input type="hidden" name="success_url" value="{{ success_url }}">
                         <input type="hidden" name="failure_url" value="{{ failure_url }}">
-                        <input type="hidden" name="signed_field_names" value="total_amount,transaction_uuid,product_code">
+                        <input type="hidden" name="signed_field_names"
+                            value="total_amount,transaction_uuid,product_code">
                         <input type="hidden" name="signature" value="{{ signature }}">
 
                         <div class="d-grid">
@@ -52,7 +55,8 @@
                     </form>
 
                     <div class="text-center mt-3">
-                        <a href="{% url 'courses:course_detail' course.slug %}" class="text-muted small text-decoration-none">
+                        <a href="{% url 'courses:course_detail' course.slug %}"
+                            class="text-muted small text-decoration-none">
                             Cancel Payment
                         </a>
                     </div>

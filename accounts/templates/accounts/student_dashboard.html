@@ -10,40 +10,40 @@
         border-radius: 12px;
         overflow: hidden;
     }
-    
+
     .dashboard-card:hover {
         transform: translateY(-3px);
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
     }
-    
+
     .course-progress {
         height: 6px;
         border-radius: 3px;
         overflow: hidden;
     }
-    
+
     .progress-bar-custom {
         background-color: var(--mint-green);
     }
-    
+
     .continue-btn {
         background-color: var(--mint-green);
         border-color: var(--mint-green);
         color: white;
     }
-    
+
     .continue-btn:hover {
         background-color: #3dbdb3;
         border-color: #3dbdb3;
         color: white;
     }
-    
+
     .badge-custom-mint {
         background-color: rgba(78, 205, 196, 0.1);
         color: var(--mint-green);
         border: 1px solid rgba(78, 205, 196, 0.3);
     }
-    
+
     .badge-custom-blue {
         background-color: rgba(26, 83, 92, 0.1);
         color: var(--primary-blue);
@@ -59,9 +59,8 @@
         <h2 class="fw-bold mb-1" style="color: var(--primary-blue);">Welcome back, {{ user.first_name }}!</h2>
         <p class="text-muted mb-0">Ready to continue your learning journey?</p>
     </div>
-    <a href="{% url 'courses:course_list' %}" 
-       class="btn btn-primary rounded-pill px-4 py-2"
-       style="background-color: var(--mint-green); border-color: var(--mint-green);">
+    <a href="{% url 'courses:course_list' %}" class="btn btn-primary rounded-pill px-4 py-2"
+        style="background-color: var(--mint-green); border-color: var(--mint-green);">
         <i class="fas fa-search me-2"></i> Browse Courses
     </a>
 </div>
@@ -70,7 +69,7 @@
 <div class="row g-4 mb-4">
     <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 text-center dashboard-card"
-             style="border-top: 4px solid var(--primary-blue);">
+            style="border-top: 4px solid var(--primary-blue);">
             <div class="card-body py-4">
                 <div class="rounded-circle bg-primary bg-opacity-10 p-3 d-inline-block mb-3">
                     <i class="fas fa-book-open fa-2x" style="color: var(--primary-blue);"></i>
@@ -82,7 +81,7 @@
     </div>
     <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 text-center dashboard-card"
-             style="border-top: 4px solid var(--mint-green);">
+            style="border-top: 4px solid var(--mint-green);">
             <div class="card-body py-4">
                 <div class="rounded-circle bg-success bg-opacity-10 p-3 d-inline-block mb-3">
                     <i class="fas fa-check-circle fa-2x" style="color: var(--mint-green);"></i>
@@ -94,7 +93,7 @@
     </div>
     <div class="col-md-3">
         <div class="card border-0 shadow-sm h-100 text-center dashboard-card"
-             style="border-top: 4px solid var(--accent-yellow);">
+            style="border-top: 4px solid var(--accent-yellow);">
             <div class="card-body py-4">
                 <div class="rounded-circle bg-warning bg-opacity-10 p-3 d-inline-block mb-3">
                     <i class="fas fa-spinner fa-2x" style="color: #e6c200;"></i>
@@ -105,16 +104,18 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100 text-center dashboard-card"
-             style="border-top: 4px solid #6c757d;">
-            <div class="card-body py-4">
-                <div class="rounded-circle bg-info bg-opacity-10 p-3 d-inline-block mb-3">
-                    <i class="fas fa-certificate fa-2x text-info"></i>
+        <a href="{% url 'reviews:my_certificates' %}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm h-100 text-center dashboard-card"
+                style="border-top: 4px solid #6c757d;">
+                <div class="card-body py-4">
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 d-inline-block mb-3">
+                        <i class="fas fa-certificate fa-2x text-info"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">{{ certificates.count }}</h3>
+                    <p class="text-muted mb-0">Certificates</p>
                 </div>
-                <h3 class="fw-bold mb-1">{{ certificates.count }}</h3>
-                <p class="text-muted mb-0">Certificates</p>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -129,7 +130,7 @@
                 </h5>
                 <!-- Updated link to go to course list instead of non-existent my_courses -->
                 <a href="{% url 'courses:course_list' %}" class="btn btn-sm btn-outline-primary rounded-pill"
-                   style="border-color: var(--mint-green); color: var(--mint-green);">
+                    style="border-color: var(--mint-green); color: var(--mint-green);">
                     Browse More
                 </a>
             </div>
@@ -141,13 +142,11 @@
                         <div class="row align-items-center">
                             <div class="col-md-3">
                                 {% if enrollment.course.thumbnail %}
-                                <img src="{{ enrollment.course.thumbnail.url }}" 
-                                     class="rounded-3 img-fluid"
-                                     alt="{{ enrollment.course.title }}"
-                                     style="height: 100px; object-fit: cover;">
+                                <img src="{{ enrollment.course.thumbnail.url }}" class="rounded-3 img-fluid"
+                                    alt="{{ enrollment.course.title }}" style="height: 100px; object-fit: cover;">
                                 {% else %}
                                 <div class="rounded-3 bg-light d-flex align-items-center justify-content-center"
-                                     style="height: 100px; background-color: rgba(26, 83, 92, 0.1);">
+                                    style="height: 100px; background-color: rgba(26, 83, 92, 0.1);">
                                     <i class="fas fa-book fa-2x" style="color: var(--primary-blue);"></i>
                                 </div>
                                 {% endif %}
@@ -161,24 +160,24 @@
                                 </p>
                                 <div class="d-flex align-items-center">
                                     <div class="course-progress bg-light flex-grow-1 me-2">
-                                        <div class="progress-bar-custom" 
-                                             style="width: {{ enrollment.progress_percentage|default:0 }}%; height: 100%;">
+                                        <div class="progress-bar-custom"
+                                            style="width: {{ enrollment.unit_progress|default:0 }}%; height: 100%;">
                                         </div>
                                     </div>
                                     <small class="fw-bold" style="color: var(--mint-green);">
-                                        {{ enrollment.progress_percentage|default:0 }}%
+                                        {{ enrollment.unit_progress|floatformat:0 }}%
                                     </small>
                                 </div>
                             </div>
                             <div class="col-md-3 text-end">
                                 {% if enrollment.last_accessed_lesson %}
                                 <a href="{% url 'courses:lesson_view' enrollment.course.slug enrollment.last_accessed_lesson.id %}"
-                                   class="btn continue-btn rounded-pill px-4">
+                                    class="btn continue-btn rounded-pill px-4">
                                     <i class="fas fa-play me-1"></i> Continue
                                 </a>
                                 {% else %}
                                 <a href="{% url 'courses:course_detail' enrollment.course.slug %}"
-                                   class="btn continue-btn rounded-pill px-4">
+                                    class="btn continue-btn rounded-pill px-4">
                                     <i class="fas fa-play me-1"></i> Start
                                 </a>
                                 {% endif %}
@@ -192,9 +191,8 @@
                     <i class="fas fa-book-open fa-4x mb-3" style="color: rgba(26, 83, 92, 0.2);"></i>
                     <h5 class="text-muted mb-2">No courses in progress</h5>
                     <p class="text-muted mb-3">Start learning by enrolling in a course!</p>
-                    <a href="{% url 'courses:course_list' %}" 
-                       class="btn btn-primary rounded-pill px-4"
-                       style="background-color: var(--mint-green); border-color: var(--mint-green);">
+                    <a href="{% url 'courses:course_list' %}" class="btn btn-primary rounded-pill px-4"
+                        style="background-color: var(--mint-green); border-color: var(--mint-green);">
                         Browse Courses
                     </a>
                 </div>
@@ -215,18 +213,16 @@
                 {% if recommended_courses %}
                 <div class="list-group list-group-flush">
                     {% for course in recommended_courses|slice:":3" %}
-                    <a href="{% url 'courses:course_detail' course.slug %}" 
-                       class="list-group-item list-group-item-action px-0 py-3 border-bottom">
+                    <a href="{% url 'courses:course_detail' course.slug %}"
+                        class="list-group-item list-group-item-action px-0 py-3 border-bottom">
                         <div class="d-flex align-items-start">
                             <div class="flex-shrink-0">
                                 {% if course.thumbnail %}
-                                <img src="{{ course.thumbnail.url }}" 
-                                     class="rounded-2"
-                                     style="width: 60px; height: 60px; object-fit: cover;"
-                                     alt="{{ course.title }}">
+                                <img src="{{ course.thumbnail.url }}" class="rounded-2"
+                                    style="width: 60px; height: 60px; object-fit: cover;" alt="{{ course.title }}">
                                 {% else %}
                                 <div class="rounded-2 bg-light d-flex align-items-center justify-content-center"
-                                     style="width: 60px; height: 60px; background-color: rgba(26, 83, 92, 0.1);">
+                                    style="width: 60px; height: 60px; background-color: rgba(26, 83, 92, 0.1);">
                                     <i class="fas fa-book" style="color: var(--primary-blue);"></i>
                                 </div>
                                 {% endif %}
@@ -257,9 +253,8 @@
                 <div class="text-center py-4">
                     <i class="fas fa-lightbulb fa-3x mb-3" style="color: rgba(26, 83, 92, 0.2);"></i>
                     <p class="text-muted mb-3">No recommendations yet</p>
-                    <a href="{% url 'courses:course_list' %}" 
-                       class="btn btn-outline-primary rounded-pill btn-sm"
-                       style="border-color: var(--mint-green); color: var(--mint-green);">
+                    <a href="{% url 'courses:course_list' %}" class="btn btn-outline-primary rounded-pill btn-sm"
+                        style="border-color: var(--mint-green); color: var(--mint-green);">
                         Explore Courses
                     </a>
                 </div>
@@ -285,9 +280,9 @@
                     {% for activity in recent_activity|slice:":5" %}
                     <li class="d-flex align-items-center py-2 border-bottom">
                         <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                             style="width: 40px; height: 40px; background-color: rgba(78, 205, 196, 0.1);">
+                            style="width: 40px; height: 40px; background-color: rgba(78, 205, 196, 0.1);">
                             <i class="fas fa-{% if activity.type == 'lesson_completed' %}check-circle{% elif activity.type == 'enrollment' %}book{% else %}play-circle{% endif %}"
-                               style="color: var(--mint-green);"></i>
+                                style="color: var(--mint-green);"></i>
                         </div>
                         <div class="flex-grow-1">
                             <div class="fw-bold" style="color: var(--primary-blue);">
@@ -317,8 +312,7 @@
                     <i class="fas fa-award me-2" style="color: var(--accent-yellow);"></i>Recent Certificates
                 </h5>
                 {% if certificates.count > 0 %}
-                <!-- Updated to show view all only if certificates exist, but not linking to non-existent URL -->
-                <span class="text-muted small">{{ certificates.count }} earned</span>
+                <a href="{% url 'reviews:my_certificates' %}" class="text-decoration-none small">View All</a>
                 {% endif %}
             </div>
             <div class="card-body">
@@ -327,7 +321,7 @@
                     {% for certificate in certificates|slice:":3" %}
                     <li class="d-flex align-items-center py-2 border-bottom">
                         <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                             style="width: 40px; height: 40px; background-color: rgba(255, 224, 102, 0.2);">
+                            style="width: 40px; height: 40px; background-color: rgba(255, 224, 102, 0.2);">
                             <i class="fas fa-certificate" style="color: #e6c200;"></i>
                         </div>
                         <div class="flex-grow-1">
@@ -337,9 +331,10 @@
                             <small class="text-muted">Issued: {{ certificate.issued_date|date:"M d, Y" }}</small>
                         </div>
                         <!-- Removed non-existent view certificate link -->
-                        <span class="badge badge-custom-blue rounded-pill px-3">
-                            Certificate
-                        </span>
+                        <a href="{% url 'reviews:certificate_download' certificate.enrollment.id %}" target="_blank"
+                            class="badge badge-custom-blue rounded-pill px-3 text-decoration-none">
+                            <i class="fas fa-download me-1"></i> PDF
+                        </a>
                     </li>
                     {% endfor %}
                 </ul>

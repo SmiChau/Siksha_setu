@@ -67,6 +67,7 @@ class Course(models.Model):
     
     views_count = models.PositiveIntegerField(default=0)
     enrollment_count = models.PositiveIntegerField(default=0)
+    likes_count = models.PositiveIntegerField(default=0)
     
     what_you_learn = models.JSONField(default=list, blank=True, help_text='List of learning outcomes')
     requirements = models.JSONField(default=list, blank=True, help_text='List of requirements')
@@ -142,16 +143,39 @@ class Course(models.Model):
         return round(score * 100, 2)
     
     def calculate_trending_score(self):
-        from datetime import datetime
-        age_hours = (timezone.now() - self.created_at).total_seconds() / 3600
-        gravity = 1.8
+        """
+        Algorithm 2: Hacker News Gravity Algorithm
+        -----------------------------------------
+        ACADEMIC JUSTIFICATION:
+        1.  **Superiority to Raw Popularity**: Raw popularity (total counts) favors old items. 
+            Gravity ensures that a course with 100 enrollments today ranks higher than one 
+            with 1000 enrollments from last year.
+        2.  **Time Decay**: Prevents dashboard stagnation. It forces new, high-momentum content 
+             to the top, reflecting what is trending 'now'.
+        3.  **Real-World use**: Platforms like Reddit and Hacker News use this to maintain a 
+            fresh front page.
+        4.  **Analytics Reliability**: Helps instructors see which of their content is currently 
+            gaining traction rather than just lifetime totals.
+
+        FORMULA: score = engagement_score / (time_since_posted_in_hours + 2) ^ 1.5
+        ENGAGEMENT_SCORE: (enrollments * 3) + (views * 1) + (likes * 2)
+        """
+        from django.utils import timezone
+        import math
         
-        interactions = self.views_count + (self.enrollment_count * 5)
+        # Calculate time since publish in hours
+        # published_at fallback to created_at if not set
+        start_time = self.published_at or self.created_at
+        age_hours = (timezone.now() - start_time).total_seconds() / 3600
         
-        if age_hours < 1:
-            age_hours = 1
+        # Step 1: Engagement Score
+        engagement_score = (self.enrollment_count * 3) + (self.views_count * 1) + (self.likes_count * 2)
         
-        score = interactions / pow(age_hours + 2, gravity)
+        # Step 2 & 3: Gravity Calculation
+        # Gravity constant 1.5 ensures moderate time-based decay
+        gravity = 1.5
+        score = engagement_score / math.pow(age_hours + 2, gravity)
+        
         return round(score, 4)
     
     def save(self, *args, **kwargs):
@@ -281,13 +305,17 @@ class Enrollment(models.Model):
     
     is_paid = models.BooleanField(default=False)
     enrolled_at = models.DateTimeField(auto_now_add=True)
+    
+    # Simple Mastery Algorithm Fields
+    completed_units = models.PositiveIntegerField(default=0, help_text='Number of fully watched videos')
+    unit_progress = models.FloatField(default=0.0, help_text='(completed_units / total_units) * 100')
+    quiz_score = models.FloatField(default=0.0, help_text='Average quiz performance (0-100)')
+    mastery_score = models.FloatField(default=0.0, help_text='(unit_progress * 0.6) + (quiz_score * 0.4)')
+    certificate_unlocked = models.BooleanField(default=False)
+    
+    # Legacy / Compatibility Fields
     is_completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
-    
-    progress_percentage = models.FloatField(default=0.0)
-    
-    mcq_score = models.FloatField(default=0.0, help_text='MCQ score percentage')
-    overall_score = models.FloatField(default=0.0, help_text='Overall course score')
     
     class Meta:
         unique_together = ['student', 'course']
@@ -296,56 +324,60 @@ class Enrollment(models.Model):
     def __str__(self):
         return f"{self.student.email} - {self.course.title}"
     
-    def calculate_progress(self):
-        total_lessons = self.course.lessons.count()
-        if total_lessons == 0:
-            return 0
+    def update_scores(self):
+        """
+        Implements Time-Based Progress Logic
+        1. video_progress = (total_watched_seconds / total_course_seconds) * 100
+        2. quantized into 5% steps
+        3. mastery_score = (video_progress * 0.6) + (quiz_score * 0.4)
+        """
+        all_lessons = self.course.lessons.all()
+        # Sum duration (minutes to seconds) - total course length
+        total_seconds = sum([l.video_duration * 60 for l in all_lessons])
         
-        completed_lessons = LessonProgress.objects.filter(
-            enrollment=self,
-            is_completed=True
-        ).count()
+        # Sum actual cumulative watch time from all lesson progress records
+        watched_seconds = LessonProgress.objects.filter(enrollment=self).aggregate(
+            total=models.Sum('watch_time'))['total'] or 0
         
-        return round((completed_lessons / total_lessons) * 100, 1)
-    
-    def calculate_mcq_score(self):
-        from django.db.models import Avg
-        lesson_ids = self.course.lessons.values_list('id', flat=True)
+        if total_seconds > 0:
+            raw_progress = (watched_seconds / total_seconds) * 100
+            # 5% Increments Logic: 0%, 5%, 10%, 15%...
+            self.unit_progress = (raw_progress // 5) * 5
+            self.unit_progress = min(max(self.unit_progress, 0.0), 100.0)
+            
+            # Count completed videos for UI listing
+            self.completed_units = LessonProgress.objects.filter(
+                enrollment=self, is_completed=True).count()
+        else:
+            self.unit_progress = 100.0
+            self.completed_units = all_lessons.count()
+
+        # Quiz Score Logic: Average of all questions across the course
+        total_q = MCQQuestion.objects.filter(lesson__course=self.course).count()
+        if total_q > 0:
+            correct_attempts = MCQAttempt.objects.filter(
+                enrollment=self,
+                is_correct=True
+            ).count()
+            self.quiz_score = round((correct_attempts / total_q) * 100, 1)
+        else:
+            self.quiz_score = 100.0
+            
+        # Weighted Scoring Model
+        self.mastery_score = round((self.unit_progress * 0.6) + (self.quiz_score * 0.4), 1)
         
-        attempts = MCQAttempt.objects.filter(
-            enrollment=self,
-            question__lesson_id__in=lesson_ids
-        )
-        
-        if not attempts.exists():
-            return 0
-        
-        correct = attempts.filter(is_correct=True).count()
-        total = attempts.count()
-        
-        return round((correct / total) * 100, 1) if total > 0 else 0
-    
-    def calculate_overall_score(self):
-        unit_progress = self.progress_percentage
-        mcq_score = self.mcq_score
-        
-        # Weighted Scoring Model (WSM): 60% Progress, 40% Quiz
-        overall = (unit_progress * 0.6) + (mcq_score * 0.4)
-        return round(overall, 1)
-    
-    def check_completion(self):
-        self.progress_percentage = self.calculate_progress()
-        self.mcq_score = self.calculate_mcq_score()
-        self.overall_score = self.calculate_overall_score()
-        
-        # Mastery Threshold: 80%
-        if self.overall_score >= 80:
+        # Certificate Unlock Logic (>= 80%)
+        if self.mastery_score >= 80:
+            self.certificate_unlocked = True
             self.is_completed = True
             if not self.completed_at:
                 self.completed_at = timezone.now()
-        
+        else:
+            self.certificate_unlocked = False
+            self.is_completed = False
+
         self.save()
-        return self.is_completed
+        return self.mastery_score
     
     def save(self, *args, **kwargs):
         is_new = self.pk is None
@@ -369,8 +401,8 @@ class LessonProgress(models.Model):
     )
     
     is_completed = models.BooleanField(default=False)
-    watch_time = models.PositiveIntegerField(default=0, help_text='Watch time in seconds')
-    last_position = models.PositiveIntegerField(default=0, help_text='Last video position in seconds')
+    watch_time = models.PositiveIntegerField(default=0, help_text='Total cumulative watch time in seconds')
+    max_position = models.PositiveIntegerField(default=0, help_text='Furthest position watched')
     
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -381,12 +413,24 @@ class LessonProgress(models.Model):
     def __str__(self):
         return f"{self.enrollment.student.email} - {self.lesson.title}"
     
-    def mark_completed(self):
-        if not self.is_completed:
-            self.is_completed = True
-            self.completed_at = timezone.now()
-            self.save()
-            self.enrollment.check_completion()
+    def update_watch_time(self, current_watch_time, video_duration_seconds):
+        """
+        Server-side validation and incremental watch time update.
+        Unlocks quiz when watch threshold (95%) is met for this lesson.
+        """
+        # Ensure we don't decrease watch time (prevent tracking reset abuse)
+        if current_watch_time > self.watch_time:
+            # Clamp to duration
+            self.watch_time = min(current_watch_time, video_duration_seconds)
+            
+        # check for completion (95%)
+        if not self.is_completed and video_duration_seconds > 0:
+            if (self.watch_time / video_duration_seconds) >= 0.95:
+                self.is_completed = True
+                self.completed_at = timezone.now()
+        
+        self.save()
+        return self.is_completed
 
 
 class MCQAttempt(models.Model):

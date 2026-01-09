@@ -11,6 +11,10 @@ import json
 import requests
 import logging
 from datetime import datetime
+import hmac
+import base64
+import hashlib
+import uuid
 
 from .models import Payment
 from courses.models import Course, Enrollment
@@ -26,7 +30,7 @@ KHALTI_VERIFY_URL = getattr(settings, 'KHALTI_VERIFY_URL', 'https://a.khalti.com
 
 # Get eSewa configuration
 ESEWA_MERCHANT_CODE = getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST')
-ESEWA_SECRET_KEY = getattr(settings, 'ESEWA_SECRET_KEY', '')
+ESEWA_SECRET_KEY = getattr(settings, 'ESEWA_SECRET_KEY', '8gBm/:&EnhH.1/q')  # Default test secret
 ESEWA_FORM_URL = getattr(settings, 'ESEWA_FORM_URL', 'https://rc-epay.esewa.com.np/api/epay/main/v2/form')
 
 @login_required
@@ -258,19 +262,20 @@ def verify_khalti_payment(pidx, payment):
         return {'success': False, 'error': 'Verification error'}
 
 
+# Esewa Payment
 @login_required
 def esewa_initiate_view(request, course_slug):
     """
-    Initiate eSewa payment
+    Strict eSewa v2 implementation. 
+    A 400 Bad Request usually means the amount format or required field is invalid.
     """
-    course = get_object_or_404(Course, slug=course_slug, status='published')
+    course = get_object_or_404(Course, slug=course_slug)
     
-    # Check if already enrolled
+    # Pre-payment enrollment check
     if Enrollment.objects.filter(student=request.user, course=course).exists():
         messages.info(request, "You are already enrolled in this course.")
         return redirect('courses:course_detail', slug=course.slug)
-    
-    # Create payment record
+        
     payment = Payment.objects.create(
         user=request.user,
         course=course,
@@ -278,35 +283,45 @@ def esewa_initiate_view(request, course_slug):
         payment_gateway='esewa'
     )
     
-    # Prepare eSewa parameters
-    import hmac
-    import hashlib
-    import base64
+    # Force strict sandbox defaults if not configured
+    merchant_code = getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST')
+    secret_key = getattr(settings, 'ESEWA_SECRET_KEY', '8gBm/:&EnhH.1/q')
+    esewa_url = getattr(settings, 'ESEWA_FORM_URL', 'https://rc-epay.esewa.com.np/api/epay/main/v2/form')
     
-    total_amount = str(int(course.price))
-    transaction_uuid = payment.transaction_id
-    product_code = ESEWA_MERCHANT_CODE
+    # eSewa v2 is extremely picky. 
+    # Use EXACTLY one decimal place for ALL numerical fields as per dev docs (e.g. 100.0, 0.0)
+    principal_amount = "{:.1f}".format(float(course.price))
+    tax_amount = "0.0"
+    psc = "0.0"
+    pdc = "0.0"
+    total_amount = principal_amount  # Since tax and charges are 0
     
-    # Generate signature for eSewa v2
-    message = f"total_amount={total_amount},transaction_uuid={transaction_uuid},product_code={product_code}"
-    signature = hmac.new(
-        ESEWA_SECRET_KEY.encode(),
+    transaction_uuid = str(payment.transaction_id)
+    
+    # Signature Generation
+    # Order: total_amount,transaction_uuid,product_code
+    message = f"total_amount={total_amount},transaction_uuid={transaction_uuid},product_code={merchant_code}"
+    
+    logger.info(f"DEBUG: eSewa Message: {message}")
+    
+    signature_bytes = hmac.new(
+        secret_key.encode(),
         message.encode(),
         hashlib.sha256
     ).digest()
-    signature_b64 = base64.b64encode(signature).decode()
+    signature_b64 = base64.b64encode(signature_bytes).decode('utf-8')
     
     context = {
         'payment': payment,
         'course': course,
-        'esewa_url': ESEWA_FORM_URL,
-        'amount': total_amount,
-        'tax_amount': "0",
-        'product_service_charge': "0",
-        'product_delivery_charge': "0",
+        'esewa_url': esewa_url,
+        'amount': principal_amount,
+        'tax_amount': tax_amount,
         'total_amount': total_amount,
         'transaction_uuid': transaction_uuid,
-        'product_code': product_code,
+        'product_code': merchant_code,
+        'product_service_charge': psc,
+        'product_delivery_charge': pdc,
         'success_url': request.build_absolute_uri(reverse('payments:esewa_callback')),
         'failure_url': request.build_absolute_uri(reverse('payments:esewa_failure')),
         'signed_field_names': "total_amount,transaction_uuid,product_code",
@@ -315,109 +330,87 @@ def esewa_initiate_view(request, course_slug):
     
     return render(request, 'payments/esewa_checkout.html', context)
 
+
 @require_GET
+@csrf_exempt
 def esewa_callback_view(request):
     """
-    Handle eSewa payment callback
+    Handle eSewa v2 Success Callback
     """
     data = request.GET.get('data')
     if not data:
-        messages.error(request, "Invalid callback data from eSewa.")
-        return redirect("payments:payment_failed")
-    
-    try:
-        import base64
-        import json
+        messages.error(request, "No data received from eSewa.")
+        return redirect('payments:payment_failed')
         
-        # Decode base64 response
+    try:
+        # 1. Decode JSON response from Base64
         decoded_bytes = base64.b64decode(data)
         decoded_str = decoded_bytes.decode('utf-8')
-        response_data = json.loads(decoded_str)
+        resp = json.loads(decoded_str)
         
-        status = response_data.get('status')
-        transaction_uuid = response_data.get('transaction_uuid')
-        total_amount = response_data.get('total_amount')
+        logger.info(f"eSewa v2 Callback Data: {resp}")
         
-        logger.info(f"eSewa callback received: {response_data}")
+        status = resp.get('status')
+        transaction_uuid = resp.get('transaction_uuid')
+        transaction_code = resp.get('transaction_code')
+        total_amount = resp.get('total_amount')
         
         if status != 'COMPLETE':
             messages.error(request, f"Payment failed with status: {status}")
-            return redirect("payments:payment_failed")
-        
-        # Get payment record
+            return redirect('payments:payment_failed')
+            
+        # 2. Verify Internal Record
         payment = get_object_or_404(Payment, transaction_id=transaction_uuid)
         
-        # Verify amount
-        amount_str = str(total_amount).replace(',', '')
-        if float(amount_str) != float(payment.amount):
-            payment.mark_failed({'error': 'Amount mismatch', 'response': response_data})
-            messages.error(request, "Payment amount mismatch.")
-            return redirect("payments:payment_failed")
-        
-        # Check if already processed
-        if payment.status == 'completed':
-            messages.info(request, "Payment already processed.")
-            return redirect('courses:course_detail', slug=payment.course.slug)
-        
-        # Mark payment as completed
-        with transaction.atomic():
-            payment.mark_completed(
-                gateway_transaction_id=response_data.get('transaction_code', ''),
-                gateway_response=response_data
-            )
+        # 3. Verify Amount
+        # Removing commas if eSewa sends formatted strings
+        clean_total = str(total_amount).replace(',', '')
+        if float(clean_total) != float(payment.amount):
+            logger.error(f"Amount Mismatch! Gateway: {clean_total}, Expected: {payment.amount}")
+            messages.error(request, "Payment verification failed: Amount mismatch.")
+            return redirect('payments:payment_failed')
             
-            # Create enrollment
-            Enrollment.objects.get_or_create(
-                student=payment.user,
-                course=payment.course,
-                defaults={'enrolled_at': datetime.now()}
-            )
-        
-        messages.success(request, f"Payment successful! You are now enrolled in {payment.course.title}.")
+        # 4. Finalize Payment
+        if payment.status != 'completed':
+            with transaction.atomic():
+                payment.mark_completed(
+                    gateway_transaction_id=transaction_code,
+                    gateway_response=resp
+                )
+                # Ensure Enrollment
+                Enrollment.objects.get_or_create(student=payment.user, course=payment.course)
+                
+            messages.success(request, f"Successfully enrolled in {payment.course.title}!")
+            
         return render(request, 'payments/esewa_success.html', {'payment': payment})
         
     except Exception as e:
-        logger.exception(f"eSewa callback error: {e}")
-        messages.error(request, "Error processing payment callback.")
-        return redirect("payments:payment_failed")
+        logger.exception("eSewa Callback Error")
+        messages.error(request, "An error occurred during payment verification.")
+        return redirect('payments:payment_failed')
+
 
 @require_GET
 def esewa_failure_view(request):
     """
-    Handle eSewa payment failure
+    Redirected here by eSewa if user cancels or payment fails.
     """
-    messages.error(request, "Payment was cancelled or failed.")
-    return redirect("payments:payment_failed")
+    messages.warning(request, "Payment was cancelled or failed by eSewa.")
+    return redirect('payments:payment_failed')
 
-@require_GET
+
 def payment_failed_view(request):
-    """
-    Display payment failure page
-    """
     return render(request, 'payments/payment_failed.html')
 
-@login_required
-def payment_history_view(request):
-    """
-    Display user's payment history
-    """
-    payments = Payment.objects.filter(user=request.user).select_related('course').order_by('-created_at')
-    context = {'payments': payments}
-    return render(request, 'payments/payment_history.html', context)
 
 @login_required
 def payment_success_view(request, transaction_id):
-    """
-    Display payment success page
-    """
     payment = get_object_or_404(Payment, transaction_id=transaction_id, user=request.user)
-    
-    if payment.status != 'completed':
-        messages.warning(request, "This payment is not marked as completed.")
-        return redirect('payments:payment_history')
-    
-    context = {
-        'payment': payment,
-        'course': payment.course
-    }
-    return render(request, 'payments/payment_success.html', context)
+    return render(request, 'payments/esewa_success.html', {'payment': payment})
+
+
+@login_required
+def payment_history_view(request):
+    payments = Payment.objects.filter(user=request.user).order_by('-created_at')
+    context = {'payments': payments}
+    return render(request, 'payments/payment_history.html', context)

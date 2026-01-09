@@ -407,6 +407,10 @@ def teacher_dashboard_view(request):
     messages_received = TeacherMessage.objects.filter(teacher=request.user).order_by('-created_at')
     unread_count = messages_received.filter(is_read=False).count()
     
+    # Trending Courses Analytics (Algorithm 2 - Global)
+    from courses.utils import get_trending_courses as get_global_trending
+    trending_courses = get_global_trending(5)
+    
     context = {
         'user': request.user,
         'courses': courses,
@@ -420,6 +424,7 @@ def teacher_dashboard_view(request):
         'recent_reviews': recent_reviews,
         'messages_received': messages_received,
         'unread_count': unread_count,
+        'trending_courses': trending_courses,
     }
     return render(request, 'accounts/teacher_dashboard.html', context)
 

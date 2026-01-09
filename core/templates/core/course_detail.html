@@ -265,20 +265,21 @@
                     <h6 class="text-muted text-uppercase small mb-3">Your Progress</h6>
 
                     {% if enrollment %}
-                    <div class="progress-circle mb-3"
-                        style="background: conic-gradient(var(--primary-purple) {{ mastery_score }}%, #e9ecef 0);">
-                        <span class="progress-value">{{ mastery_score|floatformat:0 }}%</span>
+                    <div id="progressCircle" class="progress-circle mb-3"
+                        style="background: conic-gradient(var(--primary-purple) {{ unit_progress }}%, #e9ecef 0);">
+                        <span id="progressValue" class="progress-value">{{ unit_progress|floatformat:0 }}%</span>
                     </div>
 
                     <div class="d-flex justify-content-between small text-muted mb-3">
-                        <div>Unit Comp.<br><strong class="text-dark">{{ unit_progress|floatformat:0 }}%</strong></div>
-                        <div>Quiz Perf.<br><strong class="text-dark">{{ quiz_score|floatformat:0 }}%</strong></div>
+                        <div>Unit Comp.<br><strong id="unitProgressText" class="text-dark">{{ unit_progress|floatformat:0 }}%</strong></div>
+                        <div>Quiz Perf.<br><strong id="quizScoreText" class="text-dark">{{ quiz_score|floatformat:0 }}%</strong></div>
                     </div>
 
-                    <div class="d-grid gap-2">
-                        {% if is_mastered %}
+                    <div class="d-grid gap-2" id="masteryStatusArea">
+                        {% if certificate_unlocked %}
                         <div class="badge bg-success p-2"><i class="fas fa-check-circle me-1"></i> Mastered</div>
-                        <a href="#" class="btn btn-outline-primary btn-sm rounded-pill mt-2">
+                        <a href="{% url 'reviews:certificate_download' enrollment.id %}"
+                            class="btn btn-outline-primary btn-sm rounded-pill mt-2">
                             <i class="fas fa-certificate me-1"></i> Download Certificate
                         </a>
                         {% else %}
@@ -462,12 +463,16 @@
                                 <div class="mb-3">
                                     <label class="form-label">Your Rating</label>
                                     <div class="rating-input">
-                                        {% for i in "54321" %}
-                                        <input type="radio" name="rating" value="{{ i }}" id="rate-{{ i }}"
-                                            {% if user_review.rating|add:0 == i|add:0 %}checked{% endif %}>
-                                        <label for="rate-{{ i }}"><i class="fas fa-star"></i></label>
-                                        {% endfor %}
-                                    </div>
+                                            {% for i in "54321" %}
+                                            <input type="radio" name="rating" value="{{ i }}" id="rate-{{ i }}"
+                                                {% if user_review.rating|add:0 == i|add:0 %}checked{% endif %}>
+                                            <label for="rate-{{ i }}"><i class="fas fa-star"></i></label>
+                                            {% endfor %}
+                                        </div>
+
+
+
+
                                     <style>
                                         .rating-input {
                                             display: flex;
@@ -592,12 +597,20 @@
 {% block extra_js %}
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    const lessonsData = {{ lessons_json|safe }};
-    const isEnrolled = {{ enrollment|yesno:"true,false" }};
+    const lessonsData = {{ lessons_json| safe }};
+    
     const courseSlug = "{{ course.slug }}";
+    const isEnrolled = {{ enrollment|yesno:"true,false" }};
     let player;
     let currentLessonId = {{ current_lesson.id|default:"null" }};
 
+
+    // Tracking Variables
+    let watchTimer = null;
+    let effectiveWatchTime = 0; // cumulative seconds watched
+    let lastPosition = 0;
+    let videoDuration = 0;
+    let isTracking = false;
 
     // Initial State Setup
     document.addEventListener('DOMContentLoaded', () => {
@@ -609,36 +622,82 @@
 
     // YouTube API
     function onYouTubeIframeAPIReady() {
-        // Player will be initialized on distinct action or if forced
-        // We defer player creation to the "Start Video" click to support custom cover
-        // But if we want to retain state, we can init hidden. 
-        // Let's init only when needed to save resources.
+        // Init happens on startVideo
     }
 
     function initPlayer(videoId) {
         if (player) {
             player.loadVideoById(videoId);
+            resetTracking();
         } else {
             player = new YT.Player('player', {
                 height: '100%', width: '100%', videoId: videoId,
                 playerVars: {
-                    'playsinline': 1,
-                    'controls': 1,
-                    'modestbranding': 1,
-                    'rel': 0,
-                    'autoplay': 1,
-                    'iv_load_policy': 3,
-                    'fs': 1
+                    'playsinline': 1, 'controls': 1, 'modestbranding': 1,
+                    'rel': 0, 'autoplay': 1, 'iv_load_policy': 3, 'fs': 1
                 },
-                events: { 'onStateChange': onPlayerStateChange }
+                events: {
+                    'onStateChange': onPlayerStateChange,
+                    'onReady': onPlayerReady
+                }
             });
         }
     }
 
+    function onPlayerReady(event) {
+        videoDuration = player.getDuration();
+        resetTracking();
+    }
+
     function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            startTracking();
+        } else {
+            stopTracking();
+        }
+
         if (event.data === YT.PlayerState.ENDED) {
+            videoDuration = player.getDuration();
             markLessonComplete(currentLessonId);
         }
+    }
+
+    function startTracking() {
+        if (isTracking) return;
+        isTracking = true;
+        lastPosition = player.getCurrentTime();
+
+        let heartbeatCounter = 0;
+
+        watchTimer = setInterval(() => {
+            const currentPos = player.getCurrentTime();
+            const diff = currentPos - lastPosition;
+
+            // Only count if they are playing normally (diff between 0 and 2 seconds)
+            if (diff > 0 && diff <= 1.5) {
+                effectiveWatchTime += diff;
+                heartbeatCounter++;
+            }
+            lastPosition = currentPos;
+
+            // Heartbeat every 5 seconds of active watching for faster visual feedback
+            if (heartbeatCounter >= 5) {
+                markLessonComplete(currentLessonId);
+                heartbeatCounter = 0;
+            }
+        }, 1000);
+    }
+
+    function stopTracking() {
+        isTracking = false;
+        if (watchTimer) clearInterval(watchTimer);
+    }
+
+    function resetTracking() {
+        effectiveWatchTime = 0;
+        lastPosition = 0;
+        videoDuration = 0;
+        if (player) videoDuration = player.getDuration();
     }
 
     // Video & UI Logic
@@ -668,6 +727,10 @@
         document.getElementById('player').style.display = 'none';
 
         if (player) player.stopVideo();
+        // Resume tracking from last saved watch time to ensure increments continue
+        effectiveWatchTime = lesson.watch_time || 0;
+        lastPosition = 0;
+        videoDuration = 0;
 
         // Update active class
         document.querySelectorAll('.lesson-item').forEach(el => el.classList.remove('active'));
@@ -708,18 +771,16 @@
             const quizItem = document.getElementById(`quiz-item-${l.id}`);
             if (l.has_quiz) {
                 quizItem.classList.remove('d-none');
-                // Lock logic: If not completed, add locked class
-                if (l.is_completed) {
-                    quizItem.classList.remove('locked');
-                } else {
-                    quizItem.classList.add('locked');
-                }
+                // Always unlock quiz if enrolled or preview
+                quizItem.classList.remove('locked');
             }
         });
     }
 
     window.loadQuiz = function (lessonId) {
         const lesson = lessonsData.find(l => l.id === lessonId);
+        // Removed watch criteria as requested - accessible if enrolled or preview
+        if (!lesson) return;
 
         // Highlight Sidebar
         document.querySelectorAll('.lesson-item').forEach(el => el.classList.remove('active'));
@@ -728,12 +789,23 @@
 
         // Swap UI
         if (player) player.stopVideo();
+        stopTracking();
         document.getElementById('videoCover').style.display = 'none';
         document.getElementById('player').style.display = 'none';
         document.getElementById('quizInterface').style.display = 'block';
 
         renderQuizQuestions(lesson);
     };
+
+    function escapeHtml(text) {
+        if (!text) return text;
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
 
     function renderQuizQuestions(lesson) {
         const container = document.getElementById('quizContent');
@@ -746,15 +818,17 @@
         lesson.questions.forEach((q, index) => {
             html += `<div class="card mb-3">
                         <div class="card-body">
-                            <h6 class="fw-bold">${index + 1}. ${q.text}</h6>
+                            <h6 class="fw-bold">${index + 1}. ${escapeHtml(q.text)}</h6>
                             <div class="options-list mt-3">`;
             q.options.forEach(opt => {
-                html += `<div class="form-check">
-                            <input class="form-check-input" type="radio" name="q-${q.id}" id="opt-${q.id}-${opt.key}" value="${opt.key}">
-                            <label class="form-check-label" for="opt-${q.id}-${opt.key}">
-                                ${opt.text}
-                            </label>
-                         </div>`;
+                if (opt.text && opt.text.trim() !== '') {
+                    html += `<div class="form-check">
+                                <input class="form-check-input" type="radio" name="q-${q.id}" id="opt-${q.id}-${opt.key}" value="${opt.key}">
+                                <label class="form-check-label" for="opt-${q.id}-${opt.key}">
+                                    ${escapeHtml(opt.text)}
+                                </label>
+                             </div>`;
+                }
             });
             html += `</div>
                      <div id="feedback-${q.id}" class="mt-2 small fw-bold"></div>
@@ -771,7 +845,7 @@
         const val = selected.value;
         const feedback = document.getElementById(`feedback-${questionId}`);
 
-        fetch(`/${courseSlug}/submit-mcq/`, {
+        fetch(`/courses/${courseSlug}/submit-mcq/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -792,6 +866,7 @@
                         feedback.className = "mt-2 small fw-bold text-danger";
                         feedback.innerText = "Incorrect. Try again.";
                     }
+                    updateDashboard(data);
                 } else {
                     alert("Error: " + data.error);
                 }
@@ -800,25 +875,75 @@
 
     function markLessonComplete(lessonId) {
         if (!isEnrolled) return;
-        fetch(`/${courseSlug}/lesson/${lessonId}/complete/`, {
+
+        fetch(`/courses/${courseSlug}/lesson/${lessonId}/complete/`, {
             method: 'POST',
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-        }).then(res => {
-            if (res.ok) {
-                // Update local state to unlock quiz
-                const lesson = lessonsData.find(l => l.id === lessonId);
-                lesson.is_completed = true;
-                const quizItem = document.getElementById(`quiz-item-${lessonId}`);
-                if (quizItem) quizItem.classList.remove('locked');
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                watch_time: Math.round(effectiveWatchTime)
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const lesson = lessonsData.find(l => l.id === lessonId);
+                    // Update local memory for unlocking quiz
+                    lesson.is_completed = data.lesson_completed;
+
+                    if (data.newly_completed) {
+                        const quizItem = document.getElementById(`quiz-item-${lessonId}`);
+                        if (quizItem) quizItem.classList.remove('locked');
+                        alert("Lesson Completed! Quiz Unlocked.");
+                    }
+                    updateDashboard(data);
+                }
+            });
+    }
+
+    function updateDashboard(data) {
+        const circle = document.getElementById('progressCircle');
+        // Use unit_progress for the main circle to show 5% step watch progress directly
+        const progress = Math.round(data.unit_progress || 0);
+        if (circle) {
+            circle.style.background = `conic-gradient(var(--primary-purple) ${progress}%, #e9ecef 0)`;
+        }
+
+        const valText = document.getElementById('progressValue');
+        if (valText) valText.innerText = progress + '%';
+
+        const unitText = document.getElementById('unitProgressText');
+        if (unitText) unitText.innerText = Math.round(data.unit_progress || 0) + '%';
+
+        const quizText = document.getElementById('quizScoreText');
+        if (quizText) quizText.innerText = Math.round(data.quiz_score || 0) + '%';
+
+        const area = document.getElementById('masteryStatusArea');
+        if (area) {
+            if (data.certificate_unlocked) {
+                area.innerHTML = `
+                    <div class="badge bg-success p-2"><i class="fas fa-check-circle me-1"></i> Mastered</div>
+                    <a href="/reviews/certificates/download/{{ enrollment.id }}/" class="btn btn-outline-primary btn-sm rounded-pill mt-2">
+                        <i class="fas fa-certificate me-1"></i> Download Certificate
+                    </a>
+                `;
+            } else {
+                area.innerHTML = `
+                    <div class="badge bg-secondary p-2"><i class="fas fa-spinner me-1"></i> ${data.mastery_status || "In Progress"}</div>
+                    <button class="btn btn-outline-secondary btn-sm rounded-pill mt-2" disabled>
+                        <i class="fas fa-lock me-1"></i> Certificate Locked
+                    </button>
+                `;
             }
-        });
+        }
     }
 
     function toggleTheaterMode() {
         document.getElementById('videoWrapper').classList.toggle('minimized-player');
     }
 
-    // Helper to update UI on page load
     function updateLessonUI(lessonId) {
         const lesson = lessonsData.find(l => l.id === lessonId);
         if (lesson) {

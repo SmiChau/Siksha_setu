@@ -5,6 +5,35 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/css/teachers.css' %}">
+<style>
+    .btn-mint-green {
+        background-color: var(--mint-green);
+        border-color: var(--mint-green);
+        color: white;
+    }
+
+    .btn-mint-green:hover {
+        background-color: #3db8af;
+        border-color: #3db8af;
+        color: white;
+    }
+
+    .btn-outline-mint-green {
+        border-color: var(--mint-green);
+        color: var(--mint-green);
+    }
+
+    .btn-outline-mint-green:hover {
+        background-color: var(--mint-green);
+        color: white;
+    }
+
+    .badge-outline-mint {
+        border: 1px solid var(--mint-green);
+        color: var(--primary-blue);
+        background: rgba(78, 205, 196, 0.1);
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -21,23 +50,31 @@
             </p>
         </div>
 
+        <!-- Active Category Info -->
+        {% if selected_category_obj %}
+        <div class="mb-5 text-center">
+            <div class="d-inline-block bg-white px-4 py-2 rounded-pill shadow-sm border border-mint-green">
+                <span class="text-muted small">Specialized in:</span>
+                <span class="fw-bold ms-1" style="color: var(--primary-blue);">{{ selected_category_obj.name }}</span>
+                <a href="?" class="ms-2 text-danger text-decoration-none" title="Clear Filter">
+                    <i class="fas fa-times-circle"></i>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Filter Bar -->
-        <div class="teacher-filter-bar d-flex flex-wrap gap-3 align-items-center justify-content-center mb-4">
-            <button class="btn btn-outline-primary rounded-pill active px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
+        <div class="teacher-filter-bar d-flex flex-wrap gap-2 align-items-center justify-content-center mb-5">
+            <a href="?"
+                class="btn btn-sm px-4 rounded-pill {% if not selected_category %}btn-mint-green{% else %}btn-outline-mint-green{% endif %}">
                 All Experts
-            </button>
-            <button class="btn btn-outline-primary rounded-pill px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
-                Development
-            </button>
-            <button class="btn btn-outline-primary rounded-pill px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
-                Design
-            </button>
-            <button class="btn btn-outline-primary rounded-pill px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
-                Business
-            </button>
-            <button class="btn btn-outline-primary rounded-pill px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
-                Language
-            </button>
+            </a>
+            {% for cat in categories %}
+            <a href="?category={{ cat.slug }}"
+                class="btn btn-sm px-4 rounded-pill {% if selected_category == cat.slug %}btn-mint-green{% else %}btn-outline-mint-green{% endif %}">
+                {{ cat.name }}
+            </a>
+            {% endfor %}
         </div>
 
         <!-- Teacher Grid -->
@@ -50,15 +87,13 @@
                     <!-- Avatar -->
                     <div class="teacher-avatar-wrapper mb-3">
                         {% if teacher.profile_picture %}
-                            <img src="{{ teacher.profile_picture.url }}"
-                                 class="teacher-avatar rounded-circle"
-                                 alt="{{ teacher.get_full_name }}"
-                                 style="width: 150px; height: 150px; object-fit: cover;">
+                        <img src="{{ teacher.profile_picture.url }}" class="teacher-avatar rounded-circle"
+                            alt="{{ teacher.get_full_name }}" style="width: 150px; height: 150px; object-fit: cover;">
                         {% else %}
-                            <div class="teacher-avatar-placeholder rounded-circle mx-auto d-flex align-items-center justify-content-center"
-                                 style="width: 150px; height: 150px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%); color: white; font-size: 3rem;">
-                                {{ teacher.get_short_name|first }}
-                            </div>
+                        <div class="teacher-avatar-placeholder rounded-circle mx-auto d-flex align-items-center justify-content-center"
+                            style="width: 150px; height: 150px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%); color: white; font-size: 3rem;">
+                            {{ teacher.get_short_name|first }}
+                        </div>
                         {% endif %}
                     </div>
 
@@ -70,11 +105,11 @@
                     <!-- Location / Expertise -->
                     <div class="teacher-expertise text-muted mb-2 small">
                         {% if teacher.teacher_profile and teacher.teacher_profile.location %}
-                            <i class="fas fa-map-marker-alt me-1"></i>
-                            {{ teacher.teacher_profile.location }}
+                        <i class="fas fa-map-marker-alt me-1"></i>
+                        {{ teacher.teacher_profile.location }}
                         {% else %}
-                            <i class="fas fa-star me-1"></i>
-                            Expert Instructor
+                        <i class="fas fa-star me-1"></i>
+                        Expert Instructor
                         {% endif %}
                     </div>
 
@@ -97,17 +132,17 @@
                         <span class="d-flex align-items-center">
                             <i class="fas fa-graduation-cap me-1"></i>
                             {% if teacher.teacher_profile and teacher.teacher_profile.education %}
-                                {{ teacher.teacher_profile.education|truncatechars:15 }}
+                            {{ teacher.teacher_profile.education|truncatechars:15 }}
                             {% else %}
-                                Qualified
+                            Qualified
                             {% endif %}
                         </span>
                     </div>
 
                     <!-- View Profile -->
                     <a href="{% url 'core:teacher_profile' teacher.id %}"
-                       class="btn btn-outline-primary rounded-pill px-4 mt-2"
-                       style="border-color: var(--mint-green); color: var(--mint-green);">
+                        class="btn btn-outline-primary rounded-pill px-4 mt-2"
+                        style="border-color: var(--mint-green); color: var(--mint-green);">
                         View Profile
                     </a>
 

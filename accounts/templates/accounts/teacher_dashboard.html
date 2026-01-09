@@ -307,7 +307,7 @@
         <h5 class="fw-bold mb-0" style="color: var(--primary-blue);">
             <i class="fas fa-book-open me-2" style="color: var(--mint-green);"></i>My Courses
             <span class="badge rounded-pill ms-2 px-3 py-1"
-                style="background-color: rgba(78, 205, 196, 0.1); color: var(--mint-green);">               {{ courses.count }} total
+                style="background-color: rgba(78, 205, 196, 0.1); color: var(--mint-green);"> {{ courses.count }} total
             </span>
         </h5>
         <div class="d-flex gap-2">
@@ -459,6 +459,54 @@
             </a>
         </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Trending Courses (Algorithm 2) -->
+<div class="card border-0 shadow-sm mb-5 rounded-3 overflow-hidden">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0" style="color: var(--primary-blue);">
+            <i class="fas fa-chart-line me-2" style="color: var(--accent-yellow);"></i>Trending Analytics (Hacker News
+            Gravity)
+            <small class="text-muted fw-normal ms-2" style="font-size: 0.8rem;">Current Momentum</small>
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Course</th>
+                        <th>Trending Score</th>
+                        <th>Views</th>
+                        <th>Enrollments</th>
+                        <th class="pe-4">Likes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in trending_courses %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="fw-bold" style="color: var(--primary-blue);">{{ item.course.title|truncatechars:40 }}</span>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill px-3 py-1"
+                                style="background-color: rgba(230, 194, 0, 0.1); color: #e6c200;">
+                                {{ item.trending_score|floatformat:4 }}
+                            </span>
+                        </td>
+                        <td>{{ item.course.views_count }}</td>
+                        <td>{{ item.course.enrollment_count }}</td>
+                        <td class="pe-4">{{ item.course.likes_count }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">No trending data yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 

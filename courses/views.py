@@ -11,41 +11,58 @@ from .models import (
     Category, Course, Lesson, LessonResource, 
     MCQQuestion, Enrollment, LessonProgress, MCQAttempt
 )
-from .models import (
-    Category, Course, Lesson, LessonResource, 
-    MCQQuestion, Enrollment, LessonProgress, MCQAttempt
-)
 from reviews.models import Review, Certificate
 from payments.models import Payment
-from django.db.models import OuterRef, Subquery, DecimalField, Sum, Value
+from django.db.models import OuterRef, Subquery, DecimalField, Sum, Value, Max
 from django.db.models.functions import Coalesce
+from core.models import TeacherMessage
 
 
 def course_list_view(request):
+    """
+    Main view for the course catalog.
+    
+    ACADEMIC JUSTIFICATION:
+    1. **Dynamic Category Fetching**: We fetch only categories that have at least one 
+       published course to prevent "Empty Result" states in the UI, ensuring a 
+       high-integrity browsing experience.
+    2. **Server-Side Filtering**: Filtering at the database level (ORM) is significantly 
+       more performant than client-side for growing datasets.
+    3. **SEO Friendly URLs**: Using query parameters (?category=slug) allows 
+       search engines to index filtered views independently.
+    """
     courses = Course.objects.filter(status='published').select_related('instructor', 'category')
-    categories = Category.objects.all()
+    
+    # Only show categories that actually have live courses
+    categories = Category.objects.filter(courses__status='published').distinct()
     
     category_slug = request.GET.get('category')
     level = request.GET.get('level')
     price_filter = request.GET.get('price')
-    search = request.GET.get('search')
+    query = request.GET.get('q')
     sort = request.GET.get('sort', 'popular')
     
+    # Search logic (Combined with category filter)
+    if query:
+        courses = courses.filter(
+            Q(title__icontains=query) |
+            Q(category__name__icontains=query)
+        )
+    
+    # Category Filtering
+    selected_category_obj = None
     if category_slug:
         courses = courses.filter(category__slug=category_slug)
+        selected_category_obj = Category.objects.filter(slug=category_slug).first()
+
     if level:
         courses = courses.filter(level=level)
     if price_filter == 'free':
         courses = courses.filter(is_free=True)
     elif price_filter == 'paid':
         courses = courses.filter(is_free=False)
-    if search:
-        courses = courses.filter(
-            Q(title__icontains=search) |
-            Q(description__icontains=search) |
-            Q(instructor__first_name__icontains=search)
-        )
     
+    # Sorting
     if sort == 'newest':
         courses = courses.order_by('-created_at')
     elif sort == 'rating':
@@ -55,6 +72,7 @@ def course_list_view(request):
     elif sort == 'price_high':
         courses = courses.order_by('-price')
     else:
+        # Default: Momentum/Weighted Score
         courses = sorted(courses, key=lambda c: c.calculate_weighted_score(), reverse=True)
     
     paginator = Paginator(courses, 12)
@@ -65,9 +83,10 @@ def course_list_view(request):
         'courses': courses,
         'categories': categories,
         'selected_category': category_slug,
+        'selected_category_obj': selected_category_obj,
         'selected_level': level,
         'selected_price': price_filter,
-        'search_query': search,
+        'search_query': query,
         'sort': sort,
     }
     return render(request, 'core/course_list.html', context)
@@ -77,20 +96,19 @@ def course_detail_view(request, slug):
     if slug in ["manage", "my-courses"]:
         raise Http404("Invalid course slug")
 
-    # If owner, they can see drafts
-    if request.user.is_authenticated and request.user.role == 'teacher':
-        course = get_object_or_404(
-            Course.objects.select_related('instructor', 'category').prefetch_related('lessons', 'reviews'),
-            slug=slug,
-            instructor=request.user
-        )
-    else:
-        # Students or public only see published
-        course = get_object_or_404(
-            Course.objects.select_related('instructor', 'category').prefetch_related('lessons', 'reviews'),
-            slug=slug,
-            status='published'
-        )
+    # Fetch course by slug first
+    course = Course.objects.select_related('instructor', 'category').prefetch_related('lessons', 'reviews').filter(slug=slug).first()
+    
+    if not course:
+        raise Http404("No Course matches the given query.")
+
+    # Access Control Logic:
+    # 1. Published courses are visible to everyone.
+    # 2. Non-published courses (drafts/pending) are only visible to the instructor or superusers.
+    is_owner = request.user.is_authenticated and (request.user == course.instructor or request.user.is_superuser)
+    
+    if course.status != 'published' and not is_owner:
+        raise Http404("No Course matches the given query.")
     
     Course.objects.filter(pk=course.pk).update(views_count=course.views_count + 1)
     
@@ -126,11 +144,11 @@ def course_detail_view(request, slug):
             lesson_progress = {p.lesson_id: p for p in progress_records}
             
             # Recalculate if needed to be fresh
-            enrollment.check_completion() 
-            unit_progress = enrollment.progress_percentage
-            quiz_score = enrollment.mcq_score
-            mastery_score = enrollment.overall_score
-            is_mastered = enrollment.overall_score >= 80
+            enrollment.update_scores() 
+            unit_progress = enrollment.unit_progress
+            quiz_score = enrollment.quiz_score
+            mastery_score = enrollment.mastery_score
+            is_mastered = enrollment.mastery_score >= 80
             mastery_status = "Mastered" if is_mastered else "In Progress"
             
     # Determine current lesson
@@ -153,8 +171,10 @@ def course_detail_view(request, slug):
         res_data = [{'title': r.title, 'url': r.get_resource_url(), 'type': r.resource_type} for r in resources]
         
         is_completed = False
+        watch_time = 0
         if enrollment and lesson.id in lesson_progress:
             is_completed = lesson_progress[lesson.id].is_completed
+            watch_time = lesson_progress[lesson.id].watch_time
             
         lessons_data.append({
             'id': lesson.id,
@@ -165,6 +185,7 @@ def course_detail_view(request, slug):
             'is_preview': lesson.is_preview,
             'resources': res_data,
             'is_completed': is_completed,
+            'watch_time': watch_time,
             'has_quiz': lesson.mcq_questions.exists(),
             'quiz_count': lesson.mcq_questions.count(),
             'questions': [
@@ -206,6 +227,7 @@ def course_detail_view(request, slug):
         'mastery_score': mastery_score,
         'mastery_status': mastery_status,
         'is_mastered': is_mastered,
+        'certificate_unlocked': is_mastered,
     }
     return render(request, 'core/course_detail.html', context)
 
@@ -282,11 +304,35 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
         enrollment=enrollment,
         lesson=lesson
     )
-    lesson_progress.mark_completed()
+    
+    import json
+    newly_completed = False
+    try:
+        data = json.loads(request.body)
+        # Frontend sends seconds
+        watch_seconds = float(data.get('watch_time', 0))
+        # Lesson duration in minutes -> convert to seconds
+        video_duration_seconds = lesson.video_duration * 60
+        
+        # Incremental update and check for completion
+        newly_completed = lesson_progress.update_watch_time(watch_seconds, video_duration_seconds)
+    except Exception as e:
+        print(f"Error updating watch time: {e}")
+        pass
+
+    # Recalculate everything (Time-based logic with 5% steps)
+    enrollment.update_scores()
     
     return JsonResponse({
         'success': True,
-        'progress': enrollment.calculate_progress()
+        'unit_progress': enrollment.unit_progress,
+        'quiz_score': enrollment.quiz_score,
+        'mastery_score': enrollment.mastery_score,
+        'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
+        'is_mastered': enrollment.mastery_score >= 80,
+        'certificate_unlocked': enrollment.certificate_unlocked,
+        'lesson_completed': lesson_progress.is_completed, # Important for quiz unlocking
+        'newly_completed': newly_completed
     })
 
 
@@ -382,43 +428,134 @@ def get_top_rated_courses(limit=6):
 
 
 def get_trending_courses(limit=6):
-    courses = Course.objects.filter(status='published')
-    sorted_courses = sorted(courses, key=lambda c: c.calculate_trending_score(), reverse=True)
-    return sorted_courses[:limit]
+    from .utils import get_trending_courses as get_global_trending
+    trending_data = get_global_trending(limit)
+    return [item['course'] for item in trending_data]
 
 
 def get_recommended_courses(user, limit=6):
+    """
+    Algorithm 3: Content-Based Filtering Recommendation Engine
+    ----------------------------------------------------------
+    ACADEMIC JUSTIFICATION:
+    1.  **Why Content-Based?**
+        - Operates purely on Item Features (Categories, Tags) and User Profile.
+        - Addresses the "Cold Start" problem for new items (unlike Collaborative Filtering).
+        - Highly explainable: "Recommended because you liked content X".
+    
+    2.  **Personalized Learning Support:**
+        - Builds a unique 'Interest Profile' for every student based on their enrollment history.
+        - Suggests courses that semantically align with what the student has already shown interest in,
+          fostering deeper subject mastery.
+
+    3.  **Scalability:**
+        - Rule-based and deterministic. O(N*M) complexity where N=Users, M=Courses.
+        - Does not require heavy matrix factorization or model training.
+        - Can be cached easily per user.
+
+    4.  **Future Extensibility:**
+        - This logic creates the feature vectors (User Vector, Item Vector).
+        - These vectors can later be fed into Cosine Similarity functions or Neural Networks 
+          (e.g., Two-Tower architecture) for advanced ML ranking.
+
+    ALGORITHM STEPS:
+    1.  **User Profile Construction**: Aggregate weights from enrolled Categories & Tags.
+    2.  **Candidate Selection**: Filter Active Courses NOT already enrolled.
+    3.  **Similarity Scoring**: Score = (CategoryWeight * 0.4) + (TagJaccardIndex * 0.6).
+    4.  **Ranking**: Sort by Score DESC.
+    """
     if not user.is_authenticated:
         return get_top_rated_courses(limit)
-    
-    enrolled_courses = Enrollment.objects.filter(student=user).values_list('course_id', flat=True)
-    
+
+    # --- Step 1: Build User Profile ---
+    # Fetch all enrolled courses for the user
+    # Optimize: Only fetch necessary fields to minimize memory footprint
+    enrolled_courses = Course.objects.filter(
+        enrollments__student=user
+    ).values('id', 'category_id', 'what_you_learn')
+
     if not enrolled_courses:
+        # Cold Start: Fallback to global popularity if user has no history
         return get_top_rated_courses(limit)
-    
-    enrolled_categories = Course.objects.filter(
-        id__in=enrolled_courses
-    ).values_list('category_id', flat=True).distinct()
-    
-    recommended = Course.objects.filter(
-        status='published',
-        category_id__in=enrolled_categories
+
+    enrolled_ids = set()
+    category_counts = {}
+    user_tags_set = set()
+    total_enrollments = 0
+
+    for item in enrolled_courses:
+        enrolled_ids.add(item['id'])
+        
+        # Category Frequency Analysis
+        cat_id = item['category_id']
+        if cat_id:
+            category_counts[cat_id] = category_counts.get(cat_id, 0) + 1
+        
+        # Tag Aggregation (using 'what_you_learn' as semantic tags)
+        # Assuming 'what_you_learn' is a list of strings
+        if item['what_you_learn'] and isinstance(item['what_you_learn'], list):
+            for tag in item['what_you_learn']:
+                if tag:
+                    user_tags_set.add(tag.lower().strip())
+        
+        total_enrollments += 1
+
+    # Normalize Category Weights (0.0 to 1.0)
+    # e.g., If user enrolled in 3 Web Dev and 1 Data Science, Web Dev weight is 0.75
+    category_weights = {k: v / total_enrollments for k, v in category_counts.items()}
+
+    # --- Step 2: Candidate Selection ---
+    # Fetch all published courses not already enrolled
+    # Optimization: select_related for minimal joins later
+    candidates = Course.objects.filter(
+        status='published'
     ).exclude(
-        id__in=enrolled_courses
-    ).annotate(
-        avg_rating=Avg('reviews__rating')
-    ).order_by('-avg_rating', '-enrollment_count')[:limit]
+        id__in=enrolled_ids
+    ).select_related('category').only('id', 'title', 'category', 'what_you_learn', 'thumbnail', 'price', 'is_free', 'instructor')
+
+    scored_courses = []
+
+    # --- Step 3: Compute Similarity Score ---
+    for course in candidates:
+        # A. Category Match Score (0.4 Weight)
+        # Direct lookup in normalized user interest profile
+        cat_score = category_weights.get(course.category_id, 0.0)
+        
+        # B. Tag Overlap Score (0.6 Weight)
+        # Using Jaccard Similarity Index: Intersection / Union
+        course_tags = set()
+        if course.what_you_learn and isinstance(course.what_you_learn, list):
+            course_tags = {t.lower().strip() for t in course.what_you_learn if t}
+        
+        tag_score = 0.0
+        if user_tags_set or course_tags:
+            intersection = user_tags_set.intersection(course_tags)
+            union = user_tags_set.union(course_tags)
+            if union:
+                tag_score = len(intersection) / len(union)
+
+        # Final Weighted Score
+        # We prioritize Tags (Content) slightly more than broad Categories
+        final_score = (cat_score * 0.4) + (tag_score * 0.6)
+        
+        scored_courses.append((course, final_score))
+
+    # --- Step 4: Rank & Recommend ---
+    # Sort by score DESC
+    scored_courses.sort(key=lambda x: x[1], reverse=True)
     
-    if recommended.count() < limit:
-        additional = Course.objects.filter(
-            status='published'
-        ).exclude(
-            id__in=enrolled_courses
-        ).exclude(
-            id__in=[c.id for c in recommended]
-        ).order_by('-enrollment_count')[:limit - recommended.count()]
-        recommended = list(recommended) + list(additional)
+    # Extract just the course objects
+    recommended = [item[0] for item in scored_courses[:limit]]
     
+    # Back-fill with popular courses if recommendation list is too short (Hybrid fallback)
+    if len(recommended) < limit:
+        top_rated = get_top_rated_courses(limit * 2) # Fetch extra to filter duplicates
+        for c in top_rated:
+            if len(recommended) >= limit:
+                break
+            if c.id not in enrolled_ids and c not in recommended:
+                recommended.append(c)
+
     return recommended
 
 
@@ -446,6 +583,7 @@ def teacher_dashboard_view(request):
     
     courses = Course.objects.filter(instructor=request.user).annotate(
         enrolled_students=Count('enrollments__student', distinct=True),
+        avg_rating=Avg('reviews__rating'),
         revenue_total=Coalesce(
             Subquery(revenue_subquery, output_field=DecimalField()), 
             Value(0, output_field=DecimalField())
@@ -460,40 +598,44 @@ def teacher_dashboard_view(request):
     total_revenue = sum(c.revenue_total for c in courses)
     
     # Calculate average rating across all courses
-    # We can't easily aggregate the model method get_average_rating in DB
-    # So we do it in python for consistency with the displayed cards if needed, 
-    # OR we can keep the separate aggregation if it was working.
-    # For now, let's trust the existing aggregation if it exists, or add one.
-    # The previous view simplified this. Let's add a robust average rating calculation.
-    
-    from django.db.models import Avg
-    # Re-querying for rating to be safe or iterating. Iterating is fine for dashboard scale.
-    # But wait, courses doesn't have rating annotated.
-    # Let's annotate rating too for efficiency if we want to display it or sum it?
-    # Actually, the table uses course.get_average_rating.
-    # The card uses... we need to see what the card used.
-    # The template used {{ avg_rating }} but it wasn't passed in context in the snippet I saw!
-    # Let's calculate it.
-    
     total_rating_sum = 0
     rated_courses_count = 0
     for course in courses:
-        r = course.get_average_rating()
+        r = course.avg_rating or 0
         if r > 0:
             total_rating_sum += r
             rated_courses_count += 1
             
     avg_rating = round(total_rating_sum / rated_courses_count, 1) if rated_courses_count > 0 else 0.0
+    # Recent enrollments for this teacher's courses
+    recent_enrollments = Enrollment.objects.filter(
+        course__instructor=request.user
+    ).select_related('student', 'course').order_by('-enrolled_at')[:10]
+    
+    # Recent reviews for this teacher's courses
+    recent_reviews = Review.objects.filter(
+        course__instructor=request.user
+    ).select_related('user', 'course').order_by('-created_at')[:5]
+    
+    # Messages from students
+    messages_received = TeacherMessage.objects.filter(teacher=request.user).order_by('-created_at')
+    unread_count = messages_received.filter(is_read=False).count()
 
     context = {
+        'user': request.user,
         'courses': courses,
+        'total_courses': courses.count(),
         'published_count': published_count,
         'draft_count': draft_count,
         'total_students': total_students,
         'total_revenue': total_revenue,
         'avg_rating': avg_rating,
+        'recent_enrollments': recent_enrollments,
+        'recent_reviews': recent_reviews,
+        'messages_received': messages_received,
+        'unread_count': unread_count,
     }
-    return render(request, 'courses/teacher_dashboard.html', context)
+    return render(request, 'accounts/teacher_dashboard.html', context)
 
 @login_required
 def course_create_step1_view(request, slug=None):
@@ -532,6 +674,12 @@ def course_create_step2_view(request, slug):
     course = get_object_or_404(Course, slug=slug, instructor=request.user)
     
     from .forms import LessonForm
+    from django.db.models import Max
+    
+    # Calculate next available order
+    current_max = course.lessons.aggregate(Max('order'))['order__max'] or 0
+    next_order = current_max + 1
+    
     if request.method == 'POST':
         if 'delete_lesson' in request.POST:
             lesson_id = request.POST.get('delete_lesson')
@@ -542,15 +690,22 @@ def course_create_step2_view(request, slug):
         
         form = LessonForm(request.POST)
         if form.is_valid():
-            lesson = form.save(commit=False)
-            lesson.course = course
-            lesson.save()
-            messages.success(request, "Lesson added successfully.")
-            return redirect('courses:course_edit_step2', slug=course.slug)
+            lesson_order = form.cleaned_data.get('order')
+            
+            # If user left it as default 0 or some value that exists, let's check
+            if Lesson.objects.filter(course=course, order=lesson_order).exists():
+                form.add_error('order', f"A lesson with order {lesson_order} already exists. Please choose a different order or use the default ({next_order}).")
+            else:
+                lesson = form.save(commit=False)
+                lesson.course = course
+                lesson.save()
+                messages.success(request, "Lesson added successfully.")
+                return redirect('courses:course_edit_step2', slug=course.slug)
     else:
-        form = LessonForm()
+        # Default the order to the next available one
+        form = LessonForm(initial={'order': next_order})
     
-    lessons = course.lessons.all()
+    lessons = course.lessons.all().order_by('order')
     context = {
         'course': course,
         'lessons': lessons,
@@ -703,32 +858,75 @@ def submit_mcq_answer(request, course_slug):
             defaults={'selected_option': selected_option}
         )
         
-        # Recalculate Course MCQ Score
-        total_questions = MCQQuestion.objects.filter(lesson__course=course).count()
-        correct_attempts = MCQAttempt.objects.filter(
-            enrollment=enrollment, 
-            question__lesson__course=course,
-            is_correct=True
-        ).count()
+        # The MCQAttempt save() method automatically handles is_correct check
         
-        if total_questions > 0:
-            new_mcq_score = (correct_attempts / total_questions) * 100
-        else:
-            new_mcq_score = 100.0
-            
-        enrollment.mcq_score = round(new_mcq_score, 1)
-        enrollment.save()
-        
-        enrollment.check_completion()
+        # Trigger recalculation of all stats using the model methods
+        enrollment.update_scores()
         
         return JsonResponse({
             'success': True,
             'is_correct': attempt.is_correct,
             'explanation': question.explanation,
             'correct_option': question.correct_option,
-            'new_mcq_score': enrollment.mcq_score,
-            'mastery_score': enrollment.overall_score,
-            'is_mastered': enrollment.overall_score >= 80,
+            
+            # Updated Algorithm stats for dynamic UI updates
+            'unit_progress': enrollment.unit_progress,
+            'quiz_score': enrollment.quiz_score,
+            'mastery_score': enrollment.mastery_score,
+            'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
+            'is_mastered': enrollment.mastery_score >= 80,
+            'certificate_unlocked': enrollment.certificate_unlocked
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def submit_mcq_answer(request, course_slug):
+    """
+    Handles MCQ submission via JSON Body.
+    Expects: { question_id: <int>, selected_option: <str> }
+    """
+    import json
+    try:
+        data = json.loads(request.body)
+        question_id = data.get('question_id')
+        selected_option = data.get('selected_option', '').upper()
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'})
+
+    if not question_id or not selected_option:
+        return JsonResponse({'success': False, 'error': 'Missing parameters'})
+
+    course = get_object_or_404(Course, slug=course_slug)
+    enrollment = get_object_or_404(Enrollment, student=request.user, course=course)
+    question = get_object_or_404(MCQQuestion, id=question_id)
+    
+    # Verify question belongs to course (via lesson)
+    if question.lesson.course != course:
+         return JsonResponse({'success': False, 'error': 'Invalid question for this course'})
+
+    if selected_option not in ['A', 'B', 'C', 'D']:
+        return JsonResponse({'success': False, 'error': 'Invalid option'})
+    
+    attempt, created = MCQAttempt.objects.update_or_create(
+        enrollment=enrollment,
+        question=question,
+        defaults={'selected_option': selected_option}
+    )
+    
+    # Update progress and scores
+    enrollment.update_scores()
+    
+    return JsonResponse({
+        'success': True,
+        'is_correct': attempt.is_correct,
+        'correct_option': question.correct_option,
+        'explanation': question.explanation,
+        'quiz_score': enrollment.quiz_score,
+        'unit_progress': enrollment.unit_progress,
+        'mastery_score': enrollment.mastery_score,
+        'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
+        'certificate_unlocked': enrollment.certificate_unlocked
+    })
