@@ -172,8 +172,8 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = 'Siksha Setu <smritichaudharyy2004@gmail.com>'
-SERVER_EMAIL = 'smritichaudharyy2004@gmail.com'
+DEFAULT_FROM_EMAIL = 'Siksha Setu <sikshasetu01@gmail.com>'
+SERVER_EMAIL = 'sikshasetu01@gmail.com'
 
 # Session Configuration
 # https://docs.djangoproject.com/en/5.1/ref/settings/#sessions
