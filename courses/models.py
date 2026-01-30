@@ -401,6 +401,7 @@ class LessonProgress(models.Model):
     )
     
     is_completed = models.BooleanField(default=False)
+    quiz_completed = models.BooleanField(default=False)
     watch_time = models.PositiveIntegerField(default=0, help_text='Total cumulative watch time in seconds')
     max_position = models.PositiveIntegerField(default=0, help_text='Furthest position watched')
     

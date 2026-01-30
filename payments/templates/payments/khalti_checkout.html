@@ -1,0 +1,54 @@
+{% extends 'core/base_public.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header text-white py-3 rounded-top-4" style="background-color: #ce1828;">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-wallet me-2"></i> Pay with Khalti</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <img src="{% static 'core/img/khaltilogo.png' %}" alt="Khalti Payment Gateway" height="50"
+                            class="mb-3">
+                        <h4 class="fw-bold">{{ course.title }}</h4>
+                        <p class="text-muted">Payment amount: <span class="fw-bold text-dark fs-5">NPR {{ total_amount }}</span></p>
+                    </div>
+
+                    <div class="alert alert-light border mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Course Price:</span>
+                            <span>NPR {{ amount }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Student:</span>
+                            <span class="text-muted small">{{ student_name }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-top pt-2 fw-bold">
+                            <span>Total Payable:</span>
+                            <span>NPR {{ total_amount }}</span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <a href="{% url 'payments:khalti_initiate' course.slug %}"
+                            class="btn btn-lg rounded-pill text-white fw-bold shadow-sm"
+                            style="background-color: #ce1828;">
+                            Pay with Khalti <i class="fas fa-arrow-right ms-2"></i>
+                        </a>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <a href="{% url 'courses:course_detail' course.slug %}"
+                            class="text-muted small text-decoration-none">
+                            Cancel Payment
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -8,8 +8,10 @@ urlpatterns = [
     path('initiate/<slug:course_slug>/', views.initiate_payment_view, name='initiate_payment'),
     
     # Khalti ePayment API v2
+    path('khalti/checkout/<slug:course_slug>/', views.khalti_checkout_view, name='khalti_checkout'),
     path('khalti/initiate/<slug:course_slug>/', views.khalti_initiate_view, name='khalti_initiate'),
     path('khalti/callback/', views.khalti_callback_view, name='khalti_callback'),
+    path('khalti/success/<str:transaction_id>/', views.khalti_success_view, name='khalti_success'),
     
     # eSewa
     path('esewa/initiate/<slug:course_slug>/', views.esewa_initiate_view, name='esewa_checkout'),

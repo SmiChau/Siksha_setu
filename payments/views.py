@@ -60,6 +60,27 @@ def initiate_payment_view(request, course_slug):
     return render(request, 'payments/checkout.html', context)
 
 @login_required
+def khalti_checkout_view(request, course_slug):
+    """
+    Shows Khalti checkout summary page
+    """
+    course = get_object_or_404(Course, slug=course_slug, status='published')
+    
+    # Check if already enrolled
+    if Enrollment.objects.filter(student=request.user, course=course).exists():
+        messages.info(request, 'You are already enrolled in this course.')
+        return redirect('courses:course_detail', slug=course_slug)
+        
+    context = {
+        'course': course,
+        'total_amount': course.price,
+        'amount': course.price,
+        'student_name': request.user.get_full_name() or request.user.email,
+    }
+    return render(request, 'payments/khalti_checkout.html', context)
+
+
+@login_required
 def khalti_initiate_view(request, course_slug):
     print(f"DEBUG: Khalti initiate request received for course: {course_slug}")
     """
@@ -191,11 +212,19 @@ def khalti_callback_view(request):
     verification_result = verify_khalti_payment(pidx, payment)
     
     if verification_result['success']:
-        messages.success(request, f"Payment successful! You are now enrolled in {payment.course.title}.")
-        return redirect('courses:course_detail', slug=payment.course.slug)
+        return redirect('payments:khalti_success', transaction_id=payment.transaction_id)
     else:
         messages.error(request, f"Payment verification failed: {verification_result.get('error', 'Unknown error')}")
         return redirect('courses:course_detail', slug=payment.course.slug)
+
+@login_required
+def khalti_success_view(request, transaction_id):
+    """
+    Shows Khalti specific success page
+    """
+    payment = get_object_or_404(Payment, transaction_id=transaction_id, user=request.user, payment_gateway='khalti')
+    return render(request, 'payments/khalti_success.html', {'payment': payment})
+
 
 def verify_khalti_payment(pidx, payment):
     """

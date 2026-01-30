@@ -151,31 +151,41 @@ def course_detail_view(request, slug):
             is_mastered = enrollment.mastery_score >= 80
             mastery_status = "Mastered" if is_mastered else "In Progress"
             
-    # Determine current lesson
-    if can_access:
-        for lesson in lessons:
-            if lesson.id not in lesson_progress or not lesson_progress[lesson.id].is_completed:
-                current_lesson = lesson
-                break
-    if not current_lesson and lessons.exists():
-        current_lesson = lessons.first()
-
-    what_you_learn = course.what_you_learn if isinstance(course.what_you_learn, list) else []
-    requirements = course.requirements if isinstance(course.requirements, list) else []
+    # Progressive Unlocking Logic
+    # -----------------------------
+    # Rule: If video_completed == true AND (quiz_exists == false OR quiz_submitted == true) 
+    # -> unlock next lesson and quiz
     
-    # Pre-serialize lessons for JS to avoid AJAX calls for simple switching
-    # We need resources too
     lessons_data = []
+    previous_lesson_ready = True # First lesson is always unlocked
+    
     for lesson in lessons:
+        progress = lesson_progress.get(lesson.id)
+        video_completed = progress.is_completed if progress else False
+        quiz_completed = progress.quiz_completed if progress else False
+        has_quiz = lesson.mcq_questions.exists()
+        
+        # Current lesson is unlocked if it's a preview OR if user is enrolled and the previous lesson was "ready"
+        if lesson.is_preview:
+            is_unlocked = True
+        elif enrollment:
+            is_unlocked = previous_lesson_ready
+        else:
+            is_unlocked = False
+        
+        # Check if THIS lesson is ready to unlock the NEXT one
+        current_ready = video_completed and (not has_quiz or quiz_completed)
+        
+        # Attach to object for template access
+        lesson.is_unlocked = is_unlocked
+        lesson.video_completed = video_completed
+        lesson.quiz_completed = quiz_completed
+        lesson.has_quiz_actual = has_quiz
+        
+        # Resources data
         resources = lesson.resources.all()
         res_data = [{'title': r.title, 'url': r.get_resource_url(), 'type': r.resource_type} for r in resources]
         
-        is_completed = False
-        watch_time = 0
-        if enrollment and lesson.id in lesson_progress:
-            is_completed = lesson_progress[lesson.id].is_completed
-            watch_time = lesson_progress[lesson.id].watch_time
-            
         lessons_data.append({
             'id': lesson.id,
             'title': lesson.title,
@@ -184,9 +194,12 @@ def course_detail_view(request, slug):
             'duration': lesson.video_duration,
             'is_preview': lesson.is_preview,
             'resources': res_data,
-            'is_completed': is_completed,
-            'watch_time': watch_time,
-            'has_quiz': lesson.mcq_questions.exists(),
+            'is_unlocked': is_unlocked,
+            'video_completed': video_completed,
+            'quiz_completed': quiz_completed,
+            'is_completed': video_completed, # Legacy compatibility
+            'watch_time': progress.watch_time if progress else 0,
+            'has_quiz': has_quiz,
             'quiz_count': lesson.mcq_questions.count(),
             'questions': [
                 {
@@ -201,7 +214,22 @@ def course_detail_view(request, slug):
                 } for q in lesson.mcq_questions.all()
             ]
         })
+        
+        # Update for next iteration
+        previous_lesson_ready = current_ready
 
+    # Set current lesson for initial rendering (first incomplete/unlocked lesson)
+    if can_access:
+        for l_data in lessons_data:
+            if not l_data['video_completed'] and l_data['is_unlocked']:
+                current_lesson = lessons.get(id=l_data['id'])
+                break
+    
+    if not current_lesson and lessons.exists():
+        current_lesson = lessons.first()
+
+    what_you_learn = course.what_you_learn if isinstance(course.what_you_learn, list) else []
+    requirements = course.requirements if isinstance(course.requirements, list) else []
     
     import json
     lessons_json = json.dumps(lessons_data)
@@ -840,46 +868,32 @@ def course_delete_view(request, slug):
 
 @login_required
 @require_POST
-def submit_mcq_answer(request, course_slug):
-    import json
-    try:
-        data = json.loads(request.body)
-        question_id = data.get('question_id')
-        selected_option = data.get('selected_option')
-        
-        course = get_object_or_404(Course, slug=course_slug)
-        question = get_object_or_404(MCQQuestion, id=question_id, lesson__course=course)
-        enrollment = get_object_or_404(Enrollment, student=request.user, course=course)
-        
-        # Save or update attempt
-        attempt, created = MCQAttempt.objects.update_or_create(
-            enrollment=enrollment,
-            question=question,
-            defaults={'selected_option': selected_option}
-        )
-        
-        # The MCQAttempt save() method automatically handles is_correct check
-        
-        # Trigger recalculation of all stats using the model methods
-        enrollment.update_scores()
-        
-        return JsonResponse({
-            'success': True,
-            'is_correct': attempt.is_correct,
-            'explanation': question.explanation,
-            'correct_option': question.correct_option,
-            
-            # Updated Algorithm stats for dynamic UI updates
-            'unit_progress': enrollment.unit_progress,
-            'quiz_score': enrollment.quiz_score,
-            'mastery_score': enrollment.mastery_score,
-            'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
-            'is_mastered': enrollment.mastery_score >= 80,
-            'certificate_unlocked': enrollment.certificate_unlocked
-        })
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
-
+def submit_lesson_quiz_view(request, course_slug, lesson_id):
+    """
+    Marks a quiz for a specific lesson as completed/submitted.
+    """
+    course = get_object_or_404(Course, slug=course_slug)
+    lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
+    enrollment = get_object_or_404(Enrollment, student=request.user, course=course)
+    
+    lesson_progress, created = LessonProgress.objects.get_or_create(
+        enrollment=enrollment,
+        lesson=lesson
+    )
+    
+    lesson_progress.quiz_completed = True
+    lesson_progress.save()
+    
+    enrollment.update_scores()
+    
+    return JsonResponse({
+        'success': True,
+        'quiz_completed': True,
+        'unit_progress': enrollment.unit_progress,
+        'quiz_score': enrollment.quiz_score,
+        'mastery_score': enrollment.mastery_score,
+        'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
+    })
 
 @login_required
 @require_POST

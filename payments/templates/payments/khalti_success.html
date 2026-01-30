@@ -1,0 +1,40 @@
+{% extends 'core/base_public.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="card border-0 shadow-sm mx-auto p-5 rounded-4" style="max-width: 500px;">
+        <div class="mb-4">
+            <img src="{% static 'core/img/khaltilogo.png' %}" alt="Khalti Logo" height="40" class="mb-3">
+            <div class="text-success mt-2">
+                <i class="fas fa-check-circle fa-5x"></i>
+            </div>
+        </div>
+
+        <h2 class="fw-bold mb-2">Payment Successful!</h2>
+        <p class="text-muted mb-4">Congratulation! You have successfully enrolled in <strong>{{ payment.course.title }}</strong>.</p>
+
+        <div class="bg-light p-3 rounded-3 mb-4 text-start">
+            <div class="small text-muted mb-1">Transaction Details:</div>
+            <div class="d-flex justify-content-between small mb-1">
+                <span>Reference ID:</span>
+                <span class="fw-bold">{{ payment.gateway_transaction_id|default:payment.transaction_id }}</span>
+            </div>
+            <div class="d-flex justify-content-between small">
+                <span>Amount Paid:</span>
+                <span class="fw-bold">NPR {{ payment.amount }}</span>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <a href="{% url 'courses:course_detail' payment.course.slug %}" class="btn btn-lg rounded-pill text-white"
+                style="background-color: #ce1828;">
+                Go to Course
+            </a>
+            <a href="{% url 'payments:payment_history' %}" class="btn btn-outline-secondary rounded-pill">
+                View Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
