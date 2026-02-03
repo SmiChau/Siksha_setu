@@ -591,17 +591,36 @@
                 </h5>
             </div>
             <div class="card-body">
-                <div class="nav nav-pills nav-fill mb-3" id="activity-tab" role="tablist">
-                    <button class="nav-link active rounded-pill me-2" id="enrollments-tab" data-bs-toggle="tab"
-                        data-bs-target="#enrollments"
-                        style="border-color: var(--mint-green); color: var(--mint-green);">
-                        Enrollments
-                    </button>
-                    <button class="nav-link rounded-pill" id="reviews-tab" data-bs-toggle="tab"
-                        data-bs-target="#reviews" style="border-color: var(--mint-green); color: var(--mint-green);">
-                        Reviews
-                    </button>
-                </div>
+               <div class="nav nav-pills nav-fill mb-3" id="activity-tab" role="tablist">
+    <button class="nav-link active rounded-pill me-2" id="enrollments-tab" data-bs-toggle="tab"
+        data-bs-target="#enrollments" style="border-color: var(--mint-green); color: var(--mint-green);">
+        <div class="d-flex align-items-center justify-content-center gap-2">
+            {% if user.profile_picture %}
+            <img src="{{ user.profile_picture.url }}" 
+                 alt="Profile" 
+                 class="rounded-circle"
+                 style="width: 24px; height: 24px; object-fit: cover; border: 2px solid var(--mint-green);">
+            {% else %}
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width: 24px; height: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 12px; font-weight: bold;">
+                {% if user.first_name and user.last_name %}
+                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                {% else %}
+                {{ user.email|first|upper }}
+                {% endif %}
+            </div>
+            {% endif %}
+            <span>Enrollments</span>
+        </div>
+    </button>
+    <button class="nav-link rounded-pill" id="reviews-tab" data-bs-toggle="tab"
+        data-bs-target="#reviews" style="border-color: var(--mint-green); color: var(--mint-green);">
+        <div class="d-flex align-items-center justify-content-center gap-2">
+            <i class="fas fa-star" style="color: #FFD700;"></i>
+            <span>Reviews</span>
+        </div>
+    </button>
+</div>
 
                 <div class="tab-content">
                     <!-- Enrollments Tab -->

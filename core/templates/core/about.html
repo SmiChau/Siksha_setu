@@ -5,6 +5,30 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/css/about.css' %}">
+<style>
+    /* Additional styles for profile images */
+    .testimonial-profile-img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--mint-green);
+    }
+    
+    .testimonial-initials {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        border: 3px solid var(--mint-green);
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -137,14 +161,21 @@
                     </div>
                     <p class="mb-4 fst-italic">"{{ review.comment|truncatewords:30 }}"</p>
                     <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold"
-                            style="width: 50px; height: 50px;">
+                        {% if review.user.profile_picture %}
+                        <!-- Display profile picture if available -->
+                        <img src="{{ review.user.profile_picture.url }}" 
+                             alt="{{ review.user.get_full_name }}" 
+                             class="testimonial-profile-img">
+                        {% else %}
+                        <!-- Display initials if no profile picture -->
+                        <div class="testimonial-initials">
                             {% if review.user.first_name and review.user.last_name %}
                             {{ review.user.first_name|first|upper }}{{ review.user.last_name|first|upper }}
                             {% else %}
                             {{ review.user.email|first|upper }}
                             {% endif %}
                         </div>
+                        {% endif %}
                         <div>
                             <h6 class="mb-0 fw-bold">{{ review.user.get_full_name|default:review.user.email }}</h6>
                             <small class="text-muted">{{ review.course.title|truncatechars:30 }} Student</small>
