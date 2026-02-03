@@ -333,13 +333,13 @@
         transition: color 0.2s;
     }
 
-    .rating-input input:checked ~ label,
+    .rating-input input:checked~label,
     .rating-input label:hover,
-    .rating-input label:hover ~ label {
+    .rating-input label:hover~label {
         color: #ffc107;
     }
 
-    .rating-input input:checked + label {
+    .rating-input input:checked+label {
         color: #ffc107;
     }
 </style>
@@ -379,7 +379,8 @@
 
                     {% if enrollment %}
                     <div class="progress-circle-container">
-                        <div id="progressCircle" class="progress-circle" style="background: conic-gradient(var(--primary-purple) {{ unit_progress|floatformat:0 }}%, #e9ecef 0);">
+                        <div id="progressCircle" class="progress-circle"
+                            style="background: conic-gradient(var(--primary-purple) {{ unit_progress|floatformat:0 }}%, #e9ecef 0);">
                             <span id="progressValue" class="progress-value">{{ unit_progress|floatformat:0 }}%</span>
                         </div>
                     </div>
@@ -478,11 +479,7 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mt-3 px-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="toggleTheaterMode()">
-                            Theater Mode
-                        </button>
-                    </div>
+                    
                 </div>
                 {% else %}
                 <div
@@ -506,18 +503,11 @@
                         {{ current_lesson.title|default:course.title }}
                     </h2>
                     <div class="text-muted small d-flex align-items-center gap-3">
-                        <span>{{ current_lesson.video_duration|default:0 }} min</span>
+                        <span>{{ current_lesson.duration_minutes }}m {{ current_lesson.duration_seconds }}s</span>
                         <span>{{ course.views }} views</span>
                     </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary rounded-pill px-4" onclick="markComplete()">
-                        Mark Complete
-                    </button>
-                    <button class="btn btn-outline-secondary rounded-pill px-4" onclick="takeNotes()">
-                        Notes
-                    </button>
-                </div>
+                
             </div>
 
             <!-- Tabs -->
@@ -645,18 +635,19 @@
                         <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
                             <div class="d-flex align-items-center gap-4">
                                 <div class="text-center">
-                                    <h2 class="display-4 fw-bold mb-0 text-primary">{{ average_rating|floatformat:1 }}</h2>
+                                    <h2 class="display-4 fw-bold mb-0 text-primary">{{ average_rating|floatformat:1 }}
+                                    </h2>
                                     <div class="text-warning mb-2">
                                         {% for i in "12345" %}
-                                            {% with counter=forloop.counter|add:0 %}
-                                                {% if counter <= average_rating %}
-                                                    <i class="fas fa-star"></i>
-                                                {% elif counter|add:-0.5 <= average_rating %}
-                                                    <i class="fas fa-star-half-alt"></i>
-                                                {% else %}
-                                                    <i class="far fa-star"></i>
-                                                {% endif %}
-                                            {% endwith %}
+                                        {% with i_num=i|add:0 %}
+                                        {% if i_num <= average_rating %}
+                                        <i class="fas fa-star"></i>
+                                        {% elif i_num|add:-0.5 <= average_rating %}
+                                        <i class="fas fa-star-half-alt"></i>
+                                        {% else %}
+                                        <i class="far fa-star"></i>
+                                        {% endif %}
+                                        {% endwith %}
                                         {% endfor %}
                                     </div>
                                     <small class="text-muted">Based on {{ review_count }} reviews</small>
@@ -683,20 +674,21 @@
                                     <label class="form-label fw-semibold">Your Rating</label>
                                     <div class="rating-input">
                                         {% for i in "54321" %}
-                                            {% with star_value=i|add:0 %}
-                                            <input type="radio" name="rating" value="{{ star_value }}" id="rate-{{ star_value }}" 
-                                                {% if user_review.rating|add:0 == star_value %}checked{% endif %}>
-                                            <label for="rate-{{ star_value }}" class="star-label">
-                                                <i class="fas fa-star"></i>
-                                            </label>
-                                            {% endwith %}
+                                        {% with star_value=i|add:0 %}
+                                        <input type="radio" name="rating" value="{{ star_value }}"
+                                            id="rate-{{ star_value }}" 
+                                            {% if user_review.rating|add:0 == star_value %}checked{% endif %}>
+                                        <label for="rate-{{ star_value }}" class="star-label">
+                                            <i class="fas fa-star"></i>
+                                        </label>
+                                        {% endwith %}
                                         {% endfor %}
                                     </div>
                                     <div class="text-center mt-2 small text-muted" id="ratingText">
                                         {% if user_review %}
-                                            {{ user_review.rating }} star{{ user_review.rating|pluralize }}
+                                        {{ user_review.rating }} star{{ user_review.rating|pluralize }}
                                         {% else %}
-                                            Select a rating
+                                        Select a rating
                                         {% endif %}
                                     </div>
                                 </div>
@@ -710,8 +702,7 @@
                                         {% if user_review %}Update Review{% else %}Submit Review{% endif %}
                                     </button>
                                     {% if user_review %}
-                                    <button type="button" class="btn btn-outline-danger rounded-pill px-4" 
-                                        onclick="if(confirm('Are you sure you want to delete your review?')) { 
+                                    <button type="button" class="btn btn-outline-danger rounded-pill px-4" onclick="if(confirm('Are you sure you want to delete your review?')) { 
                                             document.getElementById('deleteReviewForm').submit(); 
                                         }">
                                         Delete
@@ -719,7 +710,7 @@
                                     {% endif %}
                                 </div>
                             </form>
-                            
+
                             {% if user_review %}
                             <form method="post" action="{% url 'courses:delete_review' course.slug user_review.id %}"
                                 id="deleteReviewForm" class="d-none">
@@ -737,8 +728,11 @@
                                         <h6 class="fw-bold mb-0">Your Review</h6>
                                         <div class="text-warning small">
                                             {% for i in "12345" %}
-                                            {% if forloop.counter <= user_review.rating|add:0 %} <i class="fas fa-star"></i>
+                                            {% with i_num=i|add:0 %}
+                                            {% if i_num <= user_review.rating|add:0 %}
+                                            <i class="fas fa-star"></i>
                                             {% endif %}
+                                            {% endwith %}
                                             {% endfor %}
                                         </div>
                                     </div>
@@ -766,9 +760,12 @@
                                     </h6>
                                     <div class="text-warning small">
                                         {% for i in "12345" %}
-                                        {% if forloop.counter <= review.rating|add:0 %} <i class="fas fa-star"></i>
-                                            {% endif %}
-                                            {% endfor %}
+                                        {% with i_num=i|add:0 %}
+                                        {% if i_num <= review.rating|add:0 %}
+                                        <i class="fas fa-star"></i>
+                                        {% endif %}
+                                        {% endwith %}
+                                        {% endfor %}
                                     </div>
                                 </div>
                                 <p class="mb-0 text-secondary small">{{ review.comment }}</p>
@@ -868,8 +865,11 @@
                         {% for lesson in lessons %}
                         <!-- Lesson Item -->
                         <div class="list-group-item lesson-item {% if current_lesson.id == lesson.id %}active{% endif %} {% if not lesson.is_unlocked and not lesson.is_preview %}locked{% endif %}"
-                            data-id="{{ lesson.id }}" {% if lesson.is_unlocked or lesson.is_preview %}onclick="playLesson({{ lesson.id }})"{% endif %} id="lesson-{{ lesson.id }}"
-                            {% if not lesson.is_unlocked and not lesson.is_preview %}data-bs-toggle="tooltip" data-bs-placement="left" title="Complete previous lesson & quiz to unlock"{% endif %}>
+                            data-id="{{ lesson.id }}" 
+                            {% if lesson.is_unlocked or lesson.is_preview %}onclick="playLesson({{ lesson.id }})" {% endif %} 
+                            id="lesson-{{ lesson.id }}" 
+                            {% if not lesson.is_unlocked and not lesson.is_preview %}data-bs-toggle="tooltip"
+                            data-bs-placement="left" title="Complete previous lesson & quiz to unlock" {% endif %}>
                             <div class="d-flex align-items-center justify-content-between">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="lesson-icon">
@@ -897,8 +897,11 @@
                         <!-- Quiz Item -->
                         {% if lesson.has_quiz_actual %}
                         <div class="list-group-item quiz-subitem {% if not lesson.video_completed %}locked{% endif %}"
-                            id="quiz-item-{{ lesson.id }}" {% if lesson.video_completed %}onclick="loadQuiz({{ lesson.id }})"{% endif %} style="display: block;"
-                            {% if not lesson.video_completed %}data-bs-toggle="tooltip" data-bs-placement="left" title="Watch the lesson to unlock the quiz"{% endif %}>
+                            id="quiz-item-{{ lesson.id }}" 
+                            {% if lesson.video_completed %}onclick="loadQuiz({{ lesson.id }})" {% endif %} 
+                            style="display: block;" 
+                            {% if not lesson.video_completed %}data-bs-toggle="tooltip" data-bs-placement="left"
+                            title="Watch the lesson to unlock the quiz" {% endif %}>
                             <div class="d-flex align-items-center justify-content-between">
                                 <div class="d-flex align-items-center gap-2">
                                     {% if lesson.quiz_completed %}
@@ -929,11 +932,11 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
     // Fixed syntax errors in variable declarations
-    const lessonsData = {{ lessons_json|safe }};
+    const lessonsData = {{ lessons_json| safe }};
     const courseSlug = "{{ course.slug }}";
     const isEnrolled = {{ enrollment|yesno:"true,false" }};
     let player;
-    let currentLessonId = {{ current_lesson.id|default:"null" }};
+    let currentLessonId = {% if current_lesson %}{{ current_lesson.id }}{% else %}null{% endif %};
 
     // Tracking Variables
     let watchTimer = null;
@@ -964,14 +967,14 @@
     function initRatingStars() {
         const ratingInputs = document.querySelectorAll('.rating-input input[type="radio"]');
         const ratingText = document.getElementById('ratingText');
-        
+
         ratingInputs.forEach(input => {
-            input.addEventListener('change', function() {
+            input.addEventListener('change', function () {
                 const value = this.value;
                 if (ratingText) {
                     ratingText.textContent = value + ' star' + (value > 1 ? 's' : '');
                 }
-                
+
                 // Update star colors
                 const labels = document.querySelectorAll('.rating-input label');
                 labels.forEach(label => {
@@ -1090,7 +1093,94 @@
         document.getElementById('quizInterface').style.display = 'none';
         document.getElementById('player').style.display = 'block';
 
-        initPlayer(lesson.video_id);
+        if (lesson.video_type === 'local' && lesson.video_file_url) {
+            // Local Video Logic
+            const playerDiv = document.getElementById('player');
+            // Clear previous YouTube iframe if any
+            if (player && typeof player.destroy === 'function') {
+                try { 
+                    player.destroy(); 
+                    player = null; 
+                } catch (e) { 
+                    console.error(e);
+                }
+            }
+
+            playerDiv.innerHTML = `
+                <div class="ratio ratio-16x9">
+                    <video id="localVideo" controls autoplay class="w-100 h-100" style="object-fit: contain; background: black;">
+                        <source src="${lesson.video_file_url}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            `;
+            initLocalPlayer();
+        } else {
+            // YouTube Logic
+            // Clean up local video if exists
+            const playerDiv = document.getElementById('player');
+            if (playerDiv.querySelector('video')) {
+                playerDiv.innerHTML = ''; // Clear video tag
+            }
+            initPlayer(lesson.video_id);
+        }
+    }
+
+    function initLocalPlayer() {
+        const video = document.getElementById('localVideo');
+        if (!video) return;
+
+        resetTracking();
+
+        // Load metadata to get duration
+        video.addEventListener('loadedmetadata', function () {
+            videoDuration = video.duration;
+        });
+
+        // Tracking events
+        video.addEventListener('play', function () {
+            startTrackingLocal(video);
+        });
+
+        video.addEventListener('pause', function () {
+            stopTracking();
+        });
+
+        video.addEventListener('ended', function () {
+            stopTracking();
+            videoDuration = video.duration;
+            markLessonComplete(currentLessonId);
+        });
+    }
+
+    function startTrackingLocal(videoElement) {
+        if (isTracking) return;
+        isTracking = true;
+        lastPosition = videoElement.currentTime;
+
+        let heartbeatCounter = 0;
+
+        watchTimer = setInterval(function () {
+            if (!videoElement || videoElement.paused || videoElement.ended) {
+                stopTracking();
+                return;
+            }
+
+            const currentPos = videoElement.currentTime;
+            const diff = currentPos - lastPosition;
+
+            // Ensure we are playing forward at normal speed (approx)
+            if (diff > 0 && diff <= 1.5) {
+                effectiveWatchTime += diff;
+                heartbeatCounter++;
+            }
+            lastPosition = currentPos;
+
+            if (heartbeatCounter >= 5) {
+                markLessonComplete(currentLessonId);
+                heartbeatCounter = 0;
+            }
+        }, 1000);
     }
 
     window.playLesson = function (lessonId) {
@@ -1444,18 +1534,5 @@
         }
     }
 
-    function toggleTheaterMode() {
-        document.getElementById('videoWrapper').classList.toggle('minimized-player');
-    }
-
-    function takeNotes() {
-        alert("Note-taking feature coming soon!");
-    }
-
-    function markComplete() {
-        if (currentLessonId && currentLessonId !== "null") {
-            markLessonComplete(currentLessonId);
-        }
-    }
 </script>
 {% endblock %}

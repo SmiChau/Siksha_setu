@@ -5,114 +5,455 @@
 
 {% block extra_css %}
 <style>
+    :root {
+        --primary-blue: #1a535c;
+        --mint-green: #4ecdc4;
+        --accent-yellow: #ffd700;
+        --star-yellow: #ffc107;
+        --star-gray: #e0e0e0;
+        --light-mint: rgba(78, 205, 196, 0.1);
+        --light-blue: rgba(26, 83, 92, 0.1);
+        --light-yellow: rgba(255, 215, 0, 0.1);
+    }
+
+    /* Enhanced Dashboard Cards */
     .dashboard-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 16px;
         overflow: hidden;
+        border: none;
+        position: relative;
+        background: white;
+    }
+
+    .dashboard-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 5px;
+        height: 100%;
+        z-index: 1;
+        background: linear-gradient(180deg, var(--primary-blue) 0%, var(--mint-green) 100%);
+    }
+
+    .card-blue::before {
+        background: linear-gradient(180deg, var(--primary-blue) 0%, #2c7d88 100%);
+    }
+
+    .card-mint::before {
+        background: linear-gradient(180deg, var(--mint-green) 0%, #3dbdb3 100%);
+    }
+
+    .card-yellow::before {
+        background: linear-gradient(180deg, var(--accent-yellow) 0%, #e6c200 100%);
+    }
+
+    .card-gray::before {
+        background: linear-gradient(180deg, #6c757d 0%, #495057 100%);
     }
 
     .dashboard-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12) !important;
     }
 
+    .stat-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.4s ease;
+        margin: 0 auto 1rem;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .dashboard-card:hover .stat-icon {
+        transform: scale(1.15) rotate(8deg);
+        box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Enhanced Course Progress */
     .course-progress {
-        height: 6px;
-        border-radius: 3px;
+        height: 10px;
+        border-radius: 5px;
         overflow: hidden;
+        background-color: rgba(0, 0, 0, 0.05);
+        position: relative;
+    }
+
+    .course-progress::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, 
+            transparent 0%, 
+            rgba(255, 255, 255, 0.3) 50%, 
+            transparent 100%);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
     }
 
     .progress-bar-custom {
-        background-color: var(--mint-green);
+        background: linear-gradient(90deg, var(--mint-green), #3dbdb3, #4ecdc4);
+        border-radius: 5px;
+        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        z-index: 2;
     }
 
+    /* Enhanced Buttons */
     .continue-btn {
-        background-color: var(--mint-green);
-        border-color: var(--mint-green);
+        background: linear-gradient(135deg, var(--mint-green) 0%, #3dbdb3 100%);
+        border: none;
         color: white;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .continue-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, 
+            transparent, 
+            rgba(255, 255, 255, 0.2), 
+            transparent);
+        transition: left 0.5s ease;
     }
 
     .continue-btn:hover {
-        background-color: #3dbdb3;
-        border-color: #3dbdb3;
-        color: white;
+        transform: translateY(-3px);
+        box-shadow: 0 12px 25px rgba(78, 205, 196, 0.4);
+        background: linear-gradient(135deg, #3dbdb3, var(--mint-green));
     }
 
+    .continue-btn:hover::before {
+        left: 100%;
+    }
+
+    /* Enhanced Badges */
     .badge-custom-mint {
-        background-color: rgba(78, 205, 196, 0.1);
+        background: linear-gradient(135deg, rgba(78, 205, 196, 0.1), rgba(78, 205, 196, 0.2));
         color: var(--mint-green);
         border: 1px solid rgba(78, 205, 196, 0.3);
+        transition: all 0.3s ease;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
     }
 
     .badge-custom-blue {
-        background-color: rgba(26, 83, 92, 0.1);
+        background: linear-gradient(135deg, rgba(26, 83, 92, 0.1), rgba(26, 83, 92, 0.2));
         color: var(--primary-blue);
         border: 1px solid rgba(26, 83, 92, 0.3);
+        transition: all 0.3s ease;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+    }
+
+    .badge-custom-mint:hover, .badge-custom-blue:hover {
+        transform: scale(1.08) translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Course Items */
+    .course-item {
+        transition: all 0.3s ease;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid transparent;
+    }
+
+    .course-item:hover {
+        background: linear-gradient(135deg, rgba(78, 205, 196, 0.05), rgba(26, 83, 92, 0.05));
+        transform: translateX(5px) scale(1.01);
+        border-color: var(--mint-green);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    }
+
+    .course-thumbnail {
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.4s ease;
+        position: relative;
+    }
+
+    .course-thumbnail::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(26, 83, 92, 0.2), transparent);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .course-item:hover .course-thumbnail {
+        transform: scale(1.08);
+    }
+
+    .course-item:hover .course-thumbnail::before {
+        opacity: 1;
+    }
+
+    /* FIXED: Star Ratings - Simple and working */
+    .star-rating {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+
+    .star-rating i {
+        font-size: 0.9rem;
+    }
+
+    /* Yellow for filled stars */
+    .star-rating .fas.fa-star {
+        color: #ffc107 !important;
+    }
+
+    /* Yellow for half stars */
+    .star-rating .fas.fa-star-half-alt {
+        color: #ffc107 !important;
+    }
+
+    /* Light gray for empty stars */
+    .star-rating .far.fa-star {
+        color: #e0e0e0 !important;
+    }
+
+    /* Activity Items */
+    .activity-item {
+        border-left: 3px solid transparent;
+        transition: all 0.3s ease;
+        padding: 12px 16px;
+        border-radius: 8px;
+    }
+
+    .activity-item:hover {
+        background: linear-gradient(135deg, rgba(78, 205, 196, 0.05), rgba(26, 83, 92, 0.05));
+        border-left-color: var(--mint-green);
+        transform: translateX(5px);
+    }
+
+    /* Certificate Items */
+    .certificate-item {
+        transition: all 0.3s ease;
+        border-radius: 10px;
+        padding: 14px;
+        border: 1px solid transparent;
+    }
+
+    .certificate-item:hover {
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(230, 194, 0, 0.05));
+        transform: translateX(5px);
+        border-color: var(--accent-yellow);
+        box-shadow: 0 6px 20px rgba(255, 215, 0, 0.1);
+    }
+
+    /* Card Headers */
+    .card-header-custom {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        backdrop-filter: blur(10px);
+    }
+
+    /* Stats Counter */
+    .stat-counter {
+        font-feature-settings: "tnum";
+        font-variant-numeric: tabular-nums;
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary-blue), var(--mint-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.2;
+    }
+
+    /* Section Headers */
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+
+    .section-title::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 24px;
+        background: linear-gradient(180deg, var(--mint-green), var(--primary-blue));
+        border-radius: 2px;
+    }
+
+    /* Empty States */
+    .empty-state {
+        padding: 3rem 1rem;
+        text-align: center;
+        background: linear-gradient(135deg, rgba(26, 83, 92, 0.02), rgba(78, 205, 196, 0.02));
+        border-radius: 12px;
+        border: 2px dashed rgba(26, 83, 92, 0.1);
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.3;
+        background: linear-gradient(135deg, var(--primary-blue), var(--mint-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .dashboard-card {
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+        }
+        
+        .stat-counter {
+            font-size: 2rem;
+        }
+        
+        .course-thumbnail {
+            height: 80px !important;
+        }
+    }
+
+    /* Loading Animation */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease forwards;
+    }
+
+    .delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .delay-3 { animation-delay: 0.3s; opacity: 0; }
+    .delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+    /* Gradient Text */
+    .gradient-text {
+        background: linear-gradient(135deg, var(--primary-blue), var(--mint-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- Welcome Header -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-5 animate-fade-in-up">
     <div>
-        <h2 class="fw-bold mb-1" style="color: var(--primary-blue);">Welcome back, {{ user.first_name }}!</h2>
-        <p class="text-muted mb-0">Ready to continue your learning journey?</p>
+        <h2 class="fw-bold mb-1 gradient-text">
+            <i class="fas fa-user-graduate me-2"></i>
+            Welcome back, {{ user.first_name }}!
+        </h2>
+        <p class="text-muted mb-0">
+            <i class="fas fa-calendar-alt me-1"></i> {% now "F j, Y" %}
+            <span class="mx-2">•</span>
+            <i class="fas fa-chart-line me-1"></i> Your Learning Dashboard
+        </p>
     </div>
-    <a href="{% url 'courses:course_list' %}" class="btn btn-primary rounded-pill px-4 py-2"
-        style="background-color: var(--mint-green); border-color: var(--mint-green);">
+    <a href="{% url 'courses:course_list' %}" class="btn btn-primary rounded-pill px-4 py-2 shadow-sm"
+        style="background: linear-gradient(135deg, var(--mint-green) 0%, #3dbdb3 100%); border: none;">
         <i class="fas fa-search me-2"></i> Browse Courses
     </a>
 </div>
 
 <!-- Stats Cards -->
-<div class="row g-4 mb-4">
+<div class="row g-4 mb-5">
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100 text-center dashboard-card"
-            style="border-top: 4px solid var(--primary-blue);">
-            <div class="card-body py-4">
-                <div class="rounded-circle bg-primary bg-opacity-10 p-3 d-inline-block mb-3">
+        <div class="card border-0 shadow-sm h-100 dashboard-card card-blue animate-fade-in-up delay-1">
+            <div class="card-body p-4 text-center">
+                <div class="stat-icon" style="background: linear-gradient(135deg, rgba(26, 83, 92, 0.1), rgba(26, 83, 92, 0.2));">
                     <i class="fas fa-book-open fa-2x" style="color: var(--primary-blue);"></i>
                 </div>
-                <h3 class="fw-bold mb-1">{{ total_courses }}</h3>
+                <h3 class="fw-bold mb-1 stat-counter">{{ total_courses }}</h3>
                 <p class="text-muted mb-0">Enrolled Courses</p>
+                <small class="text-muted mt-2 d-block">
+                    <i class="fas fa-chart-pie me-1"></i> Learning Journey
+                </small>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100 text-center dashboard-card"
-            style="border-top: 4px solid var(--mint-green);">
-            <div class="card-body py-4">
-                <div class="rounded-circle bg-success bg-opacity-10 p-3 d-inline-block mb-3">
+        <div class="card border-0 shadow-sm h-100 dashboard-card card-mint animate-fade-in-up delay-2">
+            <div class="card-body p-4 text-center">
+                <div class="stat-icon" style="background: linear-gradient(135deg, rgba(78, 205, 196, 0.1), rgba(78, 205, 196, 0.2));">
                     <i class="fas fa-check-circle fa-2x" style="color: var(--mint-green);"></i>
                 </div>
-                <h3 class="fw-bold mb-1">{{ completed_courses }}</h3>
+                <h3 class="fw-bold mb-1 stat-counter">{{ completed_courses }}</h3>
                 <p class="text-muted mb-0">Completed</p>
+                <small class="text-muted mt-2 d-block">
+                    <i class="fas fa-trophy me-1"></i> Achievements
+                </small>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100 text-center dashboard-card"
-            style="border-top: 4px solid var(--accent-yellow);">
-            <div class="card-body py-4">
-                <div class="rounded-circle bg-warning bg-opacity-10 p-3 d-inline-block mb-3">
-                    <i class="fas fa-spinner fa-2x" style="color: #e6c200;"></i>
+        <div class="card border-0 shadow-sm h-100 dashboard-card card-yellow animate-fade-in-up delay-3">
+            <div class="card-body p-4 text-center">
+                <div class="stat-icon" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(230, 194, 0, 0.2));">
+                    <i class="fas fa-spinner fa-2x" style="color: var(--accent-yellow);"></i>
                 </div>
-                <h3 class="fw-bold mb-1">{{ in_progress.count }}</h3>
+                <h3 class="fw-bold mb-1 stat-counter" style="background: linear-gradient(135deg, #e6c200, var(--accent-yellow)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{{ in_progress.count }}</h3>
                 <p class="text-muted mb-0">In Progress</p>
+                <small class="text-muted mt-2 d-block">
+                    <i class="fas fa-play-circle me-1"></i> Active Learning
+                </small>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <a href="{% url 'reviews:my_certificates' %}" class="text-decoration-none">
-            <div class="card border-0 shadow-sm h-100 text-center dashboard-card"
-                style="border-top: 4px solid #6c757d;">
-                <div class="card-body py-4">
-                    <div class="rounded-circle bg-info bg-opacity-10 p-3 d-inline-block mb-3">
-                        <i class="fas fa-certificate fa-2x text-info"></i>
+            <div class="card border-0 shadow-sm h-100 dashboard-card card-gray animate-fade-in-up delay-4">
+                <div class="card-body p-4 text-center">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, rgba(108, 117, 125, 0.1), rgba(108, 117, 125, 0.2));">
+                        <i class="fas fa-certificate fa-2x text-secondary"></i>
                     </div>
-                    <h3 class="fw-bold mb-1">{{ certificates.count }}</h3>
+                    <h3 class="fw-bold mb-1 stat-counter" style="background: linear-gradient(135deg, #6c757d, #495057); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{{ certificates.count }}</h3>
                     <p class="text-muted mb-0">Certificates</p>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="fas fa-award me-1"></i> Your Accomplishments
+                    </small>
                 </div>
             </div>
         </a>
@@ -123,77 +464,91 @@
 <div class="row g-4">
     <!-- Continue Learning Section -->
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm mb-4 rounded-3 overflow-hidden">
-            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0" style="color: var(--primary-blue);">
-                    <i class="fas fa-play-circle me-2" style="color: var(--mint-green);"></i>Continue Learning
+        <div class="card border-0 shadow-sm mb-4 rounded-3 overflow-hidden animate-fade-in-up">
+            <div class="card-header card-header-custom py-4 d-flex justify-content-between align-items-center">
+                <h5 class="section-title mb-0">
+                    Continue Learning
+                    <span class="badge bg-primary bg-opacity-10 text-primary ms-2">{{ in_progress.count }} active</span>
                 </h5>
-                <!-- Updated link to go to course list instead of non-existent my_courses -->
                 <a href="{% url 'courses:course_list' %}" class="btn btn-sm btn-outline-primary rounded-pill"
                     style="border-color: var(--mint-green); color: var(--mint-green);">
-                    Browse More
+                    <i class="fas fa-search me-1"></i> Browse More
                 </a>
             </div>
             <div class="card-body">
                 {% if in_progress %}
                 <div class="list-group list-group-flush">
                     {% for enrollment in in_progress|slice:":3" %}
-                    <div class="list-group-item px-0 py-3 border-bottom">
-                        <div class="row align-items-center">
+                    <div class="list-group-item px-0 py-4 border-bottom course-item">
+                        <div class="row align-items-center g-4">
                             <div class="col-md-3">
-                                {% if enrollment.course.thumbnail %}
-                                <img src="{{ enrollment.course.thumbnail.url }}" class="rounded-3 img-fluid"
-                                    alt="{{ enrollment.course.title }}" style="height: 100px; object-fit: cover;">
-                                {% else %}
-                                <div class="rounded-3 bg-light d-flex align-items-center justify-content-center"
-                                    style="height: 100px; background-color: rgba(26, 83, 92, 0.1);">
-                                    <i class="fas fa-book fa-2x" style="color: var(--primary-blue);"></i>
+                                <div class="course-thumbnail">
+                                    {% if enrollment.course.thumbnail %}
+                                    <img src="{{ enrollment.course.thumbnail.url }}" class="rounded-3 w-100"
+                                        alt="{{ enrollment.course.title }}" style="height: 110px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="rounded-3 d-flex align-items-center justify-content-center w-100"
+                                        style="height: 110px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%);">
+                                        <i class="fas fa-book fa-3x text-white"></i>
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <h6 class="fw-bold mb-1" style="color: var(--primary-blue);">
+                                <h6 class="fw-bold mb-2" style="color: var(--primary-blue);">
                                     {{ enrollment.course.title }}
                                 </h6>
-                                <p class="text-muted small mb-2">
+                                <p class="text-muted small mb-3">
+                                    <i class="fas fa-align-left me-1"></i>
                                     {{ enrollment.course.short_description|truncatewords:15 }}
                                 </p>
                                 <div class="d-flex align-items-center">
-                                    <div class="course-progress bg-light flex-grow-1 me-2">
+                                    <div class="course-progress flex-grow-1 me-4">
                                         <div class="progress-bar-custom"
-                                            style="width: {{ enrollment.unit_progress|default:0 }}%; height: 100%;">
+                                            style="width: {{ enrollment.unit_progress|default:0 }}%;">
                                         </div>
                                     </div>
-                                    <small class="fw-bold" style="color: var(--mint-green);">
-                                        {{ enrollment.unit_progress|floatformat:0 }}%
-                                    </small>
+                                    <div class="text-center">
+                                        <div class="fw-bold h4 mb-0" style="color: var(--mint-green);">
+                                            {{ enrollment.unit_progress|floatformat:0 }}%
+                                        </div>
+                                        <small class="text-muted">Progress</small>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-3 text-end">
                                 {% if enrollment.last_accessed_lesson %}
                                 <a href="{% url 'courses:lesson_view' enrollment.course.slug enrollment.last_accessed_lesson.id %}"
-                                    class="btn continue-btn rounded-pill px-4">
+                                    class="btn continue-btn rounded-pill px-4 py-2 mb-2">
                                     <i class="fas fa-play me-1"></i> Continue
                                 </a>
                                 {% else %}
                                 <a href="{% url 'courses:course_detail' enrollment.course.slug %}"
-                                    class="btn continue-btn rounded-pill px-4">
+                                    class="btn continue-btn rounded-pill px-4 py-2 mb-2">
                                     <i class="fas fa-play me-1"></i> Start
                                 </a>
                                 {% endif %}
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Last accessed: {{ enrollment.updated_at|timesince }} ago
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-book-open fa-4x mb-3" style="color: rgba(26, 83, 92, 0.2);"></i>
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-book-open"></i>
+                    </div>
                     <h5 class="text-muted mb-2">No courses in progress</h5>
-                    <p class="text-muted mb-3">Start learning by enrolling in a course!</p>
-                    <a href="{% url 'courses:course_list' %}" class="btn btn-primary rounded-pill px-4"
-                        style="background-color: var(--mint-green); border-color: var(--mint-green);">
-                        Browse Courses
+                    <p class="text-muted mb-4">Start your learning journey by enrolling in a course!</p>
+                    <a href="{% url 'courses:course_list' %}" class="btn btn-primary rounded-pill px-4 py-2"
+                        style="background: linear-gradient(135deg, var(--mint-green) 0%, #3dbdb3 100%); border: none;">
+                        <i class="fas fa-search me-2"></i> Browse Courses
                     </a>
                 </div>
                 {% endif %}
@@ -203,10 +558,11 @@
 
     <!-- Recommended Courses -->
     <div class="col-lg-4">
-        <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="fw-bold mb-0" style="color: var(--primary-blue);">
-                    <i class="fas fa-lightbulb me-2" style="color: var(--accent-yellow);"></i>Recommended For You
+        <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden animate-fade-in-up">
+            <div class="card-header card-header-custom py-4">
+                <h5 class="section-title mb-0">
+                    Recommended For You
+                    <span class="badge bg-warning bg-opacity-10 text-warning ms-2">Personalized</span>
                 </h5>
             </div>
             <div class="card-body">
@@ -214,34 +570,56 @@
                 <div class="list-group list-group-flush">
                     {% for course in recommended_courses|slice:":3" %}
                     <a href="{% url 'courses:course_detail' course.slug %}"
-                        class="list-group-item list-group-item-action px-0 py-3 border-bottom">
+                        class="list-group-item list-group-item-action px-0 py-3 border-bottom course-item">
                         <div class="d-flex align-items-start">
                             <div class="flex-shrink-0">
-                                {% if course.thumbnail %}
-                                <img src="{{ course.thumbnail.url }}" class="rounded-2"
-                                    style="width: 60px; height: 60px; object-fit: cover;" alt="{{ course.title }}">
-                                {% else %}
-                                <div class="rounded-2 bg-light d-flex align-items-center justify-content-center"
-                                    style="width: 60px; height: 60px; background-color: rgba(26, 83, 92, 0.1);">
-                                    <i class="fas fa-book" style="color: var(--primary-blue);"></i>
+                                <div class="course-thumbnail">
+                                    {% if course.thumbnail %}
+                                    <img src="{{ course.thumbnail.url }}" class="rounded-2"
+                                        style="width: 70px; height: 70px; object-fit: cover;" alt="{{ course.title }}">
+                                    {% else %}
+                                    <div class="rounded-2 d-flex align-items-center justify-content-center"
+                                        style="width: 70px; height: 70px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%);">
+                                        <i class="fas fa-book fa-lg text-white"></i>
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <h6 class="fw-bold mb-1" style="color: var(--primary-blue);">
+                                <h6 class="fw-bold mb-2" style="color: var(--primary-blue);">
                                     {{ course.title|truncatewords:4 }}
                                 </h6>
-                                <div class="d-flex align-items-center mb-1">
-                                    <i class="fas fa-star text-warning me-1 small"></i>
-                                    <small class="fw-bold me-1">{{ course.get_average_rating|default:"0.0" }}</small>
-                                    <small class="text-muted">({{ course.reviews.count|default:"0" }})</small>
-                                </div>
+                                <div class="d-flex align-items-center mb-2">
+    <div class="star-rating me-2">
+        {% with rating=course.get_average_rating|default:0 %}
+            {% for i in "12345" %}
+                {% with star_num=forloop.counter %}
+                {% if rating >= star_num %}
+                    <i class="fas fa-star" style="color: #ffc107;"></i>
+                {% elif rating >= star_num|add:-0.5 %}
+                    <i class="fas fa-star-half-alt" style="color: #ffc107;"></i>
+                {% else %}
+                    <i class="far fa-star" style="color: #e0e0e0;"></i>
+                {% endif %}
+                {% endwith %}
+            {% endfor %}
+        {% endwith %}
+    </div>
+    <div class="d-flex align-items-center">
+        <span class="fw-bold me-1" style="color: #333;">{{ course.get_average_rating|default:"0.0"|floatformat:1 }}</span>
+        <small class="text-muted">({{ course.reviews.count|default:"0" }})</small>
+    </div>
+</div>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="badge badge-custom-mint rounded-pill px-2 py-1">
-                                        {{ course.get_level_display }}
+                                    <span class="badge badge-custom-mint rounded-pill px-3 py-1">
+                                        <i class="fas fa-chart-line me-1 small"></i>{{ course.get_level_display }}
                                     </span>
                                     <span class="fw-bold" style="color: var(--primary-blue);">
-                                        {% if course.is_free %}Free{% else %}₹{{ course.price }}{% endif %}
+                                        {% if course.is_free %}
+                                        <span class="badge badge-custom-blue rounded-pill px-3 py-1">Free</span>
+                                        {% else %}
+                                        <span class="text-nowrap">₹{{ course.price|floatformat:0 }}</span>
+                                        {% endif %}
                                     </span>
                                 </div>
                             </div>
@@ -250,12 +628,15 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-lightbulb fa-3x mb-3" style="color: rgba(26, 83, 92, 0.2);"></i>
-                    <p class="text-muted mb-3">No recommendations yet</p>
-                    <a href="{% url 'courses:course_list' %}" class="btn btn-outline-primary rounded-pill btn-sm"
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <h5 class="text-muted mb-2">No recommendations yet</h5>
+                    <p class="text-muted mb-4">Explore courses to get personalized recommendations!</p>
+                    <a href="{% url 'courses:course_list' %}" class="btn btn-outline-primary rounded-pill px-3"
                         style="border-color: var(--mint-green); color: var(--mint-green);">
-                        Explore Courses
+                        <i class="fas fa-compass me-1"></i> Explore Courses
                     </a>
                 </div>
                 {% endif %}
@@ -268,36 +649,43 @@
 <div class="row g-4 mt-2">
     <!-- Recent Activity -->
     <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="fw-bold mb-0" style="color: var(--primary-blue);">
-                    <i class="fas fa-history me-2" style="color: var(--mint-green);"></i>Recent Activity
+        <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden animate-fade-in-up">
+            <div class="card-header card-header-custom py-4">
+                <h5 class="section-title mb-0">
+                    Recent Activity
+                    <span class="badge bg-primary bg-opacity-10 text-primary ms-2">Latest</span>
                 </h5>
             </div>
             <div class="card-body">
                 {% if recent_activity %}
                 <ul class="list-unstyled mb-0">
                     {% for activity in recent_activity|slice:":5" %}
-                    <li class="d-flex align-items-center py-2 border-bottom">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                            style="width: 40px; height: 40px; background-color: rgba(78, 205, 196, 0.1);">
-                            <i class="fas fa-{% if activity.type == 'lesson_completed' %}check-circle{% elif activity.type == 'enrollment' %}book{% else %}play-circle{% endif %}"
-                                style="color: var(--mint-green);"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="fw-bold" style="color: var(--primary-blue);">
-                                {{ activity.description }}
+                    <li class="py-3 border-bottom activity-item">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon me-3" style="width: 50px; height: 50px; background-color: rgba(78, 205, 196, 0.1);">
+                                <i class="fas fa-{% if activity.type == 'lesson_completed' %}check-circle{% elif activity.type == 'enrollment' %}book{% else %}play-circle{% endif %}"
+                                    style="color: var(--mint-green);"></i>
                             </div>
-                            <small class="text-muted">{{ activity.course_title }}</small>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold" style="color: var(--primary-blue);">
+                                    {{ activity.description }}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-book me-1"></i>{{ activity.course_title }}
+                                </small>
+                            </div>
+                            <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
                         </div>
-                        <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
                     </li>
                     {% endfor %}
                 </ul>
                 {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-history fa-3x mb-3" style="color: rgba(26, 83, 92, 0.2);"></i>
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
                     <p class="text-muted mb-0">No recent activity</p>
+                    <p class="text-muted small">Start learning to see your activity here!</p>
                 </div>
                 {% endif %}
             </div>
@@ -306,43 +694,53 @@
 
     <!-- Recent Certificates -->
     <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0" style="color: var(--primary-blue);">
-                    <i class="fas fa-award me-2" style="color: var(--accent-yellow);"></i>Recent Certificates
+        <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden animate-fade-in-up">
+            <div class="card-header card-header-custom py-4 d-flex justify-content-between align-items-center">
+                <h5 class="section-title mb-0">
+                    Recent Certificates
+                    {% if certificates.count > 0 %}
+                    <span class="badge bg-warning bg-opacity-10 text-warning ms-2">{{ certificates.count }} earned</span>
+                    {% endif %}
                 </h5>
                 {% if certificates.count > 0 %}
-                <a href="{% url 'reviews:my_certificates' %}" class="text-decoration-none small">View All</a>
+                <a href="{% url 'reviews:my_certificates' %}" class="btn btn-sm btn-outline-primary rounded-pill"
+                    style="border-color: var(--accent-yellow); color: var(--accent-yellow);">
+                    View All
+                </a>
                 {% endif %}
             </div>
             <div class="card-body">
                 {% if certificates %}
                 <ul class="list-unstyled mb-0">
                     {% for certificate in certificates|slice:":3" %}
-                    <li class="d-flex align-items-center py-2 border-bottom">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                            style="width: 40px; height: 40px; background-color: rgba(255, 224, 102, 0.2);">
-                            <i class="fas fa-certificate" style="color: #e6c200;"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="fw-bold" style="color: var(--primary-blue);">
-                                {{ certificate.course.title|truncatewords:4 }}
+                    <li class="py-3 border-bottom certificate-item">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon me-3" style="width: 50px; height: 50px; background-color: rgba(255, 215, 0, 0.1);">
+                                <i class="fas fa-certificate" style="color: var(--accent-yellow);"></i>
                             </div>
-                            <small class="text-muted">Issued: {{ certificate.issued_date|date:"M d, Y" }}</small>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold" style="color: var(--primary-blue);">
+                                    {{ certificate.course.title|truncatewords:4 }}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i>Issued: {{ certificate.issued_date|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            <a href="{% url 'reviews:certificate_download' certificate.enrollment.id %}" target="_blank"
+                                class="badge badge-custom-blue rounded-pill px-3 py-2 text-decoration-none">
+                                <i class="fas fa-download me-1"></i> Download
+                            </a>
                         </div>
-                        <!-- Removed non-existent view certificate link -->
-                        <a href="{% url 'reviews:certificate_download' certificate.enrollment.id %}" target="_blank"
-                            class="badge badge-custom-blue rounded-pill px-3 text-decoration-none">
-                            <i class="fas fa-download me-1"></i> PDF
-                        </a>
                     </li>
                     {% endfor %}
                 </ul>
                 {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-award fa-3x mb-3" style="color: rgba(26, 83, 92, 0.2);"></i>
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-award"></i>
+                    </div>
                     <p class="text-muted mb-2">No certificates yet</p>
-                    <p class="text-muted small mb-0">Complete courses to earn certificates!</p>
+                    <p class="text-muted small mb-0">Complete courses to earn certificates of achievement!</p>
                 </div>
                 {% endif %}
             </div>

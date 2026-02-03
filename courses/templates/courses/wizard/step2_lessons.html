@@ -18,7 +18,11 @@
                 </div>
                 <div>
                     <h6 class="mb-0 fw-bold">{{ lesson.title }}</h6>
-                    <small class="text-muted">YouTube ID: <code>{{ lesson.youtube_video_id }}</code> | {{ lesson.video_duration }} min</small>
+                    <small class="text-muted">
+                        {% if lesson.video_file %}Local Video{% else %}YouTube:
+                        <code>{{ lesson.youtube_video_id }}</code>{% endif %}
+                        | {{ lesson.duration_minutes }}m {{ lesson.duration_seconds }}s
+                    </small>
                 </div>
             </div>
             <div class="text-end">
@@ -45,7 +49,7 @@
 <div class="card border border-primary-subtle rounded-4 bg-primary-subtle bg-opacity-10 mb-5">
     <div class="card-body p-4">
         <h5 class="fw-bold mb-3">Add New Lesson</h5>
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="row g-3">
                 <div class="col-md-8">
@@ -56,14 +60,27 @@
                     <label class="form-label small fw-bold">Order</label>
                     {{ form.order }}
                 </div>
+
                 <div class="col-md-6">
-                    <label class="form-label small fw-bold">YouTube Video ID</label>
+                    <label class="form-label small fw-bold">Video File (Upload)</label>
+                    {{ form.video_file }}
+                    <small class="text-muted fs-xs">Supported: MP4, WebM</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">OR YouTube Video ID</label>
                     {{ form.youtube_video_id }}
-                    <small class="text-muted fs-xs">E.g., <code>dQw4w9WgXcQ</code> from the URL.</small>
+                    <small class="text-muted fs-xs">E.g., <code>dQw4w9WgXcQ</code></small>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Duration (Minutes)</label>
+                    {{ form.duration_minutes }}
+                    <div class="invalid-feedback">{{ form.duration_minutes.errors.0 }}</div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold">Duration (min)</label>
-                    {{ form.video_duration }}
+                    <label class="form-label small fw-bold">Duration (Seconds)</label>
+                    {{ form.duration_seconds }}
+                    <div class="invalid-feedback">{{ form.duration_seconds.errors.0 }}</div>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <div class="form-check mb-2">

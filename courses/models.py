@@ -103,20 +103,22 @@ class Course(models.Model):
     
     @property
     def total_duration_display(self):
-        from django.db.models import Sum
-        total_minutes = self.lessons.aggregate(
-            total=Sum('video_duration')
-        )['total'] or 0
+        from django.db.models import Sum, F
+        # Calculate total seconds from all lessons
+        total_seconds = sum(lesson.total_duration_seconds for lesson in self.lessons.all())
         
-        if total_minutes == 0:
+        if total_seconds == 0:
             return "0m"
             
-        hours = total_minutes // 60
-        minutes = total_minutes % 60
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
         
         if hours > 0:
             return f"{hours}h {minutes}m"
-        return f"{minutes}m"
+        elif minutes > 0:
+            return f"{minutes}m {seconds}s"
+        return f"{seconds}s"
     
     def get_completion_rate(self):
         if self.enrollment_count == 0:
@@ -199,12 +201,22 @@ class Lesson(models.Model):
         blank=True,
         help_text='YouTube video ID (e.g., dQw4w9WgXcQ) or full URL'
     )
-    video_duration = models.PositiveIntegerField(default=0, help_text='Duration in minutes')
+    video_file = models.FileField(upload_to='lesson_videos/', null=True, blank=True)
+    video_duration = models.PositiveIntegerField(default=0, help_text='Duration in minutes (Legacy)')
+    duration_minutes = models.PositiveIntegerField(default=0)
+    duration_seconds = models.PositiveIntegerField(default=0)
     
     is_preview = models.BooleanField(default=False, help_text='Can be viewed without enrollment')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def total_duration_seconds(self):
+        calculated = (self.duration_minutes * 60) + self.duration_seconds
+        if calculated == 0 and self.video_duration > 0:
+            return self.video_duration * 60
+        return calculated
     
     class Meta:
         ordering = ['order']
@@ -332,8 +344,8 @@ class Enrollment(models.Model):
         3. mastery_score = (video_progress * 0.6) + (quiz_score * 0.4)
         """
         all_lessons = self.course.lessons.all()
-        # Sum duration (minutes to seconds) - total course length
-        total_seconds = sum([l.video_duration * 60 for l in all_lessons])
+        # Sum duration (minutes + seconds to total seconds) - total course length
+        total_seconds = sum([l.total_duration_seconds for l in all_lessons])
         
         # Sum actual cumulative watch time from all lesson progress records
         watched_seconds = LessonProgress.objects.filter(enrollment=self).aggregate(

@@ -186,12 +186,21 @@ def course_detail_view(request, slug):
         resources = lesson.resources.all()
         res_data = [{'title': r.title, 'url': r.get_resource_url(), 'type': r.resource_type} for r in resources]
         
+        # Duration display
+        total_seconds = lesson.total_duration_seconds
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        duration_display = f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
+        
         lessons_data.append({
             'id': lesson.id,
             'title': lesson.title,
             'description': lesson.description,
             'video_id': lesson.youtube_video_id,
-            'duration': lesson.video_duration,
+            'video_file_url': lesson.video_file.url if lesson.video_file else None,
+            'video_type': 'local' if lesson.video_file else 'youtube',
+            'duration': duration_display,
+            'duration_seconds': total_seconds, # For calculations
             'is_preview': lesson.is_preview,
             'resources': res_data,
             'is_unlocked': is_unlocked,
@@ -339,8 +348,8 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
         data = json.loads(request.body)
         # Frontend sends seconds
         watch_seconds = float(data.get('watch_time', 0))
-        # Lesson duration in minutes -> convert to seconds
-        video_duration_seconds = lesson.video_duration * 60
+        # Lesson duration in seconds
+        video_duration_seconds = lesson.total_duration_seconds
         
         # Incremental update and check for completion
         newly_completed = lesson_progress.update_watch_time(watch_seconds, video_duration_seconds)
@@ -716,7 +725,7 @@ def course_create_step2_view(request, slug):
             messages.success(request, "Lesson deleted.")
             return redirect('courses:course_edit_step2', slug=course.slug)
         
-        form = LessonForm(request.POST)
+        form = LessonForm(request.POST, request.FILES)
         if form.is_valid():
             lesson_order = form.cleaned_data.get('order')
             

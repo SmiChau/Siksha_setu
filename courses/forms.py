@@ -86,13 +86,15 @@ class CourseDetailsForm(forms.ModelForm):
 class LessonForm(forms.ModelForm):
     class Meta:
         model = Lesson
-        fields = ['title', 'description', 'youtube_video_id', 'video_duration', 'order', 'is_preview']
+        fields = ['title', 'description', 'video_file', 'youtube_video_id', 'duration_minutes', 'duration_seconds', 'order', 'is_preview']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
+            'duration_minutes': forms.NumberInput(attrs={'min': '0'}),
+            'duration_seconds': forms.NumberInput(attrs={'min': '0', 'max': '59'}),
         }
         help_texts = {
             'youtube_video_id': 'Only the 11-character ID from the YouTube URL (e.g., dQw4w9WgXcQ).',
-            'video_duration': 'Estimated duration in minutes.',
+            'video_file': 'Upload a local video file (MP4, WebM, etc).',
         }
 
     def __init__(self, *args, **kwargs):
@@ -103,6 +105,25 @@ class LessonForm(forms.ModelForm):
                 classes = field.widget.attrs.get('class', '')
                 if 'is-invalid' not in classes:
                     field.widget.attrs['class'] = f"{classes} is-invalid".strip()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        video_file = cleaned_data.get('video_file')
+        youtube_id = cleaned_data.get('youtube_video_id')
+        seconds = cleaned_data.get('duration_seconds')
+
+        if not video_file and not youtube_id:
+            raise forms.ValidationError("Please provide either a Video File or a YouTube Video ID.")
+        
+        # Note: We allow both if the user wants to fallback, but the prompt says "Ensure one is required".
+        # It doesn't say "only one allowed". However, usually it's one or the other.
+        # "Instructor can choose: Upload a local video OR provide a video URL" 
+        # I'll stick to 'at least one'.
+
+        if seconds is not None and seconds > 59:
+            self.add_error('duration_seconds', "Seconds cannot exceed 59.")
+        
+        return cleaned_data
 
     def clean_youtube_video_id(self):
         video_id = self.cleaned_data.get('youtube_video_id')

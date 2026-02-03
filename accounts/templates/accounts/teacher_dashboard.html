@@ -99,9 +99,21 @@
         flex-shrink: 0;
     }
 
+    /* FIXED: Star Rating Styles for course ratings */
     .rating-stars {
         display: inline-flex;
         gap: 2px;
+        align-items: center;
+    }
+
+    .rating-stars i.fas.fa-star {
+        color: #ffc107 !important; /* Yellow color for filled stars */
+        font-size: 0.8rem;
+    }
+
+    .rating-stars i.far.fa-star {
+        color: #ddd !important; /* Light gray for empty stars */
+        font-size: 0.8rem;
     }
 
     .btn-action {
@@ -288,14 +300,8 @@
                     style="border-color: var(--mint-green); color: var(--mint-green);">
                     <i class="fas fa-search me-1"></i> Browse Courses
                 </a>
-                <button class="btn btn-outline-primary rounded-pill px-4"
-                    style="border-color: var(--mint-green); color: var(--mint-green);">
-                    <i class="fas fa-chart-line me-1"></i> Analytics
-                </button>
-                <button class="btn btn-outline-primary rounded-pill px-4"
-                    style="border-color: var(--mint-green); color: var(--mint-green);">
-                    <i class="fas fa-cog me-1"></i> Settings
-                </button>
+                
+                
             </div>
         </div>
     </div>
@@ -394,23 +400,31 @@
                             </div>
                         </td>
                         <td>
-                            {% if course.avg_rating %}
-                            <div class="d-flex align-items-center">
-                                <span class="rating-stars me-2">
-                                    {% for i in "12345" %}
-                                    {% if forloop.counter <= course.avg_rating|floatformat:0 %} <i
-                                        class="fas fa-star text-warning" style="font-size: 0.8rem;"></i>
-                                        {% else %}
-                                        <i class="far fa-star text-warning" style="font-size: 0.8rem;"></i>
-                                        {% endif %}
-                                        {% endfor %}
-                                </span>
-                                <span class="fw-bold">{{ course.avg_rating|floatformat:1 }}</span>
-                            </div>
-                            {% else %}
-                            <span class="text-muted small">No ratings</span>
-                            {% endif %}
-                        </td>
+    {% if course.avg_rating %}
+    <div class="d-flex align-items-center">
+        <div class="star-rating-container">
+            <div class="star-rating-display">
+                {% with avg_rating=course.avg_rating|floatformat:1 %}
+                {% with full_stars=course.avg_rating|floatformat:0 %}
+                {% for i in "12345" %}
+                    {% with star_num=forloop.counter|add:0 %}
+                    {% if star_num <= full_stars|add:0 %}
+                        <i class="fas fa-star text-warning"></i>
+                    {% else %}
+                        <i class="far fa-star text-warning"></i>
+                    {% endif %}
+                    {% endwith %}
+                {% endfor %}
+                {% endwith %}
+                {% endwith %}
+            </div>
+            <div class="fw-bold ms-2" style="color: #333;">{{ course.avg_rating|floatformat:1 }}</div>
+        </div>
+    </div>  
+    {% else %}
+    <span class="text-muted small">No ratings</span>
+                        {% endif %}
+                        </td>   
                         <td>
                             <span class="fw-bold">₹{{ course.revenue_total|default:0|floatformat:0 }}</span>
                         </td>
@@ -480,7 +494,7 @@
                         <th>Trending Score</th>
                         <th>Views</th>
                         <th>Enrollments</th>
-                        <th class="pe-4">Likes</th>
+                        
                     </tr>
                 </thead>
                 <tbody>
@@ -497,7 +511,7 @@
                         </td>
                         <td>{{ item.course.views_count }}</td>
                         <td>{{ item.course.enrollment_count }}</td>
-                        <td class="pe-4">{{ item.course.likes_count }}</td>
+                        
                     </tr>
                     {% empty %}
                     <tr>
