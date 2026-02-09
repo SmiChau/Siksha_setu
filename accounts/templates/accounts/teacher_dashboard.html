@@ -107,12 +107,14 @@
     }
 
     .rating-stars i.fas.fa-star {
-        color: #ffc107 !important; /* Yellow color for filled stars */
+        color: #ffc107 !important;
+        /* Yellow color for filled stars */
         font-size: 0.8rem;
     }
 
     .rating-stars i.far.fa-star {
-        color: #ddd !important; /* Light gray for empty stars */
+        color: #ddd !important;
+        /* Light gray for empty stars */
         font-size: 0.8rem;
     }
 
@@ -300,8 +302,8 @@
                     style="border-color: var(--mint-green); color: var(--mint-green);">
                     <i class="fas fa-search me-1"></i> Browse Courses
                 </a>
-                
-                
+
+
             </div>
         </div>
     </div>
@@ -368,9 +370,11 @@
                                     {% endif %}
                                 </div>
                                 <div>
-                                    <div class="fw-bold mb-1" style="color: var(--primary-blue);">{{ course.title|truncatewords:5 }}</div>
+                                    <div class="fw-bold mb-1" style="color: var(--primary-blue);">{{
+                                        course.title|truncatewords:5 }}</div>
                                     <small class="text-muted">
-                                        <i class="fas fa-folder me-1"></i>{{ course.category.name|default:"Uncategorized" }}
+                                        <i class="fas fa-folder me-1"></i>{{
+                                        course.category.name|default:"Uncategorized" }}
                                     </small>
                                 </div>
                             </div>
@@ -400,31 +404,31 @@
                             </div>
                         </td>
                         <td>
-    {% if course.avg_rating %}
-    <div class="d-flex align-items-center">
-        <div class="star-rating-container">
-            <div class="star-rating-display">
-                {% with avg_rating=course.avg_rating|floatformat:1 %}
-                {% with full_stars=course.avg_rating|floatformat:0 %}
-                {% for i in "12345" %}
-                    {% with star_num=forloop.counter|add:0 %}
-                    {% if star_num <= full_stars|add:0 %}
-                        <i class="fas fa-star text-warning"></i>
-                    {% else %}
-                        <i class="far fa-star text-warning"></i>
-                    {% endif %}
-                    {% endwith %}
-                {% endfor %}
-                {% endwith %}
-                {% endwith %}
-            </div>
-            <div class="fw-bold ms-2" style="color: #333;">{{ course.avg_rating|floatformat:1 }}</div>
-        </div>
-    </div>  
-    {% else %}
-    <span class="text-muted small">No ratings</span>
-                        {% endif %}
-                        </td>   
+                            {% if course.avg_rating %}
+                            <div class="d-flex align-items-center">
+                                <div class="star-rating-container">
+                                    <div class="star-rating-display">
+                                        {% with avg_rating=course.avg_rating|floatformat:1 %}
+                                        {% with full_stars=course.avg_rating|floatformat:0 %}
+                                        {% for i in "12345" %}
+                                        {% with star_num=forloop.counter|add:0 %}
+                                        {% if star_num <= full_stars|add:0 %} <i class="fas fa-star text-warning"></i>
+                                            {% else %}
+                                            <i class="far fa-star text-warning"></i>
+                                            {% endif %}
+                                            {% endwith %}
+                                            {% endfor %}
+                                            {% endwith %}
+                                            {% endwith %}
+                                    </div>
+                                    <div class="fw-bold ms-2" style="color: #333;">{{ course.avg_rating|floatformat:1 }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">No ratings</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <span class="fw-bold">₹{{ course.revenue_total|default:0|floatformat:0 }}</span>
                         </td>
@@ -494,14 +498,15 @@
                         <th>Trending Score</th>
                         <th>Views</th>
                         <th>Enrollments</th>
-                        
+
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in trending_courses %}
                     <tr>
                         <td class="ps-4">
-                            <span class="fw-bold" style="color: var(--primary-blue);">{{ item.course.title|truncatechars:40 }}</span>
+                            <span class="fw-bold" style="color: var(--primary-blue);">{{
+                                item.course.title|truncatechars:40 }}</span>
                         </td>
                         <td>
                             <span class="badge rounded-pill px-3 py-1"
@@ -511,7 +516,7 @@
                         </td>
                         <td>{{ item.course.views_count }}</td>
                         <td>{{ item.course.enrollment_count }}</td>
-                        
+
                     </tr>
                     {% empty %}
                     <tr>
@@ -591,36 +596,35 @@
                 </h5>
             </div>
             <div class="card-body">
-               <div class="nav nav-pills nav-fill mb-3" id="activity-tab" role="tablist">
-    <button class="nav-link active rounded-pill me-2" id="enrollments-tab" data-bs-toggle="tab"
-        data-bs-target="#enrollments" style="border-color: var(--mint-green); color: var(--mint-green);">
-        <div class="d-flex align-items-center justify-content-center gap-2">
-            {% if user.profile_picture %}
-            <img src="{{ user.profile_picture.url }}" 
-                 alt="Profile" 
-                 class="rounded-circle"
-                 style="width: 24px; height: 24px; object-fit: cover; border: 2px solid var(--mint-green);">
-            {% else %}
-            <div class="rounded-circle d-flex align-items-center justify-content-center"
-                 style="width: 24px; height: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 12px; font-weight: bold;">
-                {% if user.first_name and user.last_name %}
-                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
-                {% else %}
-                {{ user.email|first|upper }}
-                {% endif %}
-            </div>
-            {% endif %}
-            <span>Enrollments</span>
-        </div>
-    </button>
-    <button class="nav-link rounded-pill" id="reviews-tab" data-bs-toggle="tab"
-        data-bs-target="#reviews" style="border-color: var(--mint-green); color: var(--mint-green);">
-        <div class="d-flex align-items-center justify-content-center gap-2">
-            <i class="fas fa-star" style="color: #FFD700;"></i>
-            <span>Reviews</span>
-        </div>
-    </button>
-</div>
+                <div class="nav nav-pills nav-fill mb-3" id="activity-tab" role="tablist">
+                    <button class="nav-link active rounded-pill me-2" id="enrollments-tab" data-bs-toggle="tab"
+                        data-bs-target="#enrollments"
+                        style="border-color: var(--mint-green); color: var(--mint-green);">
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                            {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="Profile" class="rounded-circle"
+                                style="width: 24px; height: 24px; object-fit: cover; border: 2px solid var(--mint-green);">
+                            {% else %}
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 24px; height: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 12px; font-weight: bold;">
+                                {% if user.first_name and user.last_name %}
+                                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                                {% else %}
+                                {{ user.email|first|upper }}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            <span>Enrollments</span>
+                        </div>
+                    </button>
+                    <button class="nav-link rounded-pill" id="reviews-tab" data-bs-toggle="tab"
+                        data-bs-target="#reviews" style="border-color: var(--mint-green); color: var(--mint-green);">
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                            <i class="fas fa-star" style="color: #FFD700;"></i>
+                            <span>Reviews</span>
+                        </div>
+                    </button>
+                </div>
 
                 <div class="tab-content">
                     <!-- Enrollments Tab -->
@@ -636,7 +640,9 @@
                                 </div>
                                 <div class="flex-grow-1">
                                     <div class="fw-bold" style="color: var(--primary-blue);">
-                                        {{ enrollment.student.get_full_name|default:enrollment.student.email|truncatechars:20 }}
+                                        {{
+                                        enrollment.student.get_full_name|default:enrollment.student.email|truncatechars:20
+                                        }}
                                     </div>
                                     <small class="text-muted">{{ enrollment.course.title|truncatewords:3 }}</small>
                                 </div>
