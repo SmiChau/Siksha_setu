@@ -250,6 +250,7 @@ def course_detail_view(request, slug):
         'user_review': user_review,
         'other_reviews': other_reviews,
         'enrollment': enrollment,
+        'user_enrolled': enrollment is not None,
         'lesson_progress': lesson_progress,
         'current_lesson': current_lesson,
         'can_access': can_access,
@@ -406,7 +407,18 @@ def submit_mcq_answer_view(request, course_slug, lesson_id, question_id):
 @login_required
 def submit_review_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug)
-    enrollment = get_object_or_404(Enrollment, student=request.user, course=course)
+    
+    # Safe enrollment check
+    enrolled = Enrollment.objects.filter(
+        student=request.user,
+        course=course
+    ).exists()
+
+    if not enrolled:
+        messages.error(request, "You must be enrolled in this course to submit a review.")
+        return redirect('courses:course_detail', slug=course.slug)
+
+    enrollment = Enrollment.objects.get(student=request.user, course=course)
     
     if request.method == 'POST':
         rating = request.POST.get('rating')

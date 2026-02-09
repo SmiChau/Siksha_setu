@@ -370,11 +370,9 @@
                                     {% endif %}
                                 </div>
                                 <div>
-                                    <div class="fw-bold mb-1" style="color: var(--primary-blue);">{{
-                                        course.title|truncatewords:5 }}</div>
+                                    <div class="fw-bold mb-1" style="color: var(--primary-blue);">{{ course.title|truncatewords:5 }}</div>
                                     <small class="text-muted">
-                                        <i class="fas fa-folder me-1"></i>{{
-                                        course.category.name|default:"Uncategorized" }}
+                                        <i class="fas fa-folder me-1"></i>{{ course.category.name|default:"Uncategorized" }}
                                     </small>
                                 </div>
                             </div>
@@ -505,8 +503,7 @@
                     {% for item in trending_courses %}
                     <tr>
                         <td class="ps-4">
-                            <span class="fw-bold" style="color: var(--primary-blue);">{{
-                                item.course.title|truncatechars:40 }}</span>
+                            <span class="fw-bold" style="color: var(--primary-blue);">{{ item.course.title|truncatechars:40 }}</span>
                         </td>
                         <td>
                             <span class="badge rounded-pill px-3 py-1"
@@ -640,9 +637,7 @@
                                 </div>
                                 <div class="flex-grow-1">
                                     <div class="fw-bold" style="color: var(--primary-blue);">
-                                        {{
-                                        enrollment.student.get_full_name|default:enrollment.student.email|truncatechars:20
-                                        }}
+                                        {{ enrollment.student.get_full_name|default:enrollment.student.email|truncatechars:20 }}
                                     </div>
                                     <small class="text-muted">{{ enrollment.course.title|truncatewords:3 }}</small>
                                 </div>
