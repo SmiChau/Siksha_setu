@@ -49,7 +49,7 @@
         <!-- Trending Table -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
-                <h4 class="fw-bold mb-4">Trending Courses (Gravity Algorithm)</h4>
+                <h4 class="fw-bold mb-4">Trending Courses (Hacker News Gravity Algorithm)</h4>
                 <div class="table-responsive">
                     <table class="table align-middle">
                         <thead>
@@ -70,7 +70,7 @@
                                 <td>
                                     <!-- Scores added here as requested -->
                                     <span class="badge bg-mint-green">
-                                        {{ item.trending_score|floatformat:2 }}
+                                        {{ item.trending_score|floatformat:4 }}
                                     </span>
                                 </td>
                                 <td>{{ item.course.views_count }}</td>

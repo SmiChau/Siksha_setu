@@ -230,8 +230,8 @@ def get_role_redirect_url(user):
             return 'accounts:teacher_dashboard'
         else:
             return 'accounts:pending_approval'
-    elif user.role == 'admin' or user.is_staff:
-        return 'admin:index'
+    elif user.role == 'admin' or user.is_staff or user.is_superuser:
+        return 'adminpanel:dashboard'
     else:
         return 'core:home'
 
