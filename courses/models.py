@@ -93,7 +93,8 @@ class Course(models.Model):
     
     def get_average_rating(self):
         from reviews.models import Review
-        reviews = Review.objects.filter(course=self)
+        # Exclude instructor's own reviews from analytics
+        reviews = Review.objects.filter(course=self).exclude(user=self.instructor)
         if reviews.exists():
             return round(reviews.aggregate(models.Avg('rating'))['rating__avg'], 1)
         return 0

@@ -35,6 +35,10 @@ def certificate_download_view(request, enrollment_id):
             student=request.user
         )
         
+        if request.user == enrollment.course.instructor:
+            messages.error(request, "Instructor cannot generate certificate for own course.")
+            return redirect('courses:course_detail', slug=enrollment.course.slug)
+
         if not enrollment.is_completed:
             messages.error(request, 'You must complete the course to download the certificate.')
             return redirect('courses:course_detail', slug=enrollment.course.slug)

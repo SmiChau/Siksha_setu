@@ -266,6 +266,7 @@ def course_detail_view(request, slug):
         'mastery_status': mastery_status,
         'is_mastered': is_mastered,
         'certificate_unlocked': is_mastered,
+        'is_instructor': request.user == course.instructor,
     }
     return render(request, 'core/course_detail.html', context)
 
@@ -273,6 +274,10 @@ def course_detail_view(request, slug):
 @login_required
 def enroll_course_view(request, slug):
     course = get_object_or_404(Course, slug=slug, status='published')
+    
+    if request.user == course.instructor:
+        messages.error(request, 'Instructors cannot enroll in their own course.')
+        return redirect('courses:course_detail', slug=slug)
     
     if Enrollment.objects.filter(student=request.user, course=course).exists():
         messages.info(request, 'You are already enrolled in this course.')
@@ -407,6 +412,10 @@ def submit_mcq_answer_view(request, course_slug, lesson_id, question_id):
 @login_required
 def submit_review_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug)
+    
+    if request.user == course.instructor:
+        messages.error(request, "Instructors cannot submit reviews on their own course.")
+        return redirect('courses:course_detail', slug=course.slug)
     
     # Safe enrollment check
     enrolled = Enrollment.objects.filter(
@@ -631,8 +640,8 @@ def teacher_dashboard_view(request):
     ).values('total')
     
     courses = Course.objects.filter(instructor=request.user).annotate(
-        enrolled_students=Count('enrollments__student', distinct=True),
-        avg_rating=Avg('reviews__rating'),
+        enrolled_students=Count('enrollments__student', filter=~Q(enrollments__student=request.user), distinct=True),
+        avg_rating=Avg('reviews__rating', filter=~Q(reviews__user=request.user)),
         revenue_total=Coalesce(
             Subquery(revenue_subquery, output_field=DecimalField()), 
             Value(0, output_field=DecimalField())
@@ -656,15 +665,15 @@ def teacher_dashboard_view(request):
             rated_courses_count += 1
             
     avg_rating = round(total_rating_sum / rated_courses_count, 1) if rated_courses_count > 0 else 0.0
-    # Recent enrollments for this teacher's courses
+    # Recent enrollments for this teacher's courses (excluding the instructor)
     recent_enrollments = Enrollment.objects.filter(
         course__instructor=request.user
-    ).select_related('student', 'course').order_by('-enrolled_at')[:10]
+    ).exclude(student=request.user).select_related('student', 'course').order_by('-enrolled_at')[:10]
     
-    # Recent reviews for this teacher's courses
+    # Recent reviews for this teacher's courses (excluding the instructor)
     recent_reviews = Review.objects.filter(
         course__instructor=request.user
-    ).select_related('user', 'course').order_by('-created_at')[:5]
+    ).exclude(user=request.user).select_related('user', 'course').order_by('-created_at')[:5]
     
     # Messages from students
     messages_received = TeacherMessage.objects.filter(teacher=request.user).order_by('-created_at')

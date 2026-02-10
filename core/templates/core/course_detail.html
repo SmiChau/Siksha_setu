@@ -415,6 +415,16 @@
                         </button>
                         {% endif %}
                     </div>
+                    {% elif is_instructor %}
+                    <div class="text-center py-4">
+                        <div class="mb-3">
+                            <div class="bg-primary bg-opacity-10 p-4 rounded-circle d-inline-block">
+                                <i class="fas fa-chalkboard-teacher fa-3x text-primary"></i>
+                            </div>
+                        </div>
+                        <h6 class="fw-bold">Course Instructor</h6>
+                        <p class="text-muted small mb-0">You are the instructor of this course.</p>
+                    </div>
                     {% else %}
                     <div class="text-center py-4">
                         <div class="mb-3">
@@ -653,7 +663,7 @@
                                 </div>
                             </div>
 
-                            {% if user_enrolled %}
+                            {% if enrollment %}
                             <button class="btn btn-primary rounded-pill px-4 py-2" type="button"
                                 data-bs-toggle="collapse" data-bs-target="#reviewForm">
                                 {% if user_review %}Edit Review{% else %}Write Review{% endif %}
@@ -673,7 +683,7 @@
                         </div>
 
                         <!-- Review Form -->
-                        {% if user_enrolled %}
+                        {% if enrollment %}
                         <div class="collapse mb-4 {% if not user_review %}show{% endif %}" id="reviewForm">
                             <form method="post" action="{% url 'courses:submit_review' course.slug %}"
                                 class="card card-body bg-light border-0 shadow-sm">
@@ -800,7 +810,16 @@
         <!-- 3. RIGHT SIDEBAR -->
         <div class="right-content-sidebar">
             <!-- Enroll Card -->
-            {% if not enrollment and not course.is_free and course.price > 0 %}
+            {% if is_instructor %}
+            <div class="card border-primary shadow-sm mb-4 sticky-top"
+                style="top: 90px; z-index: 100; border-style: dashed;">
+                <div class="card-body p-4 text-center">
+                    <i class="fas fa-user-shield fa-2x text-primary mb-3"></i>
+                    <h6 class="fw-bold mb-1">Instructor Control</h6>
+                    <p class="text-muted small mb-0">You are managing this course.</p>
+                </div>
+            </div>
+            {% elif not enrollment and not course.is_free and course.price > 0 %}
             <div class="card payment-card shadow-sm mb-3 sticky-top"
                 style="top: 90px; z-index: 100; border-radius: 14px;" id="enroll">
 
@@ -944,6 +963,7 @@
     const lessonsData = {{ lessons_json|safe }};
     const courseSlug = "{{ course.slug }}";
     const isEnrolled = {{ enrollment|yesno:"true,false" }};
+    const isInstructor = {{ is_instructor|yesno:"true,false" }};
     let player;
     let currentLessonId = {% if current_lesson %}{{ current_lesson.id }}{% else %}null{% endif %};
 
@@ -1329,7 +1349,7 @@
         });
 
         // Add Final Submit Button
-        if (!lesson.quiz_completed) {
+        if (!lesson.quiz_completed && !isInstructor) {
             html += `
                 <div class="text-center mt-4">
                     <button class="btn btn-success btn-lg rounded-pill px-5" onclick="submitLessonQuiz(${lesson.id})">
