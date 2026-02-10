@@ -636,8 +636,7 @@
                                         {% endwith %}
                                     </div>
                                     <div class="d-flex align-items-center">
-                                        <span class="fw-bold me-1" style="color: #333;">{{
-                                            course.get_average_rating|default:"0.0"|floatformat:1 }}</span>
+                                        <span class="fw-bold me-1" style="color: #333;">{{ course.get_average_rating|default:"0.0"|floatformat:1 }}</span>
                                         <small class="text-muted">({{ course.reviews.count|default:"0" }})</small>
                                     </div>
                                 </div>
@@ -757,8 +756,7 @@
                                     {{ certificate.course.title|truncatewords:4 }}
                                 </div>
                                 <small class="text-muted">
-                                    <i class="fas fa-calendar-alt me-1"></i>Issued: {{ certificate.issued_date|date:"M
-                                    d, Y" }}
+                                    <i class="fas fa-calendar-alt me-1"></i>Issued: {{ certificate.issued_date|date:"M d, Y" }}
                                 </small>
                             </div>
                             <a href="{% url 'reviews:certificate_download' certificate.enrollment.id %}" target="_blank"
