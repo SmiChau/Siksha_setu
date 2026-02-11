@@ -14,7 +14,8 @@
                         <img src="{% static 'core/img/khaltilogo.png' %}" alt="Khalti Payment Gateway" height="50"
                             class="mb-3">
                         <h4 class="fw-bold">{{ course.title }}</h4>
-                        <p class="text-muted">Payment amount: <span class="fw-bold text-dark fs-5">NPR {{ total_amount }}</span></p>
+                        <p class="text-muted">Payment amount: <span class="fw-bold text-dark fs-5">NPR {{ total_amount
+                                }}</span></p>
                     </div>
 
                     <div class="alert alert-light border mb-4">
@@ -32,6 +33,7 @@
                         </div>
                     </div>
 
+                    {% if not request.user.is_staff and not request.user.is_superuser %}
                     <div class="d-grid">
                         <a href="{% url 'payments:khalti_initiate' course.slug %}"
                             class="btn btn-lg rounded-pill text-white fw-bold shadow-sm"
@@ -39,6 +41,11 @@
                             Pay with Khalti <i class="fas fa-arrow-right ms-2"></i>
                         </a>
                     </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">
+                        Admin accounts cannot enroll.
+                    </div>
+                    {% endif %}
 
                     <div class="text-center mt-3">
                         <a href="{% url 'courses:course_detail' course.slug %}"

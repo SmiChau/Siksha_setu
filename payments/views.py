@@ -40,6 +40,11 @@ def initiate_payment_view(request, course_slug):
     """
     course = get_object_or_404(Course, slug=course_slug, status='published')
     
+    # Admin Guard
+    if request.user.is_staff or request.user.is_superuser:
+        messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
+        return redirect('courses:course_detail', slug=course_slug)
+    
     # Check if already enrolled
     if Enrollment.objects.filter(student=request.user, course=course).exists():
         messages.info(request, 'You are already enrolled in this course.')
@@ -66,6 +71,11 @@ def khalti_checkout_view(request, course_slug):
     """
     course = get_object_or_404(Course, slug=course_slug, status='published')
     
+    # Admin Guard
+    if request.user.is_staff or request.user.is_superuser:
+        messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
+        return redirect('courses:course_detail', slug=course_slug)
+        
     # Check if already enrolled
     if Enrollment.objects.filter(student=request.user, course=course).exists():
         messages.info(request, 'You are already enrolled in this course.')
@@ -87,6 +97,11 @@ def khalti_initiate_view(request, course_slug):
     Initiate Khalti payment using ePayment API v2 and redirect to Khalti's payment page
     """
     course = get_object_or_404(Course, slug=course_slug, status='published')
+    
+    # Admin Guard
+    if request.user.is_staff or request.user.is_superuser:
+        messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
+        return redirect('courses:course_detail', slug=course_slug)
     
     # Check if already enrolled
     if Enrollment.objects.filter(student=request.user, course=course).exists():
@@ -189,6 +204,11 @@ def khalti_callback_view(request):
     
     if not pidx:
         messages.error(request, "Invalid payment callback.")
+        return redirect('core:home')
+    
+    # Admin Guard
+    if request.user.is_staff or request.user.is_superuser:
+        messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
         return redirect('core:home')
     
     try:
@@ -300,6 +320,11 @@ def esewa_initiate_view(request, course_slug):
     """
     course = get_object_or_404(Course, slug=course_slug)
     
+    # Admin Guard
+    if request.user.is_staff or request.user.is_superuser:
+        messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
+        return redirect('courses:course_detail', slug=course_slug)
+        
     # Pre-payment enrollment check
     if Enrollment.objects.filter(student=request.user, course=course).exists():
         messages.info(request, "You are already enrolled in this course.")
@@ -370,6 +395,11 @@ def esewa_callback_view(request):
     if not data:
         messages.error(request, "No data received from eSewa.")
         return redirect('payments:payment_failed')
+    
+    # Admin Guard
+    if request.user.is_staff or request.user.is_superuser:
+        messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
+        return redirect('core:home')
         
     try:
         # 1. Decode JSON response from Base64

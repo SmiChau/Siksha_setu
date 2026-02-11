@@ -59,6 +59,10 @@ class Payment(models.Model):
         self.save()
         
         from courses.models import Enrollment
+        # Safety Guard: Do not enroll admin users even if payment somehow completes
+        if self.user.is_staff or self.user.is_superuser:
+            return
+
         Enrollment.objects.update_or_create(
             student=self.user,
             course=self.course,

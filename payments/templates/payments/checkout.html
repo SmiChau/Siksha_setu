@@ -21,6 +21,7 @@
                         </h1>
                     </div>
 
+                    {% if not request.user.is_staff and not request.user.is_superuser %}
                     <div class="row g-4 justify-content-center">
                         <!-- Khalti Option -->
                         <div class="col-md-5">
@@ -64,6 +65,13 @@
                             </a>
                         </div>
                     </div>
+                    {% else %}
+                    <div class="alert alert-warning text-center">
+                        <i class="fas fa-exclamation-triangle mb-2 fa-2x"></i>
+                        <h5>Admin Access Only</h5>
+                        <p class="mb-0">Admin accounts cannot enroll in courses. Please use a student account.</p>
+                    </div>
+                    {% endif %}
 
                     <div class="text-center mt-5">
                         <a href="{% url 'courses:course_detail' course.slug %}" class="text-muted text-decoration-none">

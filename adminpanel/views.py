@@ -9,9 +9,9 @@ from core.models import ContactMessage
 @user_passes_test(lambda u: u.is_staff)
 def admin_dashboard(request):
     # Overall Stats
-    total_users = CustomUser.objects.count()
+    total_users = CustomUser.objects.filter(is_staff=False, is_superuser=False).count()
     total_courses = Course.objects.count()
-    total_enrollments = Enrollment.objects.count()
+    total_enrollments = Enrollment.objects.filter(student__is_staff=False, student__is_superuser=False).count()
     total_messages = ContactMessage.objects.count()
     
     # Trending Courses (Algorithm 2 - Global)

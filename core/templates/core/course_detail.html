@@ -342,6 +342,13 @@
     .rating-input input:checked+label {
         color: #ffc107;
     }
+
+    /* Duration display fix - ADD THIS */
+    .lesson-duration {
+        display: inline-block;
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
 </style>
 {% endblock %}
 
@@ -431,7 +438,9 @@
                             <i class="fas fa-chart-pie fa-4x text-muted"></i>
                         </div>
                         <p class="text-muted small mb-3">Enroll to track your learning journey</p>
+                        {% if not request.user.is_staff and not request.user.is_superuser %}
                         <a href="#enroll" class="btn btn-primary rounded-pill px-4">Start Tracking</a>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
@@ -444,18 +453,36 @@
                         Instructor
                     </h6>
                     <div class="d-flex align-items-center p-3 bg-light rounded-3">
-                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3"
-                            style="width: 60px; height: 60px;">
-                            <i class="fas fa-user text-primary fa-lg"></i>
-                        </div>
                         <div class="flex-grow-1">
-                            <div class="fw-bold h6 mb-1">
-                                {{ course.instructor.get_full_name|default:course.instructor.email|default:"Instructor" }}
-                            </div>
-                            <div class="small text-muted">
-                                Expert Instructor
-                            </div>
+                            <a href="{% url 'core:teacher_profile' course.instructor.id %}"
+                                class="text-decoration-none text-dark d-flex align-items-center gap-3">
+                                {% if course.instructor.profile_picture %}
+                                <img src="{{ course.instructor.profile_picture.url }}"
+                                    alt="{{ course.instructor.get_full_name }}" class="rounded-circle"
+                                    style="width: 60px; height: 60px; object-fit: cover;">
+                                {% else %}
+                                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 60px; height: 60px;">
+                                    <i class="fas fa-user text-primary fa-lg"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold h6 mb-1">
+                                        {{ course.instructor.get_full_name|default:course.instructor.email|default:"Instructor" }}
+                                    </div>
+                                    <div class="small text-muted">
+                                        {% if course.instructor.profile.title %}
+                                        {{ course.instructor.profile.title }}
+                                        {% elif course.instructor.profile.bio %}
+                                        {{ course.instructor.profile.bio|truncatewords:8 }}
+                                        {% else %}
+                                        Expert Instructor
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </a>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -489,7 +516,22 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mt-3 px-2">
-                    <!-- Empty div for layout consistency -->
+                    <!-- FIXED: Duration display - check which field exists -->
+                    <div class="text-muted small d-flex align-items-center gap-3">
+                        <span>
+                            <i class="fas fa-clock me-1"></i>
+                            {% if current_lesson.video_duration %}
+                                {{ current_lesson.video_duration }} min
+                            {% elif current_lesson.duration %}
+                                {% with minutes=current_lesson.duration|stringformat:"i" %}
+                                    {{ minutes }} min
+                                {% endwith %}
+                            {% else %}
+                                0 min
+                            {% endif %}
+                        </span>
+                        <span><i class="fas fa-eye me-1"></i> {{ course.views|default:0 }} views</span>
+                    </div>
                 </div>
                 {% else %}
                 <div
@@ -498,9 +540,11 @@
                         <i class="fas fa-lock fa-4x mb-4 text-white-50"></i>
                         <h3 class="fw-bold mb-3">Content Locked</h3>
                         <p class="mb-4">Enroll now to unlock all lessons and resources</p>
+                        {% if not request.user.is_staff and not request.user.is_superuser %}
                         <a href="#enroll" class="btn btn-primary rounded-pill px-5 py-2">
                             Enroll Now
                         </a>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -512,10 +556,6 @@
                     <h2 class="h3 fw-bold mb-1" id="currentLessonTitle">
                         {{ current_lesson.title|default:course.title }}
                     </h2>
-                    <div class="text-muted small d-flex align-items-center gap-3">
-                        <span>{{ current_lesson.duration_minutes }}m {{ current_lesson.duration_seconds }}s</span>
-                        <span>{{ course.views }} views</span>
-                    </div>
                 </div>
             </div>
 
@@ -649,15 +689,14 @@
                                     <div class="text-warning mb-2">
                                         {% for i in "12345" %}
                                         {% with i_num=i|add:0 %}
-                                        {% if i_num <= average_rating %}
-                                        <i class="fas fa-star"></i>
-                                        {% elif i_num|add:-0.5 <= average_rating %}
-                                        <i class="fas fa-star-half-alt"></i>
-                                        {% else %}
-                                        <i class="far fa-star"></i>
-                                        {% endif %}
-                                        {% endwith %}
-                                        {% endfor %}
+                                        {% if i_num <= average_rating %} <i class="fas fa-star"></i>
+                                            {% elif i_num|add:-0.5 <= average_rating %} <i class="fas fa-star-half-alt">
+                                                </i>
+                                                {% else %}
+                                                <i class="far fa-star"></i>
+                                                {% endif %}
+                                                {% endwith %}
+                                                {% endfor %}
                                     </div>
                                     <small class="text-muted">Based on {{ review_count }} reviews</small>
                                 </div>
@@ -750,11 +789,10 @@
                                         <div class="text-warning small">
                                             {% for i in "12345" %}
                                             {% with i_num=i|add:0 %}
-                                            {% if i_num <= user_review.rating|add:0 %}
-                                            <i class="fas fa-star"></i>
-                                            {% endif %}
-                                            {% endwith %}
-                                            {% endfor %}
+                                            {% if i_num <= user_review.rating|add:0 %} <i class="fas fa-star"></i>
+                                                {% endif %}
+                                                {% endwith %}
+                                                {% endfor %}
                                         </div>
                                     </div>
                                     <small class="text-muted">{{ user_review.created_at|date:"F d, Y" }}</small>
@@ -782,11 +820,10 @@
                                     <div class="text-warning small">
                                         {% for i in "12345" %}
                                         {% with i_num=i|add:0 %}
-                                        {% if i_num <= review.rating|add:0 %}
-                                        <i class="fas fa-star"></i>
-                                        {% endif %}
-                                        {% endwith %}
-                                        {% endfor %}
+                                        {% if i_num <= review.rating|add:0 %} <i class="fas fa-star"></i>
+                                            {% endif %}
+                                            {% endwith %}
+                                            {% endfor %}
                                     </div>
                                 </div>
                                 <p class="mb-0 text-secondary small">{{ review.comment }}</p>
@@ -836,6 +873,7 @@
                     </div>
 
                     <!-- Payment Options -->
+                    {% if not request.user.is_staff and not request.user.is_superuser %}
                     <div class="payment-options d-flex justify-content-center gap-3 mb-3">
 
                         <!-- eSewa -->
@@ -855,6 +893,11 @@
                         </a>
 
                     </div>
+                    {% else %}
+                    <div class="alert alert-info small py-2 mb-3">
+                        Admin accounts cannot enroll.
+                    </div>
+                    {% endif %}
 
                     <!-- Footer Text -->
                     <p class="text-muted small mb-0" style="font-size: 0.7rem;">
@@ -871,10 +914,16 @@
                         <h5 class="text-muted small text-uppercase fw-bold mb-3">Start Learning</h5>
                         <h2 class="fw-bold mb-3 text-success">Free</h2>
                     </div>
+                    {% if not request.user.is_staff and not request.user.is_superuser %}
                     <a href="{% url 'courses:enroll_course' course.slug %}"
                         class="btn btn-primary w-100 rounded-pill py-3 fw-bold mb-3">
                         Enroll Now
                     </a>
+                    {% else %}
+                    <div class="alert alert-info small py-2 mb-3">
+                        Admin accounts cannot enroll.
+                    </div>
+                    {% endif %}
                     <p class="text-muted small mb-0">
                         Full access to all lessons and resources
                     </p>
@@ -913,7 +962,13 @@
                                     <div>
                                         <span class="small fw-bold d-block">{{ lesson.title }}</span>
                                         <small class="text-muted">
-                                            {{ lesson.video_duration }} min
+                                            {% if lesson.video_duration %}
+                                                {{ lesson.video_duration }} min
+                                            {% elif lesson.duration %}
+                                                {{ lesson.duration }} min
+                                            {% else %}
+                                                0 min
+                                            {% endif %}
                                         </small>
                                     </div>
                                 </div>
@@ -959,12 +1014,13 @@
 {% block extra_js %}
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    // Fixed syntax errors in variable declarations
+    // FIXED 1: Template filter syntax - removed spaces
     const lessonsData = {{ lessons_json|safe }};
     const courseSlug = "{{ course.slug }}";
     const isEnrolled = {{ enrollment|yesno:"true,false" }};
     const isInstructor = {{ is_instructor|yesno:"true,false" }};
     let player;
+    // FIXED 2: Current lesson ID syntax
     let currentLessonId = {% if current_lesson %}{{ current_lesson.id }}{% else %}null{% endif %};
 
     // Tracking Variables
@@ -976,7 +1032,7 @@
 
     // Initialize
     document.addEventListener('DOMContentLoaded', function () {
-        if (currentLessonId && currentLessonId !== "null") {
+        if (currentLessonId && currentLessonId !== null) {
             renderSidebarQuizzes();
             updateSidebarUI(); // Initialize locks and icons
         }
@@ -1007,7 +1063,7 @@
                 const labels = document.querySelectorAll('.rating-input label');
                 labels.forEach(label => {
                     const starValue = label.getAttribute('for').replace('rate-', '');
-                    if (starValue <= value) {
+                    if (parseInt(starValue) <= parseInt(value)) {
                         label.style.color = '#ffc107';
                     } else {
                         label.style.color = '#ddd';
@@ -1465,7 +1521,9 @@
                 const badge = quizEl.querySelector('.badge');
                 if (lesson.quiz_completed && !badge) {
                     const div = quizEl.querySelector('.d-flex.justify-content-between');
-                    div.insertAdjacentHTML('beforeend', '<span class="badge bg-success">Submitted</span>');
+                    if (div) {
+                        div.insertAdjacentHTML('beforeend', '<span class="badge bg-success">Submitted</span>');
+                    }
                 }
             }
         });

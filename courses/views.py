@@ -279,6 +279,10 @@ def enroll_course_view(request, slug):
         messages.error(request, 'Instructors cannot enroll in their own course.')
         return redirect('courses:course_detail', slug=slug)
     
+    if request.user.is_staff or request.user.is_superuser:
+        messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
+        return redirect('courses:course_detail', slug=slug)
+    
     if Enrollment.objects.filter(student=request.user, course=course).exists():
         messages.info(request, 'You are already enrolled in this course.')
         return redirect('courses:course_detail', slug=slug)
@@ -348,6 +352,21 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
         lesson=lesson
     )
     
+    # Logic Guard: Admin/Staff do not affect progress
+    if request.user.is_staff or request.user.is_superuser:
+        import json
+        return JsonResponse({
+            'success': True,
+            'unit_progress': enrollment.unit_progress,
+            'quiz_score': enrollment.quiz_score,
+            'mastery_score': enrollment.mastery_score,
+            'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
+            'is_mastered': enrollment.mastery_score >= 80,
+            'certificate_unlocked': enrollment.certificate_unlocked,
+            'lesson_completed': True,
+            'newly_completed': False
+        })
+    
     import json
     newly_completed = False
     try:
@@ -392,6 +411,16 @@ def submit_mcq_answer_view(request, course_slug, lesson_id, question_id):
     if selected_option not in ['A', 'B', 'C', 'D']:
         return JsonResponse({'success': False, 'error': 'Invalid option'})
     
+    # Logic Guard: Admin/Staff do not affect progress or records
+    if request.user.is_staff or request.user.is_superuser:
+        return JsonResponse({
+            'success': True,
+            'is_correct': selected_option == question.correct_option,
+            'correct_option': question.correct_option,
+            'explanation': question.explanation,
+            'mcq_score': enrollment.mcq_score
+        })
+    
     attempt, created = MCQAttempt.objects.update_or_create(
         enrollment=enrollment,
         question=question,
@@ -413,6 +442,10 @@ def submit_mcq_answer_view(request, course_slug, lesson_id, question_id):
 def submit_review_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug)
     
+    if request.user.is_staff or request.user.is_superuser:
+        messages.warning(request, "Admin accounts cannot submit course reviews.")
+        return redirect('courses:course_detail', slug=course.slug)
+
     if request.user == course.instructor:
         messages.error(request, "Instructors cannot submit reviews on their own course.")
         return redirect('courses:course_detail', slug=course.slug)
@@ -640,8 +673,8 @@ def teacher_dashboard_view(request):
     ).values('total')
     
     courses = Course.objects.filter(instructor=request.user).annotate(
-        enrolled_students=Count('enrollments__student', filter=~Q(enrollments__student=request.user), distinct=True),
-        avg_rating=Avg('reviews__rating', filter=~Q(reviews__user=request.user)),
+        enrolled_students=Count('enrollments__student', filter=~Q(enrollments__student__is_staff=True, enrollments__student__is_superuser=True, enrollments__student=request.user), distinct=True),
+        avg_rating=Avg('reviews__rating', filter=~Q(reviews__user__is_staff=True, reviews__user__is_superuser=True, reviews__user=request.user)),
         revenue_total=Coalesce(
             Subquery(revenue_subquery, output_field=DecimalField()), 
             Value(0, output_field=DecimalField())

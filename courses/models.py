@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -93,8 +94,10 @@ class Course(models.Model):
     
     def get_average_rating(self):
         from reviews.models import Review
-        # Exclude instructor's own reviews from analytics
-        reviews = Review.objects.filter(course=self).exclude(user=self.instructor)
+        # Exclude instructor's own reviews and admin reviews from analytics
+        reviews = Review.objects.filter(course=self).exclude(
+            Q(user=self.instructor) | Q(user__is_staff=True) | Q(user__is_superuser=True)
+        )
         if reviews.exists():
             return round(reviews.aggregate(models.Avg('rating'))['rating__avg'], 1)
         return 0
@@ -124,7 +127,12 @@ class Course(models.Model):
     def get_completion_rate(self):
         if self.enrollment_count == 0:
             return 0
-        completed = Enrollment.objects.filter(course=self, is_completed=True).count()
+        completed = Enrollment.objects.filter(
+            course=self, 
+            is_completed=True,
+            student__is_staff=False,
+            student__is_superuser=False
+        ).count()
         return round((completed / self.enrollment_count) * 100, 1)
     
     def calculate_weighted_score(self):
@@ -171,8 +179,10 @@ class Course(models.Model):
         start_time = self.published_at or self.created_at
         age_hours = (timezone.now() - start_time).total_seconds() / 3600
         
-        # Step 1: Engagement Score
-        engagement_score = (self.enrollment_count * 3) + (self.views_count * 1) + (self.likes_count * 2)
+        # Step 1: Engagement Score (Excluding admins)
+        # We use real counts to be immune to dummy field manipulation
+        actual_enrollments = self.enrollments.filter(student__is_staff=False, student__is_superuser=False).count()
+        engagement_score = (actual_enrollments * 3) + (self.views_count * 1) + (self.likes_count * 2)
         
         # Step 2 & 3: Gravity Calculation
         # Gravity constant 1.5 ensures moderate time-based decay

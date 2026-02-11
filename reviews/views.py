@@ -35,6 +35,10 @@ def certificate_download_view(request, enrollment_id):
             student=request.user
         )
         
+        if request.user.is_staff or request.user.is_superuser:
+            messages.warning(request, "Admin accounts cannot generate certificates.")
+            return redirect('courses:course_detail', slug=enrollment.course.slug)
+        
         if request.user == enrollment.course.instructor:
             messages.error(request, "Instructor cannot generate certificate for own course.")
             return redirect('courses:course_detail', slug=enrollment.course.slug)
@@ -121,6 +125,9 @@ def certificate_download_view(request, enrollment_id):
 
 @login_required
 def my_certificates_view(request):
+    if request.user.is_staff or request.user.is_superuser:
+        return render(request, 'reviews/my_certificates.html', {'certificates': []})
+
     certificates = Certificate.objects.filter(
         enrollment__student=request.user
     ).select_related('enrollment__course').order_by('-issued_at')

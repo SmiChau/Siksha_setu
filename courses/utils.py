@@ -54,7 +54,7 @@ def get_trending_courses(limit=5):
     # Query all published courses and annotate with real enrollment counts
     # We use select_related to get instructor/category for the dashboard UI
     courses = Course.objects.filter(status='published').annotate(
-        actual_enrollments=Count('enrollments', distinct=True)
+        actual_enrollments=Count('enrollments', filter=~Q(enrollments__student__is_staff=True, enrollments__student__is_superuser=True), distinct=True)
     ).select_related('instructor', 'category')
     
     trending_list = []
