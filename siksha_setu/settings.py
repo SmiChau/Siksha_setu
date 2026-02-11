@@ -185,8 +185,9 @@ SESSION_SAVE_EVERY_REQUEST = False  # Save session on every request (optional, i
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Session persists until expiration or logout
 SESSION_COOKIE_AGE = 86400  # 24 hours in seconds
 
-# Login URL
+# Login URL & Redirects
 LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'accounts:student_dashboard'
 
 # Message Tags for Bootstrap
 from django.contrib.messages import constants as messages

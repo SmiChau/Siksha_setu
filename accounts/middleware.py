@@ -10,12 +10,11 @@ class AdminRedirectMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Only redirect if accessing the default admin and the user is staff/admin
-        if request.path.startswith('/admin/') and not request.path.startswith('/adminpanel/'):
-            if request.user.is_authenticated and (request.user.is_staff or getattr(request.user, 'role', '') == 'admin' or request.user.is_superuser):
-                # Redirect authenticated staff/admin users to custom dashboard
-                # We skip this if they are trying to logout or other specific actions if needed, 
-                # but generally we want them in the custom portal.
-                return redirect('adminpanel:dashboard')
+        # Requirement 1 & 3: Ensure no custom middleware intercepts /admin/* routes.
+        # Skip redirect logic when request.path starts with /admin/.
+        if not request.path.startswith('/admin/'):
+            # Custom dashboard redirect logic for non-admin entry points would go here.
+            # Currently, redirection is handled surgically in the login view.
+            pass
         
         return self.get_response(request)
