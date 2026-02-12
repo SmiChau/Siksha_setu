@@ -1,0 +1,108 @@
+{% extends "adminpanel/base_admin.html" %}
+{% load static %}
+
+{% block title %}{{ action }} {{ model_name }} - Admin Panel{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h4 class="fw-bold m-0">{{ action }} {{ model_name }}</h4>
+                <a href="{{ request.META.HTTP_REFERER|default:'../' }}"
+                    class="btn btn-sm btn-outline-secondary rounded-pill">
+                    <i class="fas fa-arrow-left me-1"></i> Back
+                </a>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger rounded-4">
+                        {% for error in form.non_field_errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        {% for field in form %}
+                        <div class="col-12">
+                            <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-muted">{{
+                                field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                            <div class="form-text small">{{ field.help_text }}</div>
+                            {% endif %}
+                            {% if field.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in field.errors %}
+                                <i class="fas fa-exclamation-circle me-1"></i> {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold">
+                            <i class="fas fa-save me-1"></i> Save {{ model_name }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Surgical form control styling */
+    .admin-content input:not([type="checkbox"]):not([type="radio"]),
+    .admin-content select,
+    .admin-content textarea {
+        display: block;
+        width: 100%;
+        padding: 0.6rem 1rem;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #dee2e6;
+        appearance: none;
+        border-radius: 0.5rem;
+        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+    }
+
+    .admin-content input:focus,
+    .admin-content select:focus,
+    .admin-content textarea:focus {
+        border-color: #1a535c;
+        outline: 0;
+        box-shadow: 0 0 0 0.25rem rgba(26, 83, 92, 0.1);
+    }
+
+    .admin-content input[type="checkbox"] {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-top: 0.25rem;
+        vertical-align: top;
+        background-color: #fff;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        border: 1px solid rgba(0, 0, 0, .25);
+        appearance: none;
+        border-radius: 0.25rem;
+    }
+
+    .admin-content input[type="checkbox"]:checked {
+        background-color: #1a535c;
+        border-color: #1a535c;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
+    }
+</style>
+{% endblock %}

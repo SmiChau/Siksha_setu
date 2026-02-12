@@ -1,111 +1,137 @@
-{% extends "core/base_public.html" %}
+{% extends "adminpanel/base_admin.html" %}
 {% load static %}
 
-{% block title %}Admin Dashboard - SikshaSetu{% endblock %}
+{% block title %}Dashboard - Admin Panel{% endblock %}
 
-{% block extra_css %}
-<style>
-    /* Ensure the score badge is visible */
-    .bg-mint-green {
-        background-color: #4ecdc4 !important;
-        color: white !important;
-        font-weight: 600;
-    }
-</style>
-{% endblock %}
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="fw-bold m-0">Dashboard</h1>
+    <div class="text-muted small">
+        <i class="fas fa-calendar-alt me-1"></i> {{ now|date:"l, F d, Y" }}
+    </div>
+</div>
 
-{% block content %}
-<div class="container py-5">
-    <h1 class="fw-bold mb-4">Admin Dashboard</h1>
-
-    <div class="row g-4 mb-5">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white p-3 border-0 rounded-4 shadow-sm">
-                <h5>Total Users</h5>
-                <h2 class="fw-bold">{{ total_users }}</h2>
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="card border-0 rounded-4 shadow-sm p-3 border-start border-primary border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted small text-uppercase fw-bold mb-1">Total Users</h6>
+                    <h3 class="fw-bold mb-0">{{ total_users }}</h3>
+                </div>
+                <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary">
+                    <i class="fas fa-users fa-lg"></i>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white p-3 border-0 rounded-4 shadow-sm">
-                <h5>Total Courses</h5>
-                <h2 class="fw-bold">{{ total_courses }}</h2>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 rounded-4 shadow-sm p-3 border-start border-success border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted small text-uppercase fw-bold mb-1">Total Courses</h6>
+                    <h3 class="fw-bold mb-0">{{ total_courses }}</h3>
+                </div>
+                <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success">
+                    <i class="fas fa-book fa-lg"></i>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white p-3 border-0 rounded-4 shadow-sm">
-                <h5>Enrollments</h5>
-                <h2 class="fw-bold">{{ total_enrollments }}</h2>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 rounded-4 shadow-sm p-3 border-start border-info border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted small text-uppercase fw-bold mb-1">Enrollments</h6>
+                    <h3 class="fw-bold mb-0">{{ total_enrollments }}</h3>
+                </div>
+                <div class="bg-info bg-opacity-10 p-3 rounded-circle text-info">
+                    <i class="fas fa-graduation-cap fa-lg"></i>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white p-3 border-0 rounded-4 shadow-sm">
-                <h5>Messages</h5>
-                <h2 class="fw-bold">{{ total_messages }}</h2>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 rounded-4 shadow-sm p-3 border-start border-warning border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted small text-uppercase fw-bold mb-1">Messages</h6>
+                    <h3 class="fw-bold mb-0">{{ total_messages }}</h3>
+                </div>
+                <div class="bg-warning bg-opacity-10 p-3 rounded-circle text-warning">
+                    <i class="fas fa-envelope fa-lg"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Trending Table -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold m-0">Trending Courses</h4>
+                <a href="{% url 'adminpanel:course_list' %}" class="btn btn-sm btn-outline-primary rounded-pill">View
+                    All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Course</th>
+                            <th>Trending Score</th>
+                            <th>Views</th>
+                            <th>Enrollments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in trending_courses %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.course.title }}</strong><br>
+                                <small class="text-muted">{{ item.course.instructor.get_full_name }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-mint-green">
+                                    {{ item.trending_score|floatformat:4 }}
+                                </span>
+                            </td>
+                            <td>{{ item.course.views_count }}</td>
+                            <td>{{ item.course.enrollment_count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4">No data available.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <div class="row g-4">
-        <!-- Trending Table -->
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
-                <h4 class="fw-bold mb-4">Trending Courses (Hacker News Gravity Algorithm)</h4>
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Course</th>
-                                <th>Score</th>
-                                <th>Views</th>
-                                <th>Enrollments</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in trending_courses %}
-                            <tr>
-                                <td>
-                                    <strong>{{ item.course.title }}</strong><br>
-                                    <small class="text-muted">{{ item.course.instructor.get_full_name }}</small>
-                                </td>
-                                <td>
-                                    <!-- Scores added here as requested -->
-                                    <span class="badge bg-mint-green">
-                                        {{ item.trending_score|floatformat:4 }}
-                                    </span>
-                                </td>
-                                <td>{{ item.course.views_count }}</td>
-                                <td>{{ item.course.enrollment_count }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="text-center py-4">No featured courses yet.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+    <!-- Contact Messages -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold m-0">Recent Messages</h4>
+                <a href="{% url 'adminpanel:contact_list' %}" class="btn btn-sm btn-outline-primary rounded-pill">View
+                    All</a>
             </div>
-        </div>
-
-        <!-- Contact Messages -->
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
-                <h4 class="fw-bold mb-4">Recent Contact Messages</h4>
-                <div class="list-group list-group-flush">
-                    {% for msg in recent_messages %}
-                    <div class="list-group-item px-0 py-3 border-0 border-bottom">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0 fw-bold">{{ msg.subject }}</h6>
-                            <small class="text-muted">{{ msg.created_at|date:"M d" }}</small>
-                        </div>
-                        <p class="small text-muted mb-1">{{ msg.message|truncatechars:80 }}</p>
-                        <!-- Fixed variable access to prevent the None.email error -->
-                        <small class="text-primary fw-bold">{{ msg.full_name|default:"Anonymous" }}</small>
+            <div class="list-group list-group-flush">
+                {% for msg in recent_messages %}
+                <div class="list-group-item px-0 py-3 border-0 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <h6 class="mb-0 fw-bold">{{ msg.subject }}</h6>
+                        <small class="text-muted">{{ msg.created_at|date:"M d" }}</small>
                     </div>
-                    {% empty %}
-                    <p class="text-muted">No messages yet.</p>
-                    {% endfor %}
+                    <p class="small text-muted mb-1">{{ msg.message|truncatechars:60 }}</p>
+                    <small class="text-primary fw-bold">{{ msg.full_name|default:"Anonymous" }}</small>
                 </div>
+                {% empty %}
+                <p class="text-muted text-center py-4">No messages yet.</p>
+                {% endfor %}
             </div>
         </div>
     </div>

@@ -1,0 +1,139 @@
+{% extends "core/base_public.html" %}
+{% load static %}
+
+{% block title %}Admin Panel - SikshaSetu{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --admin-sidebar-width: 260px;
+    }
+
+    .admin-wrapper {
+        display: flex;
+        min-height: 100vh;
+    }
+
+    .admin-sidebar {
+        width: var(--admin-sidebar-width);
+        background: #1a535c;
+        color: white;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        padding: 2rem 1rem;
+    }
+
+    .admin-content {
+        flex-grow: 1;
+        background: #f8f9fa;
+        padding: 2rem;
+    }
+
+    .nav-link-admin {
+        color: rgba(255, 255, 255, 0.7);
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+        transition: all 0.3s;
+        margin-bottom: 0.25rem;
+    }
+
+    .nav-link-admin:hover,
+    .nav-link-admin.active {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    .nav-link-admin i {
+        width: 20px;
+        text-align: center;
+    }
+
+    .sidebar-section-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05rem;
+        color: rgba(255, 255, 255, 0.4);
+        margin: 1.5rem 1rem 0.5rem;
+        font-weight: bold;
+    }
+
+    .bg-mint-green {
+        background-color: #4ecdc4 !important;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-wrapper">
+    <aside class="admin-sidebar">
+        <div class="mb-4 px-3">
+            <h4 class="fw-bold m-0"><span style="color: #4ecdc4;">Admin</span> Panel</h4>
+        </div>
+
+        <a href="{% url 'adminpanel:dashboard' %}"
+            class="nav-link-admin {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+
+        <div class="sidebar-section-title">User Management</div>
+        <a href="{% url 'adminpanel:user_list' %}"
+            class="nav-link-admin {% if 'user' in request.path %}active{% endif %}">
+            <i class="fas fa-users"></i> Users
+        </a>
+        <a href="{% url 'adminpanel:instructor_application_list' %}"
+            class="nav-link-admin {% if 'application' in request.path %}active{% endif %}">
+            <i class="fas fa-user-tie"></i> Applications
+        </a>
+        <a href="{% url 'adminpanel:teacher_profile_list' %}"
+            class="nav-link-admin {% if 'teacher-profile' in request.path %}active{% endif %}">
+            <i class="fas fa-id-card"></i> Profiles
+        </a>
+
+        <div class="sidebar-section-title">Course Content</div>
+        <a href="{% url 'adminpanel:course_list' %}"
+            class="nav-link-admin {% if '/course/' in request.path %}active{% endif %}">
+            <i class="fas fa-book"></i> Courses
+        </a>
+        <a href="{% url 'adminpanel:category_list' %}"
+            class="nav-link-admin {% if 'category' in request.path %}active{% endif %}">
+            <i class="fas fa-tags"></i> Categories
+        </a>
+
+        <div class="sidebar-section-title">Sales & Analytics</div>
+        <a href="{% url 'adminpanel:enrollment_list' %}"
+            class="nav-link-admin {% if 'enrollment' in request.path %}active{% endif %}">
+            <i class="fas fa-graduation-cap"></i> Enrollments
+        </a>
+        <a href="{% url 'adminpanel:payment_list' %}"
+            class="nav-link-admin {% if 'payment' in request.path %}active{% endif %}">
+            <i class="fas fa-money-bill-wave"></i> Payments
+        </a>
+
+        <div class="sidebar-section-title">Support</div>
+        <a href="{% url 'adminpanel:contact_list' %}"
+            class="nav-link-admin {% if 'contact' in request.path %}active{% endif %}">
+            <i class="fas fa-envelope"></i> Messages
+        </a>
+    </aside>
+
+    <main class="admin-content">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-4 shadow-sm mb-4">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% block admin_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}

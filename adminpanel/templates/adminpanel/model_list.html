@@ -1,0 +1,147 @@
+{% extends "adminpanel/base_admin.html" %}
+{% load admin_extras %}
+
+{% block title %}{{ model_name }} - Admin Panel{% endblock %}
+
+{% block admin_content %}
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+        <h4 class="fw-bold m-0">{{ model_name }}</h4>
+        <div class="d-flex gap-2">
+            {% if create_url_name %}
+            <a href="{% url create_url_name %}" class="btn btn-primary rounded-pill btn-sm px-3">
+                <i class="fas fa-plus me-1"></i> Add New
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <!-- Search & Filter Bar -->
+        <div class="px-4 py-3 bg-light border-top border-bottom d-flex justify-content-between align-items-center">
+            <form method="GET" class="d-flex gap-2" style="max-width: 400px;">
+                <input type="text" name="q" class="form-control form-control-sm rounded-pill px-3"
+                    placeholder="Search..." value="{{ search_query|default:'' }}">
+                <button type="submit" class="btn btn-sm btn-dark rounded-circle px-2">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <div class="text-muted small">
+                Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ paginator.count }} items
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle m-0">
+                <thead class="bg-light small text-uppercase fw-bold text-muted">
+                    <tr>
+                        {% if fields_to_display %}
+                            {% for field in fields_to_display|slice:":5" %}
+                                <th class="px-4">{{ field|title }}</th>
+                            {% endfor %}
+                        {% else %}
+                            <th class="px-4">Data</th>
+                        {% endif %}
+                        <th class="text-end px-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obj in object_list %}
+                    <tr>
+                        {% for field in fields_to_display|slice:":5" %}
+                        <td class="px-4">
+                            {% with value=obj|getattr:field %}
+                                {% if value|get_class == 'bool' %}
+                                    {% if value %}
+                                        <span class="badge bg-success">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">No</span>
+                                    {% endif %}
+                                {% elif value|get_class == 'datetime' %}
+                                    {{ value|date:"Y-m-d H:i" }}
+                                {% elif value|get_class == 'date' %}
+                                    {{ value|date:"Y-m-d" }}
+                                {% else %}
+                                    {{ value|truncatechars:50|default:"-" }}
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        {% endfor %}
+                        <td class="text-end px-4">
+                            <div class="d-flex justify-content-end gap-2">
+                                {% if admin_update_url %}
+                                <a href="{% url admin_update_url obj.pk %}" 
+                                   class="btn btn-sm btn-outline-dark rounded-circle" 
+                                   title="Edit {{ obj }}">
+                                    <i class="fas fa-edit fa-xs"></i>
+                                </a>
+                                {% endif %}
+                                {% if admin_delete_url %}
+                                <a href="{% url admin_delete_url obj.pk %}" 
+                                   class="btn btn-sm btn-outline-danger rounded-circle" 
+                                   title="Delete {{ obj }}">
+                                    <i class="fas fa-trash fa-xs"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="100" class="text-center py-5 text-muted">
+                            <i class="fas fa-folder-open fa-3x mb-3 d-block opacity-25"></i>
+                            No records found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if is_paginated %}
+    <div class="card-footer bg-white py-3 border-0">
+        <nav aria-label="Page navigation">
+            <ul class="pagination pagination-sm justify-content-center m-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">&laquo;</a>
+                </li>
+                {% endif %}
+
+                {% for num in paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">&raquo;</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof bootstrap !== 'undefined') {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+            if (tooltipTriggerEl.getAttribute('title')) {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
