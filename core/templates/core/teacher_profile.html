@@ -166,6 +166,7 @@
                 <div class="profile-sidebar-card">
                     <h5 class="sidebar-title mb-3">Contact {{ teacher.first_name }}</h5>
                     {% if user.is_authenticated %}
+                    {% if request.user != teacher %}
                     <p class="text-muted small mb-3">Send a direct message to this instructor.</p>
                     <form action="{% url 'core:send_teacher_message' teacher.id %}" method="post">
                         {% csrf_token %}
@@ -179,6 +180,11 @@
                             Send Message
                         </button>
                     </form>
+                    {% else %}
+                    <div class="alert alert-secondary text-center small mb-0">
+                        <i class="fas fa-info-circle me-1"></i> You cannot message yourself
+                    </div>
+                    {% endif %}
                     {% else %}
                     <p class="text-muted small mb-3">Please login to contact this teacher.</p>
                     <a href="{% url 'accounts:login' %}?next={{ request.path }}"

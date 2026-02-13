@@ -379,7 +379,12 @@ def teacher_dashboard_view(request):
     ).order_by('-created_at')
     
     # Calculate totals from the annotated QuerySet to ensure consistency
-    total_students = sum(c.enrolled_students for c in courses)
+    # NEW: Total Enrollments (excluding self only) matching course counts
+    total_students = Enrollment.objects.filter(
+        course__instructor=request.user
+    ).exclude(
+        student=request.user
+    ).distinct().count()
     total_revenue = sum(c.revenue_total for c in courses)
     
     # Calculate average rating

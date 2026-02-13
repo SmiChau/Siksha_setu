@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Avg, Sum, Q
+from django.db.models import Count, Avg, Sum, Q, F
 
 from courses.models import Course, Category, Enrollment
 from courses.views import get_top_rated_courses, get_trending_courses, get_recommended_courses
@@ -174,6 +174,11 @@ def contact_view(request):
 def send_teacher_message(request, teacher_id):
     if request.method == 'POST':
         teacher = get_object_or_404(CustomUser, id=teacher_id, role='teacher')
+        
+        if request.user == teacher:
+            messages.error(request, "You cannot send a message to your own profile.")
+            return redirect('core:teacher_profile', teacher_id=teacher.id)
+
         form = TeacherMessageForm(request.POST)
         if form.is_valid():
             msg = form.save(commit=False)
@@ -198,7 +203,13 @@ def teacher_profile(request, teacher_id):
     teacher = get_object_or_404(
         CustomUser.objects.annotate(
             course_count=Count('courses_created', filter=Q(courses_created__status='published'), distinct=True),
-            student_count=Count('courses_created__enrollments'),
+            student_count=Count(
+                'courses_created__enrollments',
+                filter=
+                Q(courses_created__enrollments__student__isnull=False) &
+                ~Q(courses_created__enrollments__student=F('id')),
+                distinct=True
+            ),
             avg_rating=Avg('courses_created__reviews__rating')
         ),
         id=teacher_id,
