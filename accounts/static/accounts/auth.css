@@ -179,17 +179,19 @@ form.sign-in-form {
 
 .image {
   width: 400px;
-  max-width: 80%;        /* Ensures it fits smaller screens */
+  max-width: 80%;
+  /* Ensures it fits smaller screens */
   height: 400px;
   transition: transform 1.1s ease-in-out;
   transition-delay: 0.4s;
-  transform: translateY(-80px); 
+  transform: translateY(-80px);
   transition: transform 0.9s ease-in-out, opacity 0.6s ease;
   transition-delay: 0.6s;
   display: block;
-  margin: 0 auto; /* Move image slightly up */
+  margin: 0 auto;
+  /* Move image slightly up */
 
-  
+
 }
 
 
@@ -294,16 +296,35 @@ form.sign-in-form {
   text-align: center;
 }
 
-.alert-error {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
+.alert-error,
+.alert-danger {
+  background-color: #ffe5e5;
+  color: #b30000;
+  border: 1px solid #ffcccc;
 }
 
 .alert-success {
-  background-color: #d4edda;
-  color: #155724;
+  background-color: #e6ffed;
+  color: #0f7a2f;
   border: 1px solid #c3e6cb;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.alert-secondary {
+  background-color: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
 }
 
 .error-text {
@@ -314,11 +335,13 @@ form.sign-in-form {
   width: 100%;
   text-align: center;
 }
+
 .login-options {
   width: 100%;
   display: flex;
-  justify-content: center;   /* bring them closer */
-  gap: 100px;  
+  justify-content: center;
+  /* bring them closer */
+  gap: 100px;
   align-items: center;
   margin: 5px 0 5px;
 }
@@ -362,8 +385,10 @@ form.sign-in-form {
   margin: 12px 0;
   width: 100%;
 
-  justify-content: center;   /* ⭐ horizontal center */
-  align-items: center;       /* vertical alignment */
+  justify-content: center;
+  /* ⭐ horizontal center */
+  align-items: center;
+  /* vertical alignment */
   text-align: center;
 }
 
@@ -444,7 +469,7 @@ form.sign-in-form {
     grid-row: 1 / 2;
   }
 
-  
+
 
 
   .panel .content {

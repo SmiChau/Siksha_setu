@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -93,58 +94,55 @@
 
 <body>
 
-<div class="container">
-    <div class="forms-container">
-        <div class="signin-signup">
+    <div class="container">
+        <div class="forms-container">
+            <div class="signin-signup">
 
-            <!-- OTP VERIFY FORM -->
-            <form action="{% url 'accounts:verify_otp' %}" method="POST" class="sign-in-form">
-                {% csrf_token %}
+                <!-- OTP VERIFY FORM -->
+                <form action="{% url 'accounts:verify_otp' %}" method="POST" class="sign-in-form">
+                    {% csrf_token %}
 
-                <h2 class="title">Verify Email</h2>
-                <p class="social-text">
-                    Enter the 6-digit OTP sent to <br>
-                    <strong>{{ email }}</strong>
-                </p>
+                    <h2 class="title">Verify Email</h2>
+                    <p class="social-text">
+                        Enter the 6-digit OTP sent to <br>
+                        <strong>{{ email }}</strong>
+                    </p>
 
-                {% if messages %}
+                    {% if messages %}
                     {% for message in messages %}
-                        <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
-                            {{ message }}
-                        </div>
+                    <div
+                        class="alert {% if 'error' in message.tags or 'danger' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% elif 'warning' in message.tags %}alert-warning{% else %}alert-info{% endif %}">
+                        {{ message }}
+                    </div>
                     {% endfor %}
-                {% endif %}
+                    {% endif %}
 
-                <div class="input-field">
-                    <i class="bx bxs-key"></i>
-                    <input type="text"
-                           name="otp"
-                           placeholder="Enter 6-digit OTP"
-                           maxlength="6"
-                           pattern="[0-9]{6}"
-                           required
-                           autocomplete="off">
+                    <div class="input-field">
+                        <i class="bx bxs-key"></i>
+                        <input type="text" name="otp" placeholder="Enter 6-digit OTP" maxlength="6" pattern="[0-9]{6}"
+                            required autocomplete="off">
+                    </div>
+
+                    <button type="submit" class="btn solid">Verify OTP</button>
+                </form>
+
+                <!-- RESEND OTP -->
+                <div class="resend-wrapper">
+                    <form action="{% url 'accounts:resend_otp' %}" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="resend-btn">Resend OTP</button>
+                    </form>
                 </div>
 
-                <button type="submit" class="btn solid">Verify OTP</button>
-            </form>
+                <!-- FOOTER -->
+                <div class="footer-links">
+                    <a href="{% url 'accounts:signup' %}">Wrong email? Sign up again</a>
+                </div>
 
-            <!-- RESEND OTP -->
-            <div class="resend-wrapper">
-                <form action="{% url 'accounts:resend_otp' %}" method="POST">
-                    {% csrf_token %}
-                    <button type="submit" class="resend-btn">Resend OTP</button>
-                </form>
             </div>
-
-            <!-- FOOTER -->
-            <div class="footer-links">
-                <a href="{% url 'accounts:signup' %}">Wrong email? Sign up again</a>
-            </div>
-
         </div>
     </div>
-</div>
 
 </body>
+
 </html>

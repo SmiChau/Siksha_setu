@@ -28,7 +28,8 @@
                     {% if messages %}
                     {% for message in messages %}
                     {% if mode == 'login' %}
-                    <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                    <div
+                        class="alert {% if 'error' in message.tags or 'danger' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% elif 'warning' in message.tags %}alert-warning{% else %}alert-info{% endif %}">
                         {{ message }}
                     </div>
                     {% endif %}
@@ -83,7 +84,8 @@
                     {% if messages %}
                     {% for message in messages %}
                     {% if mode == 'signup' %}
-                    <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                    <div
+                        class="alert {% if 'error' in message.tags or 'danger' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% elif 'warning' in message.tags %}alert-warning{% else %}alert-info{% endif %}">
                         {{ message }}
                     </div>
                     {% endif %}
