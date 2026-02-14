@@ -46,8 +46,9 @@ def course_list_view(request):
     if query:
         courses = courses.filter(
             Q(title__icontains=query) |
-            Q(category__name__icontains=query)
-        )
+            Q(category__name__icontains=query) |
+            Q(tags__name__icontains=query)
+        ).distinct()
     
     # Category Filtering
     selected_category_obj = None
@@ -558,94 +559,56 @@ def get_recommended_courses(user, limit=6):
     if not user.is_authenticated:
         return get_top_rated_courses(limit)
 
-    # --- Step 1: Build User Profile ---
-    # Fetch all enrolled courses for the user
-    # Optimize: Only fetch necessary fields to minimize memory footprint
-    enrolled_courses = Course.objects.filter(
-        enrollments__student=user
-    ).values('id', 'category_id', 'what_you_learn')
-
-    if not enrolled_courses:
+    # --- Step 1: Build User Interest Profile ---
+    enrolled_courses = Course.objects.filter(enrollments__student=user)
+    
+    if not enrolled_courses.exists():
         # Cold Start: Fallback to global popularity if user has no history
         return get_top_rated_courses(limit)
 
-    enrolled_ids = set()
-    category_counts = {}
-    user_tags_set = set()
-    total_enrollments = 0
+    # Extract interest signals
+    category_ids = enrolled_courses.values_list('category_id', flat=True).distinct()
+    
+    # We need to import Tag model to query tags associated with enrolled courses
+    from .models import Tag
+    tag_ids = Tag.objects.filter(courses__in=enrolled_courses).values_list('id', flat=True).distinct()
 
-    for item in enrolled_courses:
-        enrolled_ids.add(item['id'])
-        
-        # Category Frequency Analysis
-        cat_id = item['category_id']
-        if cat_id:
-            category_counts[cat_id] = category_counts.get(cat_id, 0) + 1
-        
-        # Tag Aggregation (using 'what_you_learn' as semantic tags)
-        # Assuming 'what_you_learn' is a list of strings
-        if item['what_you_learn'] and isinstance(item['what_you_learn'], list):
-            for tag in item['what_you_learn']:
-                if tag:
-                    user_tags_set.add(tag.lower().strip())
-        
-        total_enrollments += 1
-
-    # Normalize Category Weights (0.0 to 1.0)
-    # e.g., If user enrolled in 3 Web Dev and 1 Data Science, Web Dev weight is 0.75
-    category_weights = {k: v / total_enrollments for k, v in category_counts.items()}
-
-    # --- Step 2: Candidate Selection ---
-    # Fetch all published courses not already enrolled
-    # Optimization: select_related for minimal joins later
-    candidates = Course.objects.filter(
+    # --- Step 2: Database-Level Valid Candidate Selection (Efficient) ---
+    recommended = Course.objects.filter(
         status='published'
     ).exclude(
-        id__in=enrolled_ids
-    ).select_related('category').only('id', 'title', 'category', 'what_you_learn', 'thumbnail', 'price', 'is_free', 'instructor')
-
-    scored_courses = []
-
-    # --- Step 3: Compute Similarity Score ---
-    for course in candidates:
-        # A. Category Match Score (0.4 Weight)
-        # Direct lookup in normalized user interest profile
-        cat_score = category_weights.get(course.category_id, 0.0)
-        
-        # B. Tag Overlap Score (0.6 Weight)
-        # Using Jaccard Similarity Index: Intersection / Union
-        course_tags = set()
-        if course.what_you_learn and isinstance(course.what_you_learn, list):
-            course_tags = {t.lower().strip() for t in course.what_you_learn if t}
-        
-        tag_score = 0.0
-        if user_tags_set or course_tags:
-            intersection = user_tags_set.intersection(course_tags)
-            union = user_tags_set.union(course_tags)
-            if union:
-                tag_score = len(intersection) / len(union)
-
-        # Final Weighted Score
-        # We prioritize Tags (Content) slightly more than broad Categories
-        final_score = (cat_score * 0.4) + (tag_score * 0.6)
-        
-        scored_courses.append((course, final_score))
-
-    # --- Step 4: Rank & Recommend ---
-    # Sort by score DESC
-    scored_courses.sort(key=lambda x: x[1], reverse=True)
+        enrollments__student=user
+    ).exclude(
+        instructor=user  # Don't recommend own courses if teacher
+    ).filter(
+        Q(tags__in=tag_ids) |
+        Q(category_id__in=category_ids)
+    ).annotate(
+        # Prioritize courses with more overlapping tags
+        tag_match_count=Count('tags', filter=Q(tags__in=tag_ids))
+    ).order_by(
+        '-tag_match_count', 
+        '-created_at'
+    ).select_related('category', 'instructor').distinct()[:limit]
     
-    # Extract just the course objects
-    recommended = [item[0] for item in scored_courses[:limit]]
+    # --- Step 3: Fallback Strategy ---
+    # If the specialized recommendation yields few results, fill with top-rated
+    recommended_list = list(recommended)
     
-    # Back-fill with popular courses if recommendation list is too short (Hybrid fallback)
-    if len(recommended) < limit:
-        top_rated = get_top_rated_courses(limit * 2) # Fetch extra to filter duplicates
+    if len(recommended_list) < limit:
+        top_rated = get_top_rated_courses(limit * 2)
+        # Avoid duplicates
+        existing_ids = {c.id for c in recommended_list}
+        enrolled_ids = set(enrolled_courses.values_list('id', flat=True))
+        
         for c in top_rated:
-            if len(recommended) >= limit:
+            if len(recommended_list) >= limit:
                 break
-            if c.id not in enrolled_ids and c not in recommended:
-                recommended.append(c)
+            if c.id not in existing_ids and c.id not in enrolled_ids and c.instructor != user:
+                recommended_list.append(c)
+                existing_ids.add(c.id)
+
+    return recommended_list
 
     return recommended
 

@@ -40,6 +40,15 @@
         </div>
 
         <div class="col-md-12">
+            <label class="form-label fw-bold">Tags</label>
+            {{ form.tags_field }}
+            <div class="form-text small text-muted">{{ form.tags_field.help_text }}</div>
+            {% if form.tags_field.errors %}
+            <div class="text-danger small">{{ form.tags_field.errors|join:", " }}</div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-12">
             <label class="form-label fw-bold">Description</label>
             {{ form.description }}
             {% if form.description.errors %}

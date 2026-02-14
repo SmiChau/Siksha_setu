@@ -16,6 +16,13 @@ class CourseDetailsForm(forms.ModelForm):
         help_text='Enter each requirement on a new line.'
     )
 
+    tags_field = forms.CharField(
+        widget=forms.TextInput(attrs={'placeholder': 'python, beginner, webdev'}),
+        required=False,
+        label='Tags',
+        help_text='Comma-separated tags (e.g. python, beginner)'
+    )
+
     class Meta:
         model = Course
         fields = ['title', 'category', 'level', 'description', 'short_description', 'thumbnail', 'is_free', 'price']
@@ -44,6 +51,8 @@ class CourseDetailsForm(forms.ModelForm):
                 self.initial['what_you_learn_raw'] = '\n'.join(self.instance.what_you_learn)
             if self.instance.requirements:
                 self.initial['requirements_raw'] = '\n'.join(self.instance.requirements)
+            # Populate tags
+            self.initial['tags_field'] = ', '.join([t.name for t in self.instance.tags.all()])
 
         # Add form-control class and is-invalid if field has errors
         for field_name, field in self.fields.items():
@@ -81,6 +90,19 @@ class CourseDetailsForm(forms.ModelForm):
         
         if commit:
             instance.save()
+            # Process Tags
+            from .models import Tag
+            tags_raw = self.cleaned_data.get('tags_field', '')
+            if tags_raw:
+                tag_names = [t.strip() for t in tags_raw.split(',') if t.strip()]
+                tags = []
+                for name in tag_names:
+                    tag, created = Tag.objects.get_or_create(name=name)
+                    tags.append(tag)
+                instance.tags.set(tags)
+            else:
+                instance.tags.clear()
+                
         return instance
 
 class LessonForm(forms.ModelForm):

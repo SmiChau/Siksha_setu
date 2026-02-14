@@ -1,8 +1,15 @@
 from django.contrib import admin
 from .models import (
     Category, Course, Lesson, LessonResource, 
-    MCQQuestion, Enrollment, LessonProgress, MCQAttempt
+    MCQQuestion, Enrollment, LessonProgress, MCQAttempt, Tag
 )
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
+    search_fields = ('name',)
 
 
 @admin.register(Category)
@@ -32,14 +39,15 @@ class MCQQuestionInline(admin.TabularInline):
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     list_display = ('title', 'instructor', 'category', 'level', 'price', 'is_free', 'status', 'enrollment_count', 'created_at')
-    list_filter = ('status', 'level', 'is_free', 'category', 'is_featured')
-    search_fields = ('title', 'description', 'instructor__email')
+    list_filter = ('status', 'level', 'is_free', 'category', 'is_featured', 'tags')
+    search_fields = ('title', 'description', 'instructor__email', 'tags__name')
     prepopulated_fields = {'slug': ('title',)}
     ordering = ('-created_at',)
     inlines = [LessonInline]
+    filter_horizontal = ('tags',)
     
     fieldsets = (
-        (None, {'fields': ('title', 'slug', 'description', 'short_description')}),
+        (None, {'fields': ('title', 'slug', 'description', 'short_description', 'tags')}),
         ('Media', {'fields': ('thumbnail', 'thumbnail_url')}),
         ('Details', {'fields': ('instructor', 'category', 'level', 'language')}),
         ('Pricing', {'fields': ('price', 'is_free')}),

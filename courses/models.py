@@ -21,6 +21,20 @@ class Category(models.Model):
         return self.name
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=50, unique=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
 class Course(models.Model):
     LEVEL_CHOICES = [
         ('beginner', 'Beginner'),
@@ -54,6 +68,7 @@ class Course(models.Model):
         null=True,
         related_name='courses'
     )
+    tags = models.ManyToManyField(Tag, blank=True, related_name='courses')
     
     level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='beginner')
     language = models.CharField(max_length=50, default='English')
