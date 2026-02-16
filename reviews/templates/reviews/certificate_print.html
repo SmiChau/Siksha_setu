@@ -3,15 +3,13 @@
 
 <head>
     <meta charset="utf-8">
+    <title>Certificate - {{ student_name }}</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Great+Vibes&family=Inter:wght@400;600;800&display=swap"
         rel="stylesheet">
+    <!-- html2pdf library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        @page {
-            size: A4 landscape;
-            margin: 0;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -23,24 +21,16 @@
             margin: 0;
             padding: 0;
             background: #0d2a2e;
-            width: 297mm;
-            height: 210mm;
-            position: relative;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* Preview mode - scale the entire certificate to fit in modal */
-        {% if is_preview %}
-        body {
-            transform: scale(0.45);
-            transform-origin: 0 0;
-            width: 297mm;
-            height: 210mm;
-            overflow: visible;
-            background: #0d2a2e;
+        .certificate-wrapper {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
-        {% endif %}
 
         .certificate-container {
             width: 297mm;
@@ -314,97 +304,192 @@
             line-height: 1.1;
         }
 
-        @media print {
-            body {
-                background: #ffffff;
-                transform: none !important;
-            }
+        .download-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin: 30px;
+            border: 2px solid white;
+            z-index: 10;
+        }
 
-            .border-outer {
-                box-shadow: none;
-                border: 15px solid #f8f9fa;
-            }
+        .download-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 
 <body>
-    <div class="certificate-container">
-        <!-- Main Physical-Border -->
-        <div class="border-outer">
-            <!-- Ornamental Border -->
-            <div class="border-inner">
-                <div class="tl corner-ornament"></div>
-                <div class="tr corner-ornament"></div>
-                <div class="bl corner-ornament"></div>
-                <div class="br corner-ornament"></div>
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div style="font-size: 18px;">Generating PDF... Please wait...</div>
+    </div>
 
-                <div class="certificate-card">
-                    <!-- Brand -->
-                    <div class="brand-section">
-                        <div class="brand-name">{{ platform_name|default:"SIKSHA SETU"|upper }}</div>
-                        <div class="cert-label">Certificate of Achievement</div>
-                    </div>
+    <div class="certificate-wrapper" id="certificate-content">
+        <div class="certificate-container">
+            <!-- Main Physical-Border -->
+            <div class="border-outer">
+                <!-- Ornamental Border -->
+                <div class="border-inner">
+                    <div class="tl corner-ornament"></div>
+                    <div class="tr corner-ornament"></div>
+                    <div class="bl corner-ornament"></div>
+                    <div class="br corner-ornament"></div>
 
-                    <!-- Titles -->
-                    <div class="main-titles">
-                        <h1 class="title-primary">CERTIFICATE</h1>
-                        <div class="title-secondary">This is proudly presented to</div>
-                    </div>
-
-                    <!-- Name -->
-                    <div class="student-section">
-                        <div class="name-wrapper">
-                            <h2 class="student-name">{{ student_name }}</h2>
-                            <div class="name-underline"></div>
+                    <div class="certificate-card">
+                        <!-- Brand -->
+                        <div class="brand-section">
+                            <div class="brand-name">{{ platform_name|upper }}</div>
+                            <div class="cert-label">Certificate of Achievement</div>
                         </div>
-                    </div>
 
-                    <!-- Achievement -->
-                    <div class="course-info">
-                        <p class="achievement-text">For successfully completing and demonstrating exceptional mastery in
-                        </p>
-                        <div class="course-title">{{ course_title }}</div>
+                        <!-- Titles -->
+                        <div class="main-titles">
+                            <h1 class="title-primary">CERTIFICATE</h1>
+                            <div class="title-secondary">This is proudly presented to</div>
+                        </div>
 
-                        <div class="stats-grid">
-                            <div class="stat-item">
-                                <span class="stat-icon">📅</span>
-                                <span>COMPLETED {{ completion_date|date:"F d, Y"|upper }}</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-icon">🏆</span>
-                                <span>SCORE {{ final_score|floatformat:1 }}%</span>
+                        <!-- Name -->
+                        <div class="student-section">
+                            <div class="name-wrapper">
+                                <h2 class="student-name">{{ student_name }}</h2>
+                                <div class="name-underline"></div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Signatures & Seal -->
-                    <div class="bottom-section">
-                        <div class="signature-box">
-                            <div class="sig-name">{{ signature_name }}</div>
-                            <div class="sig-line"></div>
-                            <div class="sig-title">CEO & Director</div>
-                        </div>
+                        <!-- Achievement -->
+                        <div class="course-info">
+                            <p class="achievement-text">For successfully completing and demonstrating exceptional mastery in
+                            </p>
+                            <div class="course-title">{{ course_title }}</div>
 
-                        <div class="seal-box">
-                            <div class="seal-outer">
-                                <div class="seal-content">
-                                    <div class="seal-star">★</div>
-                                    <div class="seal-text">OFFICIAL<br>MASTERY</div>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <span class="stat-icon">📅</span>
+                                    <span>COMPLETED {{ completion_date|date:"F d, Y"|upper }}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-icon">🏆</span>
+                                    <span>SCORE {{ final_score|floatformat:1 }}%</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="signature-box">
-                            <div class="sig-name">{{ instructor_name }}</div>
-                            <div class="sig-line"></div>
-                            <div class="sig-title">Course Instructor</div>
+                        <!-- Signatures & Seal -->
+                        <div class="bottom-section">
+                            <div class="signature-box">
+                                <div class="sig-name">{{ signature_name }}</div>
+                                <div class="sig-line"></div>
+                                <div class="sig-title">CEO & Director</div>
+                            </div>
+
+                            <div class="seal-box">
+                                <div class="seal-outer">
+                                    <div class="seal-content">
+                                        <div class="seal-star">★</div>
+                                        <div class="seal-text">OFFICIAL<br>MASTERY</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="signature-box">
+                                <div class="sig-name">{{ instructor_name }}</div>
+                                <div class="sig-line"></div>
+                                <div class="sig-title">Course Instructor</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    
+
+    <script>
+        function downloadPDF() {
+            // Show loading indicator
+            document.getElementById('loading').style.display = 'flex';
+            
+            const element = document.getElementById('certificate-content');
+            
+            // PDF generation options
+            const opt = {
+                margin: [0, 0, 0, 0],
+                filename: 'certificate_{{ student_name|slugify }}_{{ completion_date|date:"Y-m-d" }}.pdf',
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    letterRendering: true,
+                    allowTaint: false,
+                    backgroundColor: '#0d2a2e'
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'landscape'
+                }
+            };
+
+            // Generate and download PDF
+            html2pdf().set(opt).from(element).save()
+                .then(() => {
+                    document.getElementById('loading').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('PDF generation error:', error);
+                    document.getElementById('loading').style.display = 'none';
+                    alert('Error generating PDF. Please try again.');
+                });
+        }
+
+        // Auto-download if auto_print is True
+        {% if auto_print %}
+        window.onload = function() {
+            setTimeout(downloadPDF, 1000);
+        };
+        {% endif %}
+    </script>
 </body>
 
 </html>

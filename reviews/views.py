@@ -1,15 +1,13 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import HttpResponse
 from django.template.loader import render_to_string
-from django.views.decorators.http import require_POST
-from xhtml2pdf import pisa
-import io
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 import traceback
 
 from .models import Review, Certificate
-from courses.models import Course, Enrollment
+from courses.models import Enrollment
 
 
 def certificate_verify_view(request):
@@ -27,20 +25,24 @@ def certificate_verify_view(request):
 
 
 @login_required
+@xframe_options_sameorigin
 def certificate_download_view(request, enrollment_id):
     try:
-        enrollment = get_object_or_404(
-            Enrollment.objects.select_related('course', 'course__instructor', 'student'),
-            id=enrollment_id,
-            student=request.user
-        )
+        # 1. Safeguards - Verify Enrollment and Eligibility
+        enrollment = Enrollment.objects.select_related(
+            'course', 'course__instructor', 'student'
+        ).filter(id=enrollment_id, student=request.user).first()
+
+        if not enrollment:
+            messages.error(request, "Enrollment record not found.")
+            return redirect('reviews:my_certificates')
         
         if request.user.is_staff or request.user.is_superuser:
             messages.warning(request, "Admin accounts cannot generate certificates.")
             return redirect('courses:course_detail', slug=enrollment.course.slug)
         
         if request.user == enrollment.course.instructor:
-            messages.error(request, "Instructor cannot generate certificate for own course.")
+            messages.error(request, "Instructors cannot generate certificates for their own courses.")
             return redirect('courses:course_detail', slug=enrollment.course.slug)
 
         if not enrollment.is_completed:
@@ -56,65 +58,43 @@ def certificate_download_view(request, enrollment_id):
             messages.error(request, 'Please submit a review before downloading your certificate.')
             return redirect('courses:course_detail', slug=enrollment.course.slug)
         
+        # 2. Get or Generate Certificate
         certificate = Certificate.generate_for_enrollment(enrollment)
-        
         if not certificate:
-            messages.error(request, 'Unable to generate certificate.')
+            messages.error(request, 'You are not yet eligible for this certificate.')
             return redirect('courses:course_detail', slug=enrollment.course.slug)
         
-        # Prepare context with cleaned data
+        # 3. Get action parameter
+        action = request.GET.get('action', '')
+        auto = request.GET.get('auto') == '1'
+        
+        # 4. Context Preparation
         context = {
-            'certificate': {
-                'student_name': certificate.student_name,
-                'course_title': certificate.course_title,
-                'instructor_name': certificate.instructor_name,
-                'completion_date': certificate.issued_at,  # Use issued_at from Certificate model
-                'final_score': float(certificate.final_score),  # Ensure it's float
-                'certificate_id': certificate.certificate_id,
-                'enrollment_id': enrollment.id,
-                'ceo_name': 'Siksha Setu Director',
-            }
+            'student_name': certificate.student_name,
+            'course_name': certificate.course_title,
+            'course_title': certificate.course_title,
+            'instructor_name': certificate.instructor_name,
+            'completion_date': certificate.completion_date,
+            'final_score': float(certificate.final_score),
+            'certificate_id': certificate.certificate_id,
+            'platform_name': 'SIKSHA SETU',
+            'signature_name': 'Dr. A. Sharma',
+            'is_preview': (action == 'preview'),
+            'auto_print': auto
         }
         
-        # Generate HTML
-        html = render_to_string('reviews/certificate_template.html', context)
-        
-        # Check for preview mode
-        action = request.GET.get('action')
-        
+        # 5. Handle different actions
         if action == 'preview':
-            # Return HTML directly for preview (better for Tailwind/Modern CSS)
+            html = render_to_string('reviews/certificate_template.html', context, request=request)
             return HttpResponse(html)
-            
-        # Create PDF response
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="certificate_{certificate.certificate_id}.pdf"'
         
-        # Link callback to prevent network requests
-        def link_callback(uri, rel):
-            return None
-
-        # Create PDF in memory first
-        pdf_buffer = io.BytesIO()
-        pisa_status = pisa.CreatePDF(
-            html, 
-            dest=pdf_buffer,
-            link_callback=link_callback,
-            encoding='UTF-8'
-        )
+        if action == 'pdf':
+            html = render_to_string('reviews/certificate_print.html', context, request=request)
+            return HttpResponse(html)
         
-        if pisa_status.err:
-            error_msg = f"PDF generation error: {pisa_status.err}"
-            print(error_msg)
-            messages.error(request, 'Error generating PDF. Please try again.')
-            return redirect('reviews:my_certificates')
-        
-        # Write PDF to response
-        pdf_buffer.seek(0)
-        response.write(pdf_buffer.read())
-        pdf_buffer.close()
-        
-        return response
+        # Default - show certificate page with download button
+        html = render_to_string('reviews/certificate_print.html', context, request=request)
+        return HttpResponse(html)
         
     except Exception as e:
         print(f"Certificate download error: {str(e)}")

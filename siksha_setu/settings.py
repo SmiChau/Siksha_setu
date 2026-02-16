@@ -74,6 +74,10 @@ MIDDLEWARE = [
     'accounts.middleware.AdminRedirectMiddleware',
 ]
 
+# Quick Fix: Allow framing for certificate preview
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+
 ROOT_URLCONF = 'siksha_setu.urls'
 
 TEMPLATES = [

@@ -14,7 +14,7 @@
             <p class="text-muted mb-0">Your earned achievements and course completions</p>
         </div>
         <div class="mt-3 mt-md-0">
-            <span class="badge bg-primary bg-opacity-10 text-primary py-2 px-3 rounded-pill">
+            <span class="badge bg-primary bg-opacity-50 text-primary py-2 px-3 rounded-pill">
                 <i class="fas fa-trophy me-2"></i>{{ certificates|length }} Certificate{{ certificates|pluralize }}
             </span>
         </div>
@@ -53,9 +53,11 @@
     <!-- Certificate Grid -->
     <div class="row g-4" id="certificatesContainer">
         {% for cert in certificates %}
-        <div class="col-12 col-md-6 col-lg-4 certificate-card" data-title="{{ cert.course_title|lower }}"
-            data-instructor="{{ cert.instructor_name|lower }}" data-date="{{ cert.completion_date|date:'Y-m-d' }}"
-            data-score="{{ cert.final_score }}">
+        <div class="col-12 col-md-6 col-lg-4 certificate-card" 
+             data-title="{{ cert.course_title|lower }}"
+             data-instructor="{{ cert.instructor_name|lower }}" 
+             data-date="{{ cert.completion_date|date:'Y-m-d' }}"
+             data-score="{{ cert.final_score }}">
             <div class="card border-0 shadow-sm h-100 certificate-hover-card">
                 <!-- Certificate Header -->
                 <div class="card-header bg-transparent border-0 pb-0 pt-4 px-4">
@@ -114,9 +116,14 @@
                         </div>
                     </div>
 
+                    <!-- Certificate ID -->
+                    <div class="mb-3 text-center">
+                        <small class="text-muted">ID: {{ cert.certificate_id }}</small>
+                    </div>
+
                     <!-- Action Buttons -->
                     <div class="d-grid gap-2">
-                        <a href="{% url 'reviews:certificate_download' cert.enrollment.id %}" target="_blank"
+                        <a href="{% url 'reviews:certificate_download' cert.enrollment.id %}?action=pdf" target="_blank"
                             class="btn btn-primary d-flex align-items-center justify-content-center"
                             style="background: linear-gradient(135deg, var(--primary-purple), #6a11cb); border: none;">
                             <i class="fas fa-file-pdf me-2"></i>Download PDF
@@ -166,22 +173,31 @@
 
 <!-- Preview Modal -->
 <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Certificate Preview</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
-                <div class="spinner-border text-primary my-5" role="status" id="previewSpinner">
+            <div class="modal-body text-center p-0 overflow-hidden d-flex align-items-center justify-content-center" style="background: #0f1c3f; min-height: 450px;">
+                <div class="spinner-border text-white" role="status" id="previewSpinner" style="display: none; position: absolute;">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <iframe id="certificateFrame" style="width: 100%; height: 500px; display: none;"
-                    frameborder="0"></iframe>
+                <iframe id="certificateFrame" style="width: 505px; height: 355px; border: none; display: block; transform-origin: center center;" 
+                    frameborder="0" scrolling="no"></iframe>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                <a href="#" id="downloadCertificateBtn" class="btn btn-primary">
+                <a href="#" id="downloadCertificateBtn" class="btn btn-primary" target="_blank">
+                    <i class="fas fa-download me-2"></i>Download Certificate
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="downloadCertificateBtn" class="btn btn-primary" target="_blank">
                     <i class="fas fa-download me-2"></i>Download Certificate
                 </a>
             </div>
@@ -215,6 +231,22 @@
 
     .progress-bar {
         transition: width 1s ease-in-out;
+    }
+
+    /* Modal customization */
+    .modal-xl {
+        max-width: 95%;
+    }
+    
+    @media (min-width: 1200px) {
+        .modal-xl {
+            max-width: 1200px;
+        }
+    }
+
+    /* Ensure modal body doesn't scroll */
+    .modal-body {
+        overflow: hidden !important;
     }
 </style>
 
@@ -279,8 +311,10 @@
                 cards.forEach(card => container.appendChild(card));
 
                 // Update button text
-                document.querySelector('.dropdown-toggle').innerHTML =
-                    `<i class="fas fa-sort me-2"></i>Sort by: ${this.textContent}`;
+                const dropdownBtn = document.querySelector('.dropdown-toggle');
+                if (dropdownBtn) {
+                    dropdownBtn.innerHTML = `<i class="fas fa-sort me-2"></i>Sort by: ${this.textContent}`;
+                }
             });
         });
 
@@ -290,22 +324,48 @@
         const certificateFrame = document.getElementById('certificateFrame');
         const previewSpinner = document.getElementById('previewSpinner');
         const downloadBtn = document.getElementById('downloadCertificateBtn');
+        const previewContainer = document.getElementById('previewContainer');
+
+        // Function to calculate and set iframe scale
+        function setIframeScale() {
+            if (!certificateFrame.contentDocument) return;
+            
+            const containerWidth = previewContainer.clientWidth;
+            const containerHeight = previewContainer.clientHeight;
+            
+            // Certificate dimensions in mm (conceptually)
+            const certWidth = 297;
+            const certHeight = 210;
+            
+            // Calculate scale to fit in container (with 5% padding)
+            const scaleX = (containerWidth * 0.9) / certWidth;
+            const scaleY = (containerHeight * 0.9) / certHeight;
+            const scale = Math.min(scaleX, scaleY, 0.8); // Max scale 0.8
+            
+            // Apply scale to iframe
+            certificateFrame.style.transform = `scale(${scale})`;
+            
+            // Set iframe dimensions (original size)
+            certificateFrame.style.width = `${certWidth}mm`;
+            certificateFrame.style.height = `${certHeight}mm`;
+        }
 
         previewBtns.forEach(btn => {
             btn.addEventListener('click', function () {
                 const enrollmentId = this.dataset.enrollmentId;
                 const baseUrl = `{% url 'reviews:certificate_download' 0 %}`.replace('0', enrollmentId);
                 const previewUrl = baseUrl + '?action=preview';
+                const downloadUrl = baseUrl + '?action=pdf&auto=1';
 
                 // Show loading spinner
-                previewSpinner.style.display = 'block';
+                previewSpinner.style.display = 'inline-block';
                 certificateFrame.style.display = 'none';
 
                 // Set iframe source
                 certificateFrame.src = previewUrl;
 
                 // Set download link
-                downloadBtn.href = baseUrl;
+                downloadBtn.href = downloadUrl;
 
                 // Show modal
                 previewModal.show();
@@ -316,6 +376,58 @@
         certificateFrame.addEventListener('load', function () {
             previewSpinner.style.display = 'none';
             certificateFrame.style.display = 'block';
+            
+            // Set scale after iframe loads
+            setTimeout(() => {
+                setIframeScale();
+                
+                // Inject preview styles into iframe
+                try {
+                    const iframeDoc = certificateFrame.contentDocument || certificateFrame.contentWindow.document;
+                    if (iframeDoc) {
+                        const style = iframeDoc.createElement('style');
+                        style.textContent = `
+                            body {
+                                margin: 0;
+                                padding: 0;
+                                background: #0d2a2e;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                min-height: 100vh;
+                            }
+                            .certificate-container {
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                            }
+                        `;
+                        iframeDoc.head.appendChild(style);
+                    }
+                } catch (e) {
+                    console.log('Cannot access iframe content');
+                }
+            }, 100);
+        });
+
+        // Handle iframe load error
+        certificateFrame.addEventListener('error', function () {
+            previewSpinner.style.display = 'none';
+            certificateFrame.style.display = 'block';
+            certificateFrame.src = 'about:blank';
+            alert('Failed to load certificate preview. Please try again.');
+        });
+
+        // Adjust scale on window resize (if modal is open)
+        window.addEventListener('resize', function() {
+            if (previewModal._isShown) {
+                setIframeScale();
+            }
+        });
+
+        // Adjust scale when modal is shown
+        document.getElementById('previewModal').addEventListener('shown.bs.modal', function () {
+            if (certificateFrame.style.display !== 'none') {
+                setTimeout(setIframeScale, 50);
+            }
         });
     });
 </script>
