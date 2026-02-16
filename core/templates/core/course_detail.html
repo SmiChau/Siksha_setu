@@ -438,7 +438,7 @@
                             <i class="fas fa-chart-pie fa-4x text-muted"></i>
                         </div>
                         <p class="text-muted small mb-3">Enroll to track your learning journey</p>
-                        {% if not request.user.is_staff and not request.user.is_superuser %}
+                        {% if not request.user.is_superuser and request.user.role != 'admin' %}
                         <a href="#enroll" class="btn btn-primary rounded-pill px-4">Start Tracking</a>
                         {% endif %}
                     </div>
@@ -446,7 +446,7 @@
                 </div>
             </div>
 
-            <!-- Instructor Card -->
+            <!-- Instructor Card - FIXED -->
             <div class="card shadow-lg border-0">
                 <div class="card-body p-4">
                     <h6 class="text-muted text-uppercase small mb-3">
@@ -482,7 +482,6 @@
                                 </div>
                             </a>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -516,18 +515,16 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mt-3 px-2">
-                    <!-- FIXED: Duration display - check which field exists -->
+                    <!-- Duration display - check which field exists -->
                     <div class="text-muted small d-flex align-items-center gap-3">
                         <span>
                             <i class="fas fa-clock me-1"></i>
-                            {% if current_lesson.video_duration %}
-                            {{ current_lesson.video_duration }} min
-                            {% elif current_lesson.duration %}
-                            {% with minutes=current_lesson.duration|stringformat:"i" %}
-                            {{ minutes }} min
-                            {% endwith %}
+                            {% if current_lesson.duration_minutes or current_lesson.duration_seconds %}
+                            {{ current_lesson.duration_minutes }}m {{ current_lesson.duration_seconds }}s
+                            {% elif current_lesson.video_duration %}
+                            {{ current_lesson.video_duration }}m
                             {% else %}
-                            0 min
+                            0m
                             {% endif %}
                         </span>
                         <span><i class="fas fa-eye me-1"></i> {{ course.views|default:0 }} views</span>
@@ -540,7 +537,7 @@
                         <i class="fas fa-lock fa-4x mb-4 text-white-50"></i>
                         <h3 class="fw-bold mb-3">Content Locked</h3>
                         <p class="mb-4">Enroll now to unlock all lessons and resources</p>
-                        {% if not request.user.is_staff and not request.user.is_superuser %}
+                        {% if not request.user.is_superuser and request.user.role != 'admin' %}
                         <a href="#enroll" class="btn btn-primary rounded-pill px-5 py-2">
                             Enroll Now
                         </a>
@@ -689,9 +686,10 @@
                                     <div class="text-warning mb-2">
                                         {% for i in "12345" %}
                                         {% with i_num=i|add:0 %}
-                                        {% if i_num <= average_rating %} <i class="fas fa-star"></i>
-                                            {% elif i_num|add:-0.5 <= average_rating %} <i class="fas fa-star-half-alt">
-                                                </i>
+                                        {% if i_num <= average_rating %}
+                                        <i class="fas fa-star"></i>
+                                        {% elif i_num|add:-0.5 <= average_rating %}
+                                        <i class="fas fa-star-half-alt"></i>
                                                 {% else %}
                                                 <i class="far fa-star"></i>
                                                 {% endif %}
@@ -789,7 +787,8 @@
                                         <div class="text-warning small">
                                             {% for i in "12345" %}
                                             {% with i_num=i|add:0 %}
-                                            {% if i_num <= user_review.rating|add:0 %} <i class="fas fa-star"></i>
+                                            {% if i_num <= user_review.rating|add:0 %}
+                                            <i class="fas fa-star"></i>
                                                 {% endif %}
                                                 {% endwith %}
                                                 {% endfor %}
@@ -873,7 +872,7 @@
                     </div>
 
                     <!-- Payment Options -->
-                    {% if not request.user.is_staff and not request.user.is_superuser %}
+                    {% if not request.user.is_superuser and request.user.role != 'admin' %}
                     <div class="payment-options d-flex justify-content-center gap-3 mb-3">
 
                         <!-- eSewa -->
@@ -914,7 +913,7 @@
                         <h5 class="text-muted small text-uppercase fw-bold mb-3">Start Learning</h5>
                         <h2 class="fw-bold mb-3 text-success">Free</h2>
                     </div>
-                    {% if not request.user.is_staff and not request.user.is_superuser %}
+                    {% if not request.user.is_superuser and request.user.role != 'admin' %}
                     <a href="{% url 'courses:enroll_course' course.slug %}"
                         class="btn btn-primary w-100 rounded-pill py-3 fw-bold mb-3">
                         Enroll Now
@@ -942,7 +941,7 @@
                 <div class="lesson-list-container">
                     <div class="list-group list-group-flush" id="lessonList">
                         {% for lesson in lessons %}
-                        <!-- Lesson Item -->
+                        <!-- Lesson Item - FIXED -->
                         <div class="list-group-item lesson-item {% if current_lesson.id == lesson.id %}active{% endif %} {% if not lesson.is_unlocked and not lesson.is_preview %}locked{% endif %}"
                             data-id="{{ lesson.id }}" 
                             {% if lesson.is_unlocked or lesson.is_preview %}onclick="playLesson({{ lesson.id }})"{% endif %} 
@@ -962,10 +961,10 @@
                                     <div>
                                         <span class="small fw-bold d-block">{{ lesson.title }}</span>
                                         <small class="text-muted">
-                                            {% if lesson.video_duration %}
-                                            {{ lesson.video_duration }} min
-                                            {% elif lesson.duration %}
-                                            {{ lesson.duration }} min
+                                            {% if lesson.duration_minutes or lesson.duration_seconds %}
+                                            {{ lesson.duration_minutes }}m {{ lesson.duration_seconds }}s
+                                            {% elif lesson.video_duration %}
+                                            {{ lesson.video_duration }}m
                                             {% else %}
                                             0 min
                                             {% endif %}
@@ -978,7 +977,7 @@
                             </div>
                         </div>
 
-                        <!-- Quiz Item -->
+                        <!-- Quiz Item - FIXED -->
                         {% if lesson.has_quiz_actual %}
                         <div class="list-group-item quiz-subitem {% if not lesson.video_completed %}locked{% endif %}"
                             id="quiz-item-{{ lesson.id }}" 
@@ -1020,7 +1019,7 @@
     const isEnrolled = {{ enrollment|yesno:"true,false" }};
     const isInstructor = {{ is_instructor|yesno:"true,false" }};
     let player;
-    // FIXED 2: Current lesson ID syntax
+    // FIXED 2: Current lesson ID syntax - removed spaces in template tags
     let currentLessonId = {% if current_lesson %}{{ current_lesson.id }}{% else %}null{% endif %};
 
     // Tracking Variables

@@ -6,10 +6,10 @@
     <span class="badge bg-light text-dark rounded-pill">{{ lessons.count }} Lessons</span>
 </div>
 
-<!-- Existing Lessons List -->
+<!-- Existing Lessons List with Edit Buttons -->
 <div class="mb-5">
     {% for lesson in lessons %}
-    <div class="card border-0 bg-light rounded-4 mb-3 p-3">
+    <div class="card border-0 bg-light rounded-4 mb-3 p-3" id="lesson-{{ lesson.id }}">
         <div class="d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
                 <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
@@ -19,19 +19,34 @@
                 <div>
                     <h6 class="mb-0 fw-bold">{{ lesson.title }}</h6>
                     <small class="text-muted">
-                        {% if lesson.video_file %}Local Video{% else %}YouTube:
-                        <code>{{ lesson.youtube_video_id }}</code>{% endif %}
-                        | {{ lesson.duration_minutes }}m {{ lesson.duration_seconds }}s
+                        {% if lesson.video_file %}
+                        Local Video
+                        {% elif lesson.youtube_video_id %}
+                        YouTube: <code>{{ lesson.youtube_video_id }}</code>
+                        {% else %}
+                        No video
+                        {% endif %}
+                        | {% if lesson.duration_minutes or lesson.duration_seconds %}{{ lesson.duration_minutes }}m {{ lesson.duration_seconds }}s{% else %}Duration not set{% endif %}
                     </small>
                 </div>
             </div>
             <div class="text-end">
-                {% if lesson.is_preview %}<span class="badge bg-info-subtle text-info me-2">Preview</span>{% endif %}
+                {% if lesson.is_preview %}
+                <span class="badge bg-info-subtle text-info me-2">Preview</span>
+                {% endif %}
+
+                <!-- Edit Button -->
+                <button type="button" class="btn btn-sm btn-outline-primary border-0 me-1"
+                    onclick="editLesson({{ lesson.id }})" title="Edit Lesson">
+                    <i class="fas fa-edit"></i>
+                </button>
+
+                <!-- Delete Form -->
                 <form action="{% url 'courses:course_edit_step2' course.slug %}" method="post" style="display:inline;">
                     {% csrf_token %}
                     <input type="hidden" name="delete_lesson" value="{{ lesson.id }}">
                     <button type="submit" class="btn btn-sm btn-outline-danger border-0"
-                        onclick="return confirm('Delete this lesson and all its content?')">
+                        onclick="return confirm('Delete this lesson and all its content?')" title="Delete Lesson">
                         <i class="fas fa-trash"></i>
                     </button>
                 </form>
@@ -45,56 +60,83 @@
     {% endfor %}
 </div>
 
-<!-- Add New Lesson Form -->
+<!-- Add/Edit Lesson Form -->
 <div class="card border border-primary-subtle rounded-4 bg-primary-subtle bg-opacity-10 mb-5">
     <div class="card-body p-4">
-        <h5 class="fw-bold mb-3">Add New Lesson</h5>
-        <form method="post" enctype="multipart/form-data">
+        <h5 class="fw-bold mb-3" id="form-title">Add New Lesson</h5>
+        <form method="post" enctype="multipart/form-data" id="lessonForm">
             {% csrf_token %}
+            <input type="hidden" name="lesson_id" id="lesson_id" value="">
+
             <div class="row g-3">
                 <div class="col-md-8">
-                    <label class="form-label small fw-bold">Lesson Title</label>
+                    <label class="form-label small fw-bold">Lesson Title *</label>
                     {{ form.title }}
+                    {% if form.title.errors %}
+                    <div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small fw-bold">Order</label>
+                    <label class="form-label small fw-bold">Order *</label>
                     {{ form.order }}
+                    {% if form.order.errors %}
+                    <div class="invalid-feedback d-block">{{ form.order.errors.0 }}</div>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label small fw-bold">Video File (Upload)</label>
                     {{ form.video_file }}
-                    <small class="text-muted fs-xs">Supported: MP4, WebM</small>
+                    <small class="text-muted d-block">Supported: MP4, WebM (Max 500MB)</small>
+                    {% if form.video_file.errors %}
+                    <div class="invalid-feedback d-block">{{ form.video_file.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label small fw-bold">OR YouTube Video ID</label>
                     {{ form.youtube_video_id }}
-                    <small class="text-muted fs-xs">E.g., <code>dQw4w9WgXcQ</code></small>
+                    <small class="text-muted d-block">E.g., <code>dQw4w9WgXcQ</code></small>
+                    {% if form.youtube_video_id.errors %}
+                    <div class="invalid-feedback d-block">{{ form.youtube_video_id.errors.0 }}</div>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold">Duration (Minutes)</label>
+                    <label class="form-label small fw-bold">Duration (Minutes) *</label>
                     {{ form.duration_minutes }}
-                    <div class="invalid-feedback">{{ form.duration_minutes.errors.0 }}</div>
+                    {% if form.duration_minutes.errors %}
+                    <div class="invalid-feedback d-block">{{ form.duration_minutes.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold">Duration (Seconds)</label>
+                    <label class="form-label small fw-bold">Duration (Seconds) *</label>
                     {{ form.duration_seconds }}
-                    <div class="invalid-feedback">{{ form.duration_seconds.errors.0 }}</div>
+                    {% if form.duration_seconds.errors %}
+                    <div class="invalid-feedback d-block">{{ form.duration_seconds.errors.0 }}</div>
+                    {% endif %}
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <div class="form-check mb-2">
                         {{ form.is_preview }}
-                        <label class="form-check-label small" for="{{ form.is_preview.id_for_label }}">Free
-                            Preview</label>
+                        <label class="form-check-label small" for="{{ form.is_preview.id_for_label }}">
+                            Free Preview (watch without enrollment)
+                        </label>
                     </div>
                 </div>
                 <div class="col-md-12">
                     <label class="form-label small fw-bold">Short Description</label>
                     {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                    {% endif %}
                 </div>
+
                 <div class="col-md-12 text-end mt-4">
-                    <button type="submit" class="btn btn-primary rounded-pill px-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4 me-2" id="cancelEdit"
+                        onclick="cancelEdit()" style="display: none;">
+                        <i class="fas fa-times me-2"></i> Cancel
+                    </button>
+                    <button type="submit" name="add_lesson" class="btn btn-primary rounded-pill px-4" id="submitBtn">
                         <i class="fas fa-plus me-2"></i> Add Lesson
                     </button>
                 </div>
@@ -103,6 +145,7 @@
     </div>
 </div>
 
+<!-- Navigation Buttons -->
 <div class="d-flex justify-content-between mt-5">
     <a href="{% url 'courses:course_edit_step1' course.slug %}" class="btn btn-light btn-lg rounded-pill px-5">
         <i class="fas fa-arrow-left me-2"></i> Back
@@ -111,4 +154,76 @@
         Next: Resources <i class="fas fa-arrow-right ms-2"></i>
     </a>
 </div>
+
+<script>
+    // JavaScript for edit functionality
+    function editLesson(lessonId) {
+        // Fetch lesson data via AJAX
+        fetch(`/courses/lesson/${lessonId}/get/`)
+            .then(response => response.json())
+            .then(data => {
+                // Populate form fields
+                document.getElementById('lesson_id').value = data.id;
+                document.querySelector('[name="title"]').value = data.title;
+                document.querySelector('[name="order"]').value = data.order;
+                document.querySelector('[name="duration_minutes"]').value = data.duration_minutes;
+                document.querySelector('[name="duration_seconds"]').value = data.duration_seconds;
+                document.querySelector('[name="description"]').value = data.description;
+                document.querySelector('[name="is_preview"]').checked = data.is_preview;
+
+                // Clear file input (can't pre-populate file input for security)
+                document.querySelector('[name="video_file"]').value = '';
+                document.querySelector('[name="youtube_video_id"]').value = data.youtube_video_id || '';
+
+                // Change form to edit mode
+                document.getElementById('form-title').textContent = 'Edit Lesson';
+                document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save me-2"></i> Update Lesson';
+                document.getElementById('cancelEdit').style.display = 'inline-block';
+
+                // Scroll to form
+                document.getElementById('lessonForm').scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to load lesson data');
+            });
+    }
+
+    function cancelEdit() {
+        // Reset form
+        document.getElementById('lessonForm').reset();
+        document.getElementById('lesson_id').value = '';
+
+        // Reset to add mode
+        document.getElementById('form-title').textContent = 'Add New Lesson';
+        document.getElementById('submitBtn').innerHTML = '<i class="fas fa-plus me-2"></i> Add Lesson';
+        document.getElementById('cancelEdit').style.display = 'none';
+
+        // Clear any hidden fields
+        document.querySelector('[name="youtube_video_id"]').value = '';
+    }
+
+    // Handle form submission for both add and edit
+    document.getElementById('lessonForm').addEventListener('submit', function (e) {
+        const lessonId = document.getElementById('lesson_id').value;
+
+        if (lessonId) {
+            // For edit, we need to change the form action
+            this.action = `/courses/lesson/${lessonId}/update/`;
+        } else {
+            // For add, keep default action
+            this.action = '';
+        }
+    });
+</script>
+
+<style>
+    .border-dashed {
+        border: 2px dashed #dee2e6 !important;
+    }
+
+    .fs-xs {
+        font-size: 0.75rem;
+    }
+</style>
 {% endblock %}

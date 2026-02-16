@@ -21,6 +21,11 @@ urlpatterns = [
     # Public Course Pages (Slugs)
     path('<slug:slug>/', views.course_detail_view, name='course_detail'),
     path('<slug:slug>/enroll/', views.enroll_course_view, name='enroll_course'),
+    
+    # Lesson API for Wizard
+    path('lesson/<int:lesson_id>/get/', views.get_lesson_data_view, name='get_lesson_data'),
+    path('lesson/<int:lesson_id>/update/', views.update_lesson_view, name='update_lesson'),
+
     path('<slug:course_slug>/lesson/<int:lesson_id>/', views.lesson_view, name='lesson_view'),
     path('<slug:course_slug>/lesson/<int:lesson_id>/complete/', views.mark_lesson_complete_view, name='mark_lesson_complete'),
     path('<slug:course_slug>/lesson/<int:lesson_id>/submit-quiz/', views.submit_lesson_quiz_view, name='submit_lesson_quiz'),

@@ -280,7 +280,11 @@ def enroll_course_view(request, slug):
         messages.error(request, 'Instructors cannot enroll in their own course.')
         return redirect('courses:course_detail', slug=slug)
     
-    if request.user.is_staff or request.user.is_superuser:
+    # Debug Guard
+    print("ROLE:", request.user, "Staff:", request.user.is_staff, "Superuser:", request.user.is_superuser, "Role:", getattr(request.user, 'role', 'N/A'))
+    
+    # Only true superusers or explicit 'admin' role users are blocked from enrollment
+    if request.user.is_superuser or getattr(request.user, 'role', None) == 'admin':
         messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
         return redirect('courses:course_detail', slug=slug)
     
@@ -767,6 +771,48 @@ def course_create_step2_view(request, slug):
         'step': 2
     }
     return render(request, 'courses/wizard/step2_lessons.html', context)
+
+@login_required
+def get_lesson_data_view(request, lesson_id):
+    if request.user.role != 'teacher':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    lesson = get_object_or_404(Lesson, id=lesson_id, course__instructor=request.user)
+    data = {
+        'id': lesson.id,
+        'title': lesson.title,
+        'order': lesson.order,
+        'duration_minutes': lesson.duration_minutes,
+        'duration_seconds': lesson.duration_seconds,
+        'description': lesson.description,
+        'is_preview': lesson.is_preview,
+        'youtube_video_id': lesson.youtube_video_id,
+    }
+    return JsonResponse(data)
+
+@login_required
+def update_lesson_view(request, lesson_id):
+    if request.user.role != 'teacher':
+        return redirect('core:home')
+    
+    lesson = get_object_or_404(Lesson, id=lesson_id, course__instructor=request.user)
+    from .forms import LessonForm
+    
+    if request.method == 'POST':
+        form = LessonForm(request.POST, request.FILES, instance=lesson)
+        if form.is_valid():
+            # Safe logic: preserve existing video_file if no new file uploaded
+            if not request.FILES.get("video_file"):
+                form.instance.video_file = lesson.video_file
+                
+            form.save()
+            messages.success(request, "Lesson updated successfully.")
+            return redirect('courses:course_edit_step2', slug=lesson.course.slug)
+        else:
+            messages.error(request, "Error updating lesson. Please check the form.")
+            return redirect('courses:course_edit_step2', slug=lesson.course.slug)
+
+    return redirect('courses:course_edit_step2', slug=lesson.course.slug)
 
 @login_required
 def course_create_step3_view(request, slug):

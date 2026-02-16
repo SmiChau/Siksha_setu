@@ -41,7 +41,7 @@ def initiate_payment_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug, status='published')
     
     # Admin Guard
-    if request.user.is_staff or request.user.is_superuser:
+    if request.user.is_superuser or getattr(request.user, 'role', None) == 'admin':
         messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
         return redirect('courses:course_detail', slug=course_slug)
     
@@ -72,7 +72,7 @@ def khalti_checkout_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug, status='published')
     
     # Admin Guard
-    if request.user.is_staff or request.user.is_superuser:
+    if request.user.is_superuser or getattr(request.user, 'role', None) == 'admin':
         messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
         return redirect('courses:course_detail', slug=course_slug)
         
@@ -99,7 +99,7 @@ def khalti_initiate_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug, status='published')
     
     # Admin Guard
-    if request.user.is_staff or request.user.is_superuser:
+    if request.user.is_superuser or getattr(request.user, 'role', None) == 'admin':
         messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
         return redirect('courses:course_detail', slug=course_slug)
     
@@ -207,7 +207,7 @@ def khalti_callback_view(request):
         return redirect('core:home')
     
     # Admin Guard
-    if request.user.is_staff or request.user.is_superuser:
+    if request.user.is_superuser or getattr(request.user, 'role', None) == 'admin':
         messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
         return redirect('core:home')
     
@@ -321,7 +321,7 @@ def esewa_initiate_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug)
     
     # Admin Guard
-    if request.user.is_staff or request.user.is_superuser:
+    if request.user.is_superuser or getattr(request.user, 'role', None) == 'admin':
         messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
         return redirect('courses:course_detail', slug=course_slug)
         
@@ -397,7 +397,7 @@ def esewa_callback_view(request):
         return redirect('payments:payment_failed')
     
     # Admin Guard
-    if request.user.is_staff or request.user.is_superuser:
+    if request.user.is_superuser or getattr(request.user, 'role', None) == 'admin':
         messages.warning(request, "Admin accounts cannot enroll in courses. Please use a student account for enrollment.")
         return redirect('core:home')
         
