@@ -78,7 +78,7 @@ def certificate_download_view(request, enrollment_id):
             'final_score': float(certificate.final_score),
             'certificate_id': certificate.certificate_id,
             'platform_name': 'SIKSHA SETU',
-            'signature_name': 'Dr. A. Sharma',
+            'signature_name': 'Siksha Setu Team',
             'is_preview': (action == 'preview'),
             'auto_print': auto
         }
