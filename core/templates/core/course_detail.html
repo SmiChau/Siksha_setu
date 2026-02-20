@@ -409,9 +409,9 @@
                         <div class="stat-badge mb-3">
                             Course Mastered
                         </div>
-                        <a href="{% url 'reviews:certificate_download' enrollment.id %}"
+                        <a href="{% url 'reviews:certificate_download' enrollment.id %}?action=pdf&download=1"
                             class="btn btn-primary w-100 rounded-pill py-2 fw-bold">
-                            Download Certificate
+                            <i class="fas fa-download me-2"></i>Download Certificate
                         </a>
                         {% else %}
                         <div class="badge bg-warning p-3 mb-3 rounded-pill w-100">
@@ -685,16 +685,16 @@
                                     </h2>
                                     <div class="text-warning mb-2">
                                         {% for i in "12345" %}
-                                        {% with i_num=i|add:0 %}
+                                        {% with i_num=i|add:"0" %}
                                         {% if i_num <= average_rating %}
-                                        <i class="fas fa-star"></i>
-                                        {% elif i_num|add:-0.5 <= average_rating %}
-                                        <i class="fas fa-star-half-alt"></i>
-                                                {% else %}
-                                                <i class="far fa-star"></i>
-                                                {% endif %}
-                                                {% endwith %}
-                                                {% endfor %}
+                                            <i class="fas fa-star"></i>
+                                        {% elif i_num|add:"-0.5" <= average_rating %}
+                                            <i class="fas fa-star-half-alt"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                        {% endwith %}
+                                        {% endfor %}
                                     </div>
                                     <small class="text-muted">Based on {{ review_count }} reviews</small>
                                 </div>
@@ -732,9 +732,9 @@
                                     <label class="form-label fw-semibold">Your Rating</label>
                                     <div class="rating-input">
                                         {% for i in "54321" %}
-                                        {% with star_value=i|add:0 %}
+                                        {% with star_value=i|add:"0" %}
                                         <input type="radio" name="rating" value="{{ star_value }}"
-                                            id="rate-{{ star_value }}" {% if user_review.rating|add:0 == star_value %}checked{% endif %}>
+                                            id="rate-{{ star_value }}" {% if user_review.rating|add:"0" == star_value %}checked{% endif %}>
                                         <label for="rate-{{ star_value }}" class="star-label">
                                             <i class="fas fa-star"></i>
                                         </label>
@@ -786,12 +786,12 @@
                                         <h6 class="fw-bold mb-0">Your Review</h6>
                                         <div class="text-warning small">
                                             {% for i in "12345" %}
-                                            {% with i_num=i|add:0 %}
-                                            {% if i_num <= user_review.rating|add:0 %}
-                                            <i class="fas fa-star"></i>
-                                                {% endif %}
-                                                {% endwith %}
-                                                {% endfor %}
+                                            {% with i_num=i|add:"0" %}
+                                            {% if i_num <= user_review.rating|add:"0" %}
+                                                <i class="fas fa-star"></i>
+                                            {% endif %}
+                                            {% endwith %}
+                                            {% endfor %}
                                         </div>
                                     </div>
                                     <small class="text-muted">{{ user_review.created_at|date:"F d, Y" }}</small>
@@ -818,11 +818,12 @@
                                     </h6>
                                     <div class="text-warning small">
                                         {% for i in "12345" %}
-                                        {% with i_num=i|add:0 %}
-                                        {% if i_num <= review.rating|add:0 %} <i class="fas fa-star"></i>
-                                            {% endif %}
-                                            {% endwith %}
-                                            {% endfor %}
+                                        {% with i_num=i|add:"0" %}
+                                        {% if i_num <= review.rating|add:"0" %}
+                                            <i class="fas fa-star"></i>
+                                        {% endif %}
+                                        {% endwith %}
+                                        {% endfor %}
                                     </div>
                                 </div>
                                 <p class="mb-0 text-secondary small">{{ review.comment }}</p>
@@ -1013,13 +1014,13 @@
 {% block extra_js %}
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    // FIXED 1: Template filter syntax - removed spaces
+    // Template filter syntax - correct
     const lessonsData = {{ lessons_json|safe }};
     const courseSlug = "{{ course.slug }}";
     const isEnrolled = {{ enrollment|yesno:"true,false" }};
     const isInstructor = {{ is_instructor|yesno:"true,false" }};
     let player;
-    // FIXED 2: Current lesson ID syntax - removed spaces in template tags
+    // Current lesson ID syntax - FIXED
     let currentLessonId = {% if current_lesson %}{{ current_lesson.id }}{% else %}null{% endif %};
 
     // Tracking Variables
@@ -1028,6 +1029,7 @@
     let lastPosition = 0;
     let videoDuration = 0;
     let isTracking = false;
+    let segmentStart = 0;
 
     // Initialize
     document.addEventListener('DOMContentLoaded', function () {
@@ -1123,29 +1125,50 @@
 
         if (event.data === YT.PlayerState.ENDED) {
             videoDuration = player.getDuration();
-            markLessonComplete(currentLessonId);
+            // When video ends, mark as complete with full duration
+            markLessonComplete(currentLessonId, segmentStart, videoDuration);
         }
     }
 
     function startTracking() {
         if (isTracking) return;
         isTracking = true;
-        lastPosition = player.getCurrentTime();
+
+        // Use existing effective watch time from lesson data as starting point
+        const lesson = lessonsData.find(l => l.id === currentLessonId);
+        if (lesson && effectiveWatchTime === 0) {
+            effectiveWatchTime = lesson.watch_time || 0;
+        }
+
+        segmentStart = player.getCurrentTime();
+        lastPosition = segmentStart;
 
         let heartbeatCounter = 0;
 
         watchTimer = setInterval(function () {
+            if (!player || typeof player.getCurrentTime !== 'function') return;
+
             const currentPos = player.getCurrentTime();
             const diff = currentPos - lastPosition;
 
+            // Only count forward playback at ~normal speed
             if (diff > 0 && diff <= 1.5) {
                 effectiveWatchTime += diff;
                 heartbeatCounter++;
+            } else {
+                // User seeked or jumped: Close previous segment if it was meaningful
+                if (heartbeatCounter >= 2) {
+                    markLessonComplete(currentLessonId, segmentStart, lastPosition);
+                }
+                segmentStart = currentPos;
+                heartbeatCounter = 0;
             }
             lastPosition = currentPos;
 
-            if (heartbeatCounter >= 5) {
-                markLessonComplete(currentLessonId);
+            // Send update every ~10 seconds for 1% increments
+            if (heartbeatCounter >= 10) {
+                markLessonComplete(currentLessonId, segmentStart, currentPos);
+                segmentStart = currentPos;
                 heartbeatCounter = 0;
             }
         }, 1000);
@@ -1160,6 +1183,7 @@
         effectiveWatchTime = 0;
         lastPosition = 0;
         videoDuration = 0;
+        segmentStart = 0;
         if (player) videoDuration = player.getDuration();
     }
 
@@ -1232,14 +1256,21 @@
         video.addEventListener('ended', function () {
             stopTracking();
             videoDuration = video.duration;
-            markLessonComplete(currentLessonId);
+            markLessonComplete(currentLessonId, segmentStart, videoDuration);
         });
     }
 
     function startTrackingLocal(videoElement) {
         if (isTracking) return;
         isTracking = true;
-        lastPosition = videoElement.currentTime;
+
+        const lesson = lessonsData.find(l => l.id === currentLessonId);
+        if (lesson && effectiveWatchTime === 0) {
+            effectiveWatchTime = lesson.watch_time || 0;
+        }
+
+        segmentStart = videoElement.currentTime;
+        lastPosition = segmentStart;
 
         let heartbeatCounter = 0;
 
@@ -1256,11 +1287,20 @@
             if (diff > 0 && diff <= 1.5) {
                 effectiveWatchTime += diff;
                 heartbeatCounter++;
+            } else {
+                // Seek or jump: Close segment
+                if (heartbeatCounter >= 2) {
+                    markLessonComplete(currentLessonId, segmentStart, lastPosition);
+                }
+                segmentStart = currentPos;
+                heartbeatCounter = 0;
             }
             lastPosition = currentPos;
 
-            if (heartbeatCounter >= 5) {
-                markLessonComplete(currentLessonId);
+            // Send update every ~10 seconds for 1% increments
+            if (heartbeatCounter >= 10) {
+                markLessonComplete(currentLessonId, segmentStart, currentPos);
+                segmentStart = currentPos;
                 heartbeatCounter = 0;
             }
         }, 1000);
@@ -1270,14 +1310,28 @@
         const lesson = lessonsData.find(function (l) { return l.id === lessonId; });
         if (!lesson) return;
 
+        // Final sync of previous segment before switching
+        if (currentLessonId && currentLessonId !== lessonId) {
+            let currentPos = 0;
+            try {
+                currentPos = player ? player.getCurrentTime() : document.getElementById('localVideo')?.currentTime || 0;
+            } catch (e) {
+                currentPos = 0;
+            }
+            markLessonComplete(currentLessonId, segmentStart, currentPos);
+        }
+
         document.getElementById('videoCover').style.display = 'flex';
         document.getElementById('videoCover').style.backgroundImage = 'url(\'{{ course.get_thumbnail }}\')';
         document.getElementById('player').style.display = 'none';
 
-        if (player) player.stopVideo();
+        if (player) {
+            try { player.stopVideo(); } catch (e) { }
+        }
         effectiveWatchTime = lesson.watch_time || 0;
         lastPosition = 0;
         videoDuration = 0;
+        segmentStart = 0;
 
         document.querySelectorAll('.lesson-item').forEach(function (el) {
             el.classList.remove('active');
@@ -1412,7 +1466,7 @@
                     </button>
                 </div>
             `;
-        } else {
+        } else if (lesson.quiz_completed) {
             html += `
                 <div class="alert alert-success text-center mt-4 rounded-pill">
                     <i class="fas fa-check-circle me-2"></i> Quiz Submitted Successfully!
@@ -1458,8 +1512,10 @@
         let previousReady = true;
         lessonsData.forEach(function (lesson) {
             lesson.is_unlocked = previousReady;
-            // Next is ready if this one is completed
-            previousReady = lesson.video_completed && (!lesson.has_quiz || lesson.quiz_completed);
+            // Requirement: Next is ready if this one reached 60% (quiz_unlocked) 
+            // AND (has no quiz OR quiz is completed)
+            const isThisOneReady = (lesson.quiz_unlocked || lesson.video_completed) && (!lesson.has_quiz || lesson.quiz_completed);
+            previousReady = isThisOneReady;
         });
     }
 
@@ -1494,7 +1550,9 @@
 
             const quizEl = document.getElementById('quiz-item-' + lesson.id);
             if (quizEl) {
-                if (lesson.video_completed) {
+                const isQuizUnlocked = lesson.quiz_unlocked || lesson.video_completed;
+
+                if (isQuizUnlocked) {
                     quizEl.classList.remove('locked');
                     quizEl.onclick = function () { loadQuiz(lesson.id); };
                     const tooltip = bootstrap.Tooltip.getInstance(quizEl);
@@ -1509,7 +1567,7 @@
                 if (quizIcon) {
                     if (lesson.quiz_completed) {
                         quizIcon.className = "fas fa-check-circle text-success";
-                    } else if (!lesson.video_completed) {
+                    } else if (!isQuizUnlocked) {
                         quizIcon.className = "fas fa-lock text-muted";
                     } else {
                         quizIcon.className = "fas fa-question-circle text-primary";
@@ -1566,8 +1624,31 @@
             });
     };
 
-    function markLessonComplete(lessonId) {
-        if (!isEnrolled) return;
+    let isSyncing = false;
+    let lastSyncTime = Date.now();
+    let wallClockTracking = Date.now();
+
+    function markLessonComplete(lessonId, startTime, endTime) {
+        if (!isEnrolled || isSyncing) return;
+
+        const now = Date.now();
+        const wallClockSeconds = (now - wallClockTracking) / 1000;
+
+        // Anti-Cheating: Check if current segment exceeds wall-clock time significantly
+        // We allow up to 3x (for 2x speed + buffer)
+        const segmentDuration = endTime - startTime;
+        if (segmentDuration > (wallClockSeconds * 3) + 2) {
+            console.warn("Suspicious activity detected: Segment duration exceeds wall clock time.");
+            segmentStart = endTime;
+            wallClockTracking = now;
+            return;
+        }
+
+        // Segment Validation
+        if (segmentDuration < 1) return;
+
+        isSyncing = true;
+        wallClockTracking = now;
 
         fetch('/courses/' + courseSlug + '/lesson/' + lessonId + '/complete/', {
             method: 'POST',
@@ -1576,7 +1657,8 @@
                 'X-CSRFToken': '{{ csrf_token }}'
             },
             body: JSON.stringify({
-                watch_time: Math.round(effectiveWatchTime)
+                start_time: Math.round(startTime * 10) / 10,
+                end_time: Math.round(endTime * 10) / 10
             })
         })
             .then(function (res) { return res.json(); })
@@ -1584,13 +1666,15 @@
                 if (data.success) {
                     const lesson = lessonsData.find(function (l) { return l.id === lessonId; });
                     lesson.video_completed = data.lesson_completed;
+                    lesson.quiz_unlocked = data.quiz_unlocked;
 
-                    // Important: Trigger progressive unlocking check
                     checkProgressiveUnlocking();
-
                     updateDashboard(data);
                     updateSidebarUI();
                 }
+            })
+            .finally(function () {
+                isSyncing = false;
             });
     }
 
@@ -1613,10 +1697,13 @@
         const area = document.getElementById('masteryStatusArea');
         if (area && data.certificate_unlocked) {
             area.innerHTML = '<div class="stat-badge mb-3">Course Mastered</div>' +
-                '<a href="/reviews/certificates/download/{{ enrollment.id }}/" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">' +
-                'Download Certificate' +
+                '<a href="/reviews/certificates/download/{{ enrollment.id }}/?action=pdf&download=1" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">' +
+                '<i class="fas fa-download me-2"></i>Download Certificate' +
                 '</a>';
         }
     }
+
+    // Capture total course duration for predictive updates
+    const totalCourseDuration = lessonsData.reduce((acc, l) => acc + (l.duration_seconds || 0), 0);
 </script>
 {% endblock %}

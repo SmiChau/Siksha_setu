@@ -66,7 +66,7 @@ def certificate_download_view(request, enrollment_id):
         
         # 3. Get action parameter
         action = request.GET.get('action', '')
-        auto = request.GET.get('auto') == '1'
+        auto = request.GET.get('auto') == '1' or request.GET.get('download') == '1'
         
         # 4. Context Preparation
         context = {
@@ -116,3 +116,6 @@ def my_certificates_view(request):
         'certificates': certificates
     }
     return render(request, 'reviews/my_certificates.html', context)
+
+
+

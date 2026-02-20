@@ -163,6 +163,7 @@ def course_detail_view(request, slug):
     for lesson in lessons:
         progress = lesson_progress.get(lesson.id)
         video_completed = progress.is_completed if progress else False
+        quiz_unlocked = progress.quiz_unlocked if progress else False
         quiz_completed = progress.quiz_completed if progress else False
         has_quiz = lesson.mcq_questions.exists()
         
@@ -175,11 +176,13 @@ def course_detail_view(request, slug):
             is_unlocked = False
         
         # Check if THIS lesson is ready to unlock the NEXT one
+        # Requirement: Unlock next lesson ONLY after video completion AND quiz submission (if it exists)
         current_ready = video_completed and (not has_quiz or quiz_completed)
         
         # Attach to object for template access
         lesson.is_unlocked = is_unlocked
         lesson.video_completed = video_completed
+        lesson.quiz_unlocked = quiz_unlocked
         lesson.quiz_completed = quiz_completed
         lesson.has_quiz_actual = has_quiz
         
@@ -312,6 +315,18 @@ def lesson_view(request, course_slug, lesson_id):
         return redirect('courses:course_detail', slug=course_slug)
     
     if enrollment:
+        # Sequential Unlocking Check
+        if not lesson.is_preview and not (request.user.is_staff or request.user.is_superuser):
+            previous_lesson = Lesson.objects.filter(course=course, order__lt=lesson.order).order_by('-order').first()
+            if previous_lesson:
+                prev_p = LessonProgress.objects.filter(enrollment=enrollment, lesson=previous_lesson).first()
+                # Use full completion for sequential unlocking
+                p_v_done = prev_p.is_completed if prev_p else False
+                p_q_done = not previous_lesson.mcq_questions.exists() or (prev_p and prev_p.quiz_completed)
+                if not p_v_done or not p_q_done:
+                    messages.error(request, 'Locked: Please complete the previous lesson and its quiz first.')
+                    return redirect('courses:course_detail', slug=course_slug)
+
         lesson_progress, created = LessonProgress.objects.get_or_create(
             enrollment=enrollment,
             lesson=lesson
@@ -372,23 +387,36 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
             'newly_completed': False
         })
     
+    # Secure Sequential Guard
+    if not (request.user.is_staff or request.user.is_superuser):
+        prev_lesson = Lesson.objects.filter(course=course, order__lt=lesson.order).order_by('-order').first()
+        if prev_lesson:
+            prev_p = LessonProgress.objects.filter(enrollment=enrollment, lesson=prev_lesson).first()
+            p_v_done = prev_p.is_completed if prev_p else False
+            p_q_done = not prev_lesson.mcq_questions.exists() or (prev_p and prev_p.quiz_completed)
+            if not p_v_done or not p_q_done:
+                 return JsonResponse({'success': False, 'error': 'Complete previous lesson and quiz first.'})
+
     import json
     newly_completed = False
     try:
         data = json.loads(request.body)
-        # Frontend sends seconds
-        watch_seconds = float(data.get('watch_time', 0))
+        # Frontend sends segment boundaries [start_time, end_time]
+        segment_start = float(data.get('start_time', 0))
+        segment_end = float(data.get('end_time', 0))
         # Lesson duration in seconds
         video_duration_seconds = lesson.total_duration_seconds
         
-        # Incremental update and check for completion
-        newly_completed = lesson_progress.update_watch_time(watch_seconds, video_duration_seconds)
+        # Range-merge update and check for completion
+        newly_completed = lesson_progress.update_watch_time(
+            segment_start, segment_end, video_duration_seconds
+        )
     except Exception as e:
         print(f"Error updating watch time: {e}")
         pass
 
-    # Recalculate everything (Time-based logic with 5% steps)
-    enrollment.update_scores()
+    # Recalculate everything from persisted coverage data
+    enrollment.recalculate_progress()
     
     return JsonResponse({
         'success': True,
@@ -399,6 +427,7 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
         'is_mastered': enrollment.mastery_score >= 80,
         'certificate_unlocked': enrollment.certificate_unlocked,
         'lesson_completed': lesson_progress.is_completed, # Important for quiz unlocking
+        'quiz_unlocked': lesson_progress.quiz_unlocked,
         'newly_completed': newly_completed
     })
 
@@ -423,23 +452,29 @@ def submit_mcq_answer_view(request, course_slug, lesson_id, question_id):
             'is_correct': selected_option == question.correct_option,
             'correct_option': question.correct_option,
             'explanation': question.explanation,
-            'mcq_score': enrollment.mcq_score
+            'mcq_score': enrollment.quiz_score
         })
     
+    # Video Threshold Guard (60%)
+    progress = LessonProgress.objects.filter(enrollment=enrollment, lesson=lesson).first()
+    if not (request.user.is_staff or request.user.is_superuser):
+        if not progress or not progress.quiz_unlocked:
+            return JsonResponse({'success': False, 'error': 'Watch 50% of the video to unlock this quiz.'})
+
     attempt, created = MCQAttempt.objects.update_or_create(
         enrollment=enrollment,
         question=question,
         defaults={'selected_option': selected_option}
     )
     
-    enrollment.check_completion()
+    enrollment.recalculate_progress()
     
     return JsonResponse({
         'success': True,
         'is_correct': attempt.is_correct,
         'correct_option': question.correct_option,
         'explanation': question.explanation,
-        'mcq_score': enrollment.mcq_score
+        'mcq_score': enrollment.quiz_score
     })
 
 
@@ -953,6 +988,10 @@ def submit_lesson_quiz_view(request, course_slug, lesson_id):
         lesson=lesson
     )
     
+    # Requirement: Quiz unlocks at 60% (quiz_unlocked)
+    if not lesson_progress.quiz_unlocked and not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'You must watch at least 60% of the video to unlock the quiz.'})
+    
     lesson_progress.quiz_completed = True
     lesson_progress.save()
     
@@ -996,6 +1035,12 @@ def submit_mcq_answer(request, course_slug):
     if selected_option not in ['A', 'B', 'C', 'D']:
         return JsonResponse({'success': False, 'error': 'Invalid option'})
     
+    # Secure Guard: Video must reach 60% before answering quiz
+    progress = LessonProgress.objects.filter(enrollment=enrollment, lesson=question.lesson).first()
+    if not (request.user.is_staff or request.user.is_superuser):
+        if not progress or not progress.quiz_unlocked:
+            return JsonResponse({'success': False, 'error': 'Reach 60% video coverage to unlock the quiz.'})
+
     attempt, created = MCQAttempt.objects.update_or_create(
         enrollment=enrollment,
         question=question,

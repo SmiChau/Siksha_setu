@@ -1,0 +1,34 @@
+{% extends 'core/base_public.html' %}
+{% load static %}
+
+{% block title %}Pay with eSewa — {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-center">
+                <div class="mb-3">
+                    <img src="{% static 'core/img/esewalogo.png' %}" alt="eSewa" style="height: 40px;">
+                </div>
+                <h5 class="fw-bold mb-1">{{ course.title }}</h5>
+                <p class="text-muted mb-1">NPR {{ amount }}</p>
+                <p class="small text-muted mb-4">You will be redirected to eSewa to complete your payment securely.</p>
+
+                <!-- POST to esewa_initiate which calls eSewa API and redirects -->
+                <form id="esewa-form" method="POST" action="{{ esewa_url }}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-purple btn-lg rounded-pill w-100"
+                        style="background:#429736; color:white;">
+                        Proceed to eSewa &rarr;
+                    </button>
+                </form>
+
+                <a href="{% url 'courses:course_detail' course.slug %}" class="btn btn-link text-muted mt-3 small">
+                    Cancel and go back
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -180,7 +180,7 @@
         }
 
         .student-name {
-            font-family: 'Great Vibes', cursive;
+            font-family: 'Garamond', serif;
             font-size: 84px;
             color: #1a535c;
             margin: 0;
@@ -218,7 +218,7 @@
             display: flex;
             justify-content: center;
             gap: 40px;
-            margin-top: 10px;
+            
         }
 
         .stat-item {
@@ -304,8 +304,14 @@
             line-height: 1.1;
         }
 
+        /* Button Container - NEW */
+        .button-container {
+            margin-top: 30px;
+            text-align: center;
+        }
+
         .download-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4f9887 0%, #715989 100%);
             color: white;
             border: none;
             padding: 15px 40px;
@@ -315,7 +321,7 @@
             cursor: pointer;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
             transition: transform 0.3s, box-shadow 0.3s;
-            margin: 30px;
+            margin: 20px;
             border: 2px solid white;
             z-index: 10;
         }
@@ -363,6 +369,7 @@
         <div style="font-size: 18px;">Generating PDF... Please wait...</div>
     </div>
 
+    <!-- This div now contains ONLY the certificate content -->
     <div class="certificate-wrapper" id="certificate-content">
         <div class="certificate-container">
             <!-- Main Physical-Border -->
@@ -442,13 +449,19 @@
         </div>
     </div>
 
-    
+    <!-- Button Container - MOVED OUTSIDE the certificate-content div
+    <div class="button-container">
+        <button onclick="downloadPDF()" class="download-button">
+            <i class="fas fa-download" style="margin-right: 10px;"></i>Download Certificate
+        </button>
+    </div> -->
 
     <script>
         function downloadPDF() {
             // Show loading indicator
             document.getElementById('loading').style.display = 'flex';
             
+            // Get ONLY the certificate content, excluding the button container
             const element = document.getElementById('certificate-content');
             
             // PDF generation options

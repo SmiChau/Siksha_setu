@@ -4,6 +4,27 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
+import math
+
+
+def merge_ranges(ranges):
+    """
+    Merge overlapping [start, end] ranges into a minimal non-overlapping set.
+    Returns sorted, merged list and total unique seconds covered.
+    """
+    if not ranges:
+        return [], 0
+    # Sort by start time
+    sorted_ranges = sorted(ranges, key=lambda r: r[0])
+    merged = [sorted_ranges[0][:]]
+    for start, end in sorted_ranges[1:]:
+        if start <= merged[-1][1]:
+            # Overlapping or adjacent — extend
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    total_seconds = sum(end - start for start, end in merged)
+    return merged, total_seconds
 
 
 class Category(models.Model):
@@ -362,35 +383,48 @@ class Enrollment(models.Model):
     def __str__(self):
         return f"{self.student.email} - {self.course.title}"
     
-    def update_scores(self):
+    def recalculate_progress(self):
         """
-        Implements Time-Based Progress Logic
-        1. video_progress = (total_watched_seconds / total_course_seconds) * 100
-        2. quantized into 5% steps
-        3. mastery_score = (video_progress * 0.6) + (quiz_score * 0.4)
+        Single source of truth for all progress computation.
+        Recomputes from persisted unique watch coverage data.
+
+        Rules:
+        - video_progress = floor( (total_unique_seconds / total_course_seconds) * 100 )
+        - NEVER decreases (monotonic)
+        - mastery_score = (video_progress * 0.6) + (quiz_score * 0.4)
+        - mastery_score NEVER decreases
+        - certificate_unlocked/is_completed once set is NEVER revoked
         """
         all_lessons = self.course.lessons.all()
-        # Sum duration (minutes + seconds to total seconds) - total course length
-        total_seconds = sum([l.total_duration_seconds for l in all_lessons])
-        
-        # Sum actual cumulative watch time from all lesson progress records
-        watched_seconds = LessonProgress.objects.filter(enrollment=self).aggregate(
-            total=models.Sum('watch_time'))['total'] or 0
-        
-        if total_seconds > 0:
-            raw_progress = (watched_seconds / total_seconds) * 100
-            # 5% Increments Logic: 0%, 5%, 10%, 15%...
-            self.unit_progress = (raw_progress // 5) * 5
-            self.unit_progress = min(max(self.unit_progress, 0.0), 100.0)
-            
-            # Count completed videos for UI listing
-            self.completed_units = LessonProgress.objects.filter(
-                enrollment=self, is_completed=True).count()
+        total_course_seconds = sum(l.total_duration_seconds for l in all_lessons)
+
+        # Sum unique watched seconds from all lesson progress records
+        progress_records = LessonProgress.objects.filter(enrollment=self)
+        total_unique_seconds = sum(lp.watch_time for lp in progress_records)
+
+        # Count completed units
+        self.completed_units = progress_records.filter(is_completed=True).count()
+
+        # Compute video progress with 1% floor increments
+        if total_course_seconds > 0:
+            raw_progress = (total_unique_seconds / total_course_seconds) * 100
+            new_progress = float(min(math.floor(raw_progress), 100))
+            new_progress = max(new_progress, 0.0)
         else:
-            self.unit_progress = 100.0
+            # No lessons or all zero-duration => 100%
+            new_progress = 100.0
             self.completed_units = all_lessons.count()
 
-        # Quiz Score Logic: Average of all questions across the course
+        # All lessons completed => force 100%
+        if all_lessons.count() > 0 and self.completed_units == all_lessons.count():
+            new_progress = 100.0
+
+        # NEVER DECREASE unit_progress
+        if new_progress < self.unit_progress:
+            new_progress = self.unit_progress
+        self.unit_progress = new_progress
+
+        # Quiz Score: average of all MCQ questions across the course
         total_q = MCQQuestion.objects.filter(lesson__course=self.course).count()
         if total_q > 0:
             correct_attempts = MCQAttempt.objects.filter(
@@ -399,23 +433,34 @@ class Enrollment(models.Model):
             ).count()
             self.quiz_score = round((correct_attempts / total_q) * 100, 1)
         else:
+            # No quizzes => full quiz score
             self.quiz_score = 100.0
-            
-        # Weighted Scoring Model
-        self.mastery_score = round((self.unit_progress * 0.6) + (self.quiz_score * 0.4), 1)
-        
-        # Certificate Unlock Logic (>= 80%)
-        if self.mastery_score >= 80:
+
+        # Weighted Mastery Score (60% video + 40% quiz)
+        new_mastery = round((self.unit_progress * 0.6) + (self.quiz_score * 0.4), 1)
+
+        # NEVER DECREASE mastery_score
+        if new_mastery < self.mastery_score:
+            new_mastery = self.mastery_score
+        self.mastery_score = new_mastery
+
+        # PERSISTENCE GUARD: Never downgrade completion once reached
+        if self.is_completed:
+            self.certificate_unlocked = True
+
+        # Certificate Unlock (>= 80) — once unlocked, NEVER relock
+        if self.mastery_score >= 80 or self.certificate_unlocked:
             self.certificate_unlocked = True
             self.is_completed = True
             if not self.completed_at:
                 self.completed_at = timezone.now()
-        else:
-            self.certificate_unlocked = False
-            self.is_completed = False
 
-        self.save()
+        self.save(update_fields=["completed_units", "unit_progress", "quiz_score", "mastery_score", "certificate_unlocked", "is_completed", "completed_at"])
         return self.mastery_score
+
+    # Keep backward compat alias
+    def update_scores(self):
+        return self.recalculate_progress()
     
     def save(self, *args, **kwargs):
         is_new = self.pk is None
@@ -437,36 +482,78 @@ class LessonProgress(models.Model):
         on_delete=models.CASCADE,
         related_name='progress_records'
     )
-    
+
     is_completed = models.BooleanField(default=False)
+    quiz_unlocked = models.BooleanField(default=False)
     quiz_completed = models.BooleanField(default=False)
-    watch_time = models.PositiveIntegerField(default=0, help_text='Total cumulative watch time in seconds')
+    watch_time = models.PositiveIntegerField(default=0, help_text='Total unique covered seconds')
+    watched_ranges = models.JSONField(default=list, blank=True, help_text='[[start, end]] unique segments')
     max_position = models.PositiveIntegerField(default=0, help_text='Furthest position watched')
-    
+
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         unique_together = ['enrollment', 'lesson']
-    
+
     def __str__(self):
         return f"{self.enrollment.student.email} - {self.lesson.title}"
-    
-    def update_watch_time(self, current_watch_time, video_duration_seconds):
+
+    def update_watch_time(self, segment_start, segment_end, video_duration_seconds):
         """
-        Server-side validation and incremental watch time update.
-        Unlocks quiz when watch threshold (95%) is met for this lesson.
+        Processes a watched segment and updates unique coverage.
+        Implements Dual Unlock Model:
+        - 50% : Unlocks Quiz
+        - 95% OR reached-the-end: Marks Lesson as Completed
+        - 3s Tolerance: Treated as reached-the-end
         """
-        # Ensure we don't decrease watch time (prevent tracking reset abuse)
-        if current_watch_time > self.watch_time:
-            # Clamp to duration
-            self.watch_time = min(current_watch_time, video_duration_seconds)
+        # If already fully completed, we don't need to re-process for completion, 
+        # but we might still track max_position.
+        if self.is_completed and self.quiz_unlocked:
+            if segment_end > self.max_position:
+                self.max_position = int(segment_end)
+                self.save(update_fields=['max_position'])
+            return True
+
+        if segment_start < 0: segment_start = 0
+        if segment_end > video_duration_seconds: segment_end = video_duration_seconds
+        if segment_start >= segment_end:
+            return self.is_completed
+
+        # Update watched ranges
+        ranges = self.watched_ranges or []
+        ranges.append([round(segment_start, 1), round(segment_end, 1)])
+        
+        # Merge overlaps and calculate unique coverage
+        # FIX: merge_ranges returns (merged_list, total_seconds)
+        merged_list, total_unique = merge_ranges(ranges)
+        self.watched_ranges = merged_list
+        self.watch_time = int(total_unique)
+
+        if segment_end > self.max_position:
+            self.max_position = int(segment_end)
+
+        # Thresholds
+        if video_duration_seconds > 0:
+            progress_ratio = total_unique / video_duration_seconds
             
-        # check for completion (95%)
-        if not self.is_completed and video_duration_seconds > 0:
-            if (self.watch_time / video_duration_seconds) >= 0.95:
-                self.is_completed = True
-                self.completed_at = timezone.now()
+            # 50% Threshold: Unlock Quiz
+            if progress_ratio >= 0.50:
+                self.quiz_unlocked = True
+
+            # Threshold + 3s Tolerance Check: Complete Lesson
+            # Tolerance: If they are within 3s of the end, we can be more lenient
+            tolerance_threshold = max(0, video_duration_seconds - 3)
+            
+            # Condition 1: High enough coverage (>95%)
+            # Condition 2: Reached the end (within tolerance) AND have significant coverage (>80%)
+            if progress_ratio >= 0.95 or (self.max_position >= tolerance_threshold and progress_ratio >= 0.80):
+                if not self.is_completed:
+                    self.is_completed = True
+                    self.watch_time = video_duration_seconds  # Cap at full duration
+                    self.completed_at = timezone.now()
+                    # If lesson is completed, quiz MUST be unlocked too
+                    self.quiz_unlocked = True
         
         self.save()
         return self.is_completed

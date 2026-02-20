@@ -76,14 +76,19 @@
     }
 
     /* Enhanced Course Progress */
+    /* Enhanced Course Progress - FIXED */
     .course-progress {
         height: 10px;
         border-radius: 5px;
         overflow: hidden;
-        background-color: rgba(0, 0, 0, 0.05);
+        background-color: #e9ecef;
+        /* Changed from rgba(0,0,0,0.05) to solid light gray */
         position: relative;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        /* Optional subtle border */
     }
 
+    /* Remove the shimmer effect or keep it - your choice */
     .course-progress::after {
         content: '';
         position: absolute;
@@ -96,6 +101,21 @@
                 rgba(255, 255, 255, 0.3) 50%,
                 transparent 100%);
         animation: shimmer 2s infinite;
+        pointer-events: none;
+        /* Ensures clicks pass through */
+    }
+
+    /* Make sure the progress bar has height and visible colors */
+    .progress-bar-custom {
+        background: linear-gradient(90deg, var(--mint-green), #3dbdb3, #4ecdc4);
+        border-radius: 5px;
+        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        z-index: 2;
+        height: 100%;
+        /* Ensure it takes full height */
+        display: block;
+        /* Ensure it's displayed as block */
     }
 
     @keyframes shimmer {
@@ -108,13 +128,6 @@
         }
     }
 
-    .progress-bar-custom {
-        background: linear-gradient(90deg, var(--mint-green), #3dbdb3, #4ecdc4);
-        border-radius: 5px;
-        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        z-index: 2;
-    }
 
     /* Enhanced Buttons */
     .continue-btn {
@@ -689,21 +702,18 @@
             <div class="card-body">
                 {% if recent_activity %}
                 <ul class="list-unstyled mb-0">
-                    {% for activity in recent_activity|slice:":5" %}
+                    {% for activity in recent_activity %}
                     <li class="py-3 border-bottom activity-item">
                         <div class="d-flex align-items-center">
-                            <div class="stat-icon me-3"
-                                style="width: 50px; height: 50px; background-color: rgba(78, 205, 196, 0.1);">
-                                <i class="fas fa-{% if activity.type == 'lesson_completed' %}check-circle{% elif activity.type == 'enrollment' %}book{% else %}play-circle{% endif %}"
-                                    style="color: var(--mint-green);"></i>
-                            </div>
                             <div class="flex-grow-1">
                                 <div class="fw-bold" style="color: var(--primary-blue);">
                                     {{ activity.description }}
                                 </div>
+                                {% if activity.course %}
                                 <small class="text-muted">
-                                    <i class="fas fa-book me-1"></i>{{ activity.course_title }}
+                                    <i class="fas fa-book me-1"></i>{{ activity.course }}
                                 </small>
+                                {% endif %}
                             </div>
                             <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
                         </div>
@@ -756,12 +766,13 @@
                                     {{ certificate.course.title|truncatewords:4 }}
                                 </div>
                                 <small class="text-muted">
-                                    <i class="fas fa-calendar-alt me-1"></i>Issued: {{ certificate.issued_date|date:"M d, Y" }}
+                                    <i class="fas fa-calendar-alt me-1"></i>Issued: {{ certificate.issued_at|date:"M d, Y" }}
                                 </small>
                             </div>
+                            <!-- Eye icons (most intuitive for preview) -->
                             <a href="{% url 'reviews:certificate_download' certificate.enrollment.id %}" target="_blank"
                                 class="badge badge-custom-blue rounded-pill px-3 py-2 text-decoration-none">
-                                <i class="fas fa-download me-1"></i> Download
+                                <i class="fas fa-eye me-1"></i> Preview
                             </a>
                         </div>
                     </li>

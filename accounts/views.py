@@ -336,6 +336,110 @@ def student_dashboard_view(request):
         status='completed'
     ).order_by('-completed_at')[:5]
     
+    # Recent Activity Feed Logic
+    time_threshold = timezone.now() - timedelta(days=90)
+    activities = []
+
+    # Course completions
+    completions = Enrollment.objects.filter(
+        student=request.user,
+        is_completed=True,
+        completed_at__gte=time_threshold
+    ).values('course__title', 'completed_at')
+
+    for item in completions:
+        activities.append({
+            'type': 'completion',
+            'description': f"Completed {item['course__title']}",
+            'timestamp': item['completed_at']
+        })
+
+    # Lesson completions
+    lessons = LessonProgress.objects.filter(
+        enrollment__student=request.user,
+        is_completed=True,
+        completed_at__gte=time_threshold
+    ).values('lesson__title', 'enrollment__course__title', 'completed_at')[:10]
+
+    for item in lessons:
+        activities.append({
+            'type': 'lesson',
+            'description': f"Completed lesson: {item['lesson__title']}",
+            'course': item['enrollment__course__title'],
+            'timestamp': item['completed_at']
+        })
+
+    # Quiz submissions
+    quizzes = LessonProgress.objects.filter(
+        enrollment__student=request.user,
+        quiz_completed=True,
+        completed_at__gte=time_threshold
+    ).values('lesson__title', 'enrollment__course__title', 'completed_at')[:10]
+
+    for item in quizzes:
+        activities.append({
+            'type': 'quiz',
+            'description': f"Submitted quiz for {item['lesson__title']}",
+            'course': item['enrollment__course__title'],
+            'timestamp': item['completed_at']
+        })
+
+    # Enrollments
+    enrollments_act = Enrollment.objects.filter(
+        student=request.user,
+        enrolled_at__gte=time_threshold
+    ).values('course__title', 'enrolled_at')[:10]
+
+    for item in enrollments_act:
+        activities.append({
+            'type': 'enrollment',
+            'description': f"Enrolled in {item['course__title']}",
+            'timestamp': item['enrolled_at']
+        })
+
+    # Reviews
+    reviews_act = Review.objects.filter(
+        user=request.user,
+        created_at__gte=time_threshold
+    ).values('course__title', 'created_at')[:10]
+
+    for item in reviews_act:
+        activities.append({
+            'type': 'review',
+            'description': f"Reviewed {item['course__title']}",
+            'timestamp': item['created_at']
+        })
+
+    # Certificates
+    certificates_act = Certificate.objects.filter(
+        enrollment__student=request.user,
+        issued_at__gte=time_threshold
+    ).values('course_title', 'issued_at')[:10]
+
+    for item in certificates_act:
+        activities.append({
+            'type': 'certificate',
+            'description': f"Earned certificate for {item['course_title']}",
+            'timestamp': item['issued_at']
+        })
+
+    # Messages
+    messages_act = TeacherMessage.objects.filter(
+        sender=request.user,
+        created_at__gte=time_threshold
+    ).values('teacher__first_name', 'created_at')[:10]
+
+    for item in messages_act:
+        activities.append({
+            'type': 'message',
+            'description': f"Sent message to {item['teacher__first_name']}",
+            'timestamp': item['created_at']
+        })
+
+    # Sort and slice
+    activities.sort(key=lambda x: x['timestamp'] if x['timestamp'] else timezone.now(), reverse=True)
+    recent_activity = activities[:5]
+    
     context = {
         'user': request.user,
         'enrollments': enrollments,
@@ -346,6 +450,7 @@ def student_dashboard_view(request):
         'recent_payments': recent_payments,
         'total_courses': enrollments.count(),
         'completed_courses': completed.count(),
+        'recent_activity': recent_activity,
     }
     return render(request, 'accounts/student_dashboard.html', context)
 

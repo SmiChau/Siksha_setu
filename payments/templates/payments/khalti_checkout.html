@@ -1,0 +1,35 @@
+{% extends 'core/base_public.html' %}
+{% load static %}
+
+{% block title %}Pay with Khalti — {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-center">
+                <div class="mb-3">
+                    <img src="{% static 'core/img/khaltilogo.png' %}" alt="Khalti" style="height: 40px;">
+                </div>
+                <h5 class="fw-bold mb-1">{{ course.title }}</h5>
+                <p class="text-muted mb-1">NPR {{ amount }}</p>
+                <p class="small text-muted mb-4">You will be redirected to Khalti to complete your payment securely.</p>
+
+                <!-- POST to khalti_initiate which calls Khalti API and redirects -->
+                <form method="GET" action="{% url 'payments:khalti_initiate' course.slug %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-purple btn-lg rounded-pill w-100"
+                        style="background:#dc362b; color:white;">
+                        Proceed to Khalti &rarr;
+                    </button>
+                </form>
+
+                <a href=
+                "{% url 'courses:course_detail' course.slug %}" class="btn btn-link text-muted mt-3 small">
+                    Cancel and go back
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
