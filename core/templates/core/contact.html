@@ -39,20 +39,16 @@
             <div class="contact-form">
 
                 {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-                    {% endfor %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
                 {% endif %}
 
                 <h3 class="mb-4 fw-bold" style="color: var(--primary-blue);">
                     Send us a Message
                 </h3>
 
-                <form id="contactForm"
-                      method="POST"
-                      action="{% url 'core:contact' %}"
-                      enctype="multipart/form-data"
-                      novalidate>
+                <form id="contactForm" method="POST" action="{% url 'core:contact' %}" enctype="multipart/form-data" novalidate>
 
                     {% csrf_token %}
 
@@ -83,34 +79,20 @@
                     <!-- PURPOSE -->
                     <div class="form-group">
                         <label>Purpose *</label>
-                        <select name="enquiry_type"
-                                id="purpose"
-                                class="form-control-custom"
-                                required
-                                onchange="toggleFields()">
-
-                            <option value=""
-                                disabled
-                                {% if not form.enquiry_type.value %}selected{% endif %}>
+                        <select name="enquiry_type" id="purpose" class="form-control-custom" required onchange="toggleFields()">
+                            <option value="" disabled {% if not form.enquiry_type.value %}selected{% endif %}>
                                 Select purpose
                             </option>
-
-                            <option value="GENERAL"
-                                {% if form.enquiry_type.value|default_if_none:"" == "GENERAL" %}selected{% endif %}>
+                            <option value="GENERAL" {% if form.enquiry_type.value|default_if_none:"" == "GENERAL" %}selected{% endif %}>
                                 General Inquiry
                             </option>
-
-                            <option value="TEACHER"
-                                {% if form.enquiry_type.value|default_if_none:"" == "TEACHER" %}selected{% endif %}>
+                            <option value="TEACHER" {% if form.enquiry_type.value|default_if_none:"" == "TEACHER" %}selected{% endif %}>
                                 Enquiry about Teacher
                             </option>
-
-                            <option value="instructor"
-                                {% if request.POST.enquiry_type == "instructor" %}selected{% endif %}>
+                            <option value="instructor" {% if request.POST.enquiry_type == "instructor" %}selected{% endif %}>
                                 Apply as Instructor
                             </option>
                         </select>
-
                         <div class="invalid-feedback">Please select a purpose.</div>
                     </div>
 
@@ -126,19 +108,16 @@
                         <div class="alert alert-info small">
                             Instructor applications are reviewed by admin.
                         </div>
-
                         <div class="row">
                             <div class="col-md-6 form-group">
                                 <label>Expertise *</label>
                                 {{ instructor_form.expertise }}
                             </div>
-
                             <div class="col-md-6 form-group">
                                 <label>Experience (Years) *</label>
                                 {{ instructor_form.experience }}
                             </div>
                         </div>
-
                         <div class="form-group">
                             <label>Upload CV *</label>
                             {{ instructor_form.cv }}
@@ -151,16 +130,21 @@
                             <label>Subject *</label>
                             {{ form.subject }}
                         </div>
-
                         <div class="form-group">
                             <label>Message *</label>
                             {{ form.message }}
                         </div>
                     </div>
 
+                    {% if not request.user.is_staff and not request.user.is_superuser %}
                     <button type="submit" class="btn-submit">
                         Send Message
                     </button>
+                    {% else %}
+                    <div class="alert alert-warning text-center">
+                        Administrators cannot send contact messages.
+                    </div>
+                    {% endif %}
                 </form>
             </div>
         </div>
@@ -169,29 +153,31 @@
 
 <!-- JS -->
 <script>
-function toggleFields() {
-    const purpose = document.getElementById('purpose')?.value;
-    const instructor = document.getElementById('instructorFields');
-    const teacher = document.getElementById('teacherField');
-    const message = document.getElementById('messageSection');
+    function toggleFields() {
+        const purpose = document.getElementById('purpose')?.value;
+        const instructor = document.getElementById('instructorFields');
+        const teacher = document.getElementById('teacherField');
+        const message = document.getElementById('messageSection');
 
-    if (!purpose) return;
+        if (!purpose) return;
 
-    instructor.classList.add('d-none');
-    teacher.classList.add('d-none');
-    message.classList.remove('d-none');
+        // Hide all first
+        if (instructor) instructor.classList.add('d-none');
+        if (teacher) teacher.classList.add('d-none');
+        if (message) message.classList.remove('d-none');
 
-    if (purpose === 'instructor') {
-        instructor.classList.remove('d-none');
-        message.classList.add('d-none');
+        // Show based on selection
+        if (purpose === 'instructor') {
+            if (instructor) instructor.classList.remove('d-none');
+            if (message) message.classList.add('d-none');
+        } else if (purpose === 'TEACHER') {
+            if (teacher) teacher.classList.remove('d-none');
+        }
     }
 
-    if (purpose === 'TEACHER') {
-        teacher.classList.remove('d-none');
-    }
-}
-
-window.addEventListener('load', toggleFields);
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleFields();
+    });
 </script>
-
 {% endblock %}

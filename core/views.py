@@ -131,6 +131,10 @@ def contact_view(request):
     instructor_form = InstructorApplicationForm(user=request.user)
     
     if request.method == 'POST':
+        if request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser):
+            messages.error(request, "Admins cannot send contact messages.")
+            return redirect('core:contact')
+            
         enquiry_type = request.POST.get('enquiry_type')
         
         if enquiry_type == 'instructor':
