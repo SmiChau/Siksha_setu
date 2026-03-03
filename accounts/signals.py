@@ -4,11 +4,15 @@ from .models import CustomUser, TeacherProfile
 
 @receiver(post_save, sender=CustomUser)
 def create_teacher_profile(sender, instance, created, **kwargs):
+    if kwargs.get('raw'):
+        return
     if created and instance.role == 'teacher':
         TeacherProfile.objects.get_or_create(user=instance)
 
 @receiver(post_save, sender=CustomUser)
 def save_teacher_profile(sender, instance, **kwargs):
+    if kwargs.get('raw'):
+        return
     if instance.role == 'teacher':
         if hasattr(instance, 'teacher_profile'):
             instance.teacher_profile.save()
