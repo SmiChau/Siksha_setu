@@ -517,7 +517,7 @@
                 <div class="d-flex justify-content-between align-items-center mt-3 px-2">
                     <!-- Duration display - check which field exists -->
                     <div class="text-muted small d-flex align-items-center gap-3">
-                        <span>
+                        <span id="currentLessonDuration">
                             <i class="fas fa-clock me-1"></i>
                             {% if current_lesson.duration_minutes or current_lesson.duration_seconds %}
                             {{ current_lesson.duration_minutes }}m {{ current_lesson.duration_seconds }}s
@@ -686,15 +686,14 @@
                                     <div class="text-warning mb-2">
                                         {% for i in "12345" %}
                                         {% with i_num=i|add:"0" %}
-                                        {% if i_num <= average_rating %}
-                                            <i class="fas fa-star"></i>
-                                        {% elif i_num|add:"-0.5" <= average_rating %}
-                                            <i class="fas fa-star-half-alt"></i>
-                                        {% else %}
-                                            <i class="far fa-star"></i>
-                                        {% endif %}
-                                        {% endwith %}
-                                        {% endfor %}
+                                        {% if i_num <= average_rating %} <i class="fas fa-star"></i>
+                                            {% elif i_num|add:"-0.5" <= average_rating %} <i
+                                                class="fas fa-star-half-alt"></i>
+                                                {% else %}
+                                                <i class="far fa-star"></i>
+                                                {% endif %}
+                                                {% endwith %}
+                                                {% endfor %}
                                     </div>
                                     <small class="text-muted">Based on {{ review_count }} reviews</small>
                                 </div>
@@ -787,11 +786,10 @@
                                         <div class="text-warning small">
                                             {% for i in "12345" %}
                                             {% with i_num=i|add:"0" %}
-                                            {% if i_num <= user_review.rating|add:"0" %}
-                                                <i class="fas fa-star"></i>
-                                            {% endif %}
-                                            {% endwith %}
-                                            {% endfor %}
+                                            {% if i_num <= user_review.rating|add:"0" %} <i class="fas fa-star"></i>
+                                                {% endif %}
+                                                {% endwith %}
+                                                {% endfor %}
                                         </div>
                                     </div>
                                     <small class="text-muted">{{ user_review.created_at|date:"F d, Y" }}</small>
@@ -819,11 +817,10 @@
                                     <div class="text-warning small">
                                         {% for i in "12345" %}
                                         {% with i_num=i|add:"0" %}
-                                        {% if i_num <= review.rating|add:"0" %}
-                                            <i class="fas fa-star"></i>
-                                        {% endif %}
-                                        {% endwith %}
-                                        {% endfor %}
+                                        {% if i_num <= review.rating|add:"0" %} <i class="fas fa-star"></i>
+                                            {% endif %}
+                                            {% endwith %}
+                                            {% endfor %}
                                     </div>
                                 </div>
                                 <p class="mb-0 text-secondary small">{{ review.comment }}</p>
@@ -1014,13 +1011,14 @@
 {% block extra_js %}
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    // Template filter syntax - correct
+    // FIXED: Template filter syntax - no spaces
     const lessonsData = {{ lessons_json|safe }};
     const courseSlug = "{{ course.slug }}";
     const isEnrolled = {{ enrollment|yesno:"true,false" }};
     const isInstructor = {{ is_instructor|yesno:"true,false" }};
     let player;
-    // Current lesson ID syntax - FIXED
+    
+    // FIXED: Current lesson ID syntax - removed spaces
     let currentLessonId = {% if current_lesson %}{{ current_lesson.id }}{% else %}null{% endif %};
 
     // Tracking Variables
@@ -1239,13 +1237,25 @@
 
         resetTracking();
 
-        // Load metadata to get duration
+        // Use loadedmetadata Event For Duration to prevent incorrect initial display
         video.addEventListener('loadedmetadata', function () {
+            if (isNaN(video.duration)) return;
             videoDuration = video.duration;
+
+            // Sync UI one last time with EXACT file duration if it differs from DB
+            const minutes = Math.floor(videoDuration / 60);
+            const seconds = Math.floor(videoDuration % 60);
+            const durationEl = document.getElementById('currentLessonDuration');
+            if (durationEl) {
+                durationEl.innerHTML = `<i class="fas fa-clock me-1"></i> ${minutes > 0 ? minutes + 'm ' : ''}${seconds}s`;
+            }
         });
 
-        // Tracking events
+        // Tracking events - start tracking only after metadata is likely ready
         video.addEventListener('play', function () {
+            if (!isNaN(video.duration)) {
+                videoDuration = video.duration;
+            }
             startTrackingLocal(video);
         });
 
@@ -1255,7 +1265,9 @@
 
         video.addEventListener('ended', function () {
             stopTracking();
-            videoDuration = video.duration;
+            if (!isNaN(video.duration)) {
+                videoDuration = video.duration;
+            }
             markLessonComplete(currentLessonId, segmentStart, videoDuration);
         });
     }
@@ -1345,6 +1357,13 @@
         currentLessonId = lessonId;
         document.getElementById('currentLessonTitle').innerText = lesson.title;
         document.getElementById('currentLessonDesc').innerText = lesson.description || "No description.";
+
+        const durationEl = document.getElementById('currentLessonDuration');
+        if (durationEl) {
+            // FIXED: Check if lesson.duration exists
+            const durationText = lesson.duration || (lesson.duration_minutes ? lesson.duration_minutes + 'm ' + (lesson.duration_seconds || '') + 's' : '0m');
+            durationEl.innerHTML = `<i class="fas fa-clock me-1"></i> ${durationText}`;
+        }
 
         updateResources(lesson);
         document.getElementById('quizInterface').style.display = 'none';
@@ -1704,6 +1723,8 @@
     }
 
     // Capture total course duration for predictive updates
-    const totalCourseDuration = lessonsData.reduce((acc, l) => acc + (l.duration_seconds || 0), 0);
+    const totalCourseDuration = lessonsData.reduce(function(acc, l) { 
+        return acc + (l.duration_seconds || 0); 
+    }, 0);
 </script>
 {% endblock %}
