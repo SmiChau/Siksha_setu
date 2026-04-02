@@ -16,7 +16,7 @@
     <div class="dashboard-wrapper">
         <aside class="sidebar">
             <div class="logo mb-4">
-                
+                <!-- Logo content can be added here -->
             </div>
             <nav class="menu mt-4">
                 {% if user.role == 'student' %}
@@ -32,12 +32,12 @@
         <main class="main-content">
             <div class="content-body">
                 {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-                {% endfor %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
                 {% endif %}
 
                 <div class="card border-0 shadow-sm">
@@ -60,83 +60,92 @@
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label">Bio</label>
-                                    <textarea name="bio" class="form-control" rows="3">{{ user.bio }}</textarea>
+                                    <textarea name="bio" class="form-control" rows="3">{{ user.bio|default:'' }}</textarea>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Phone</label>
-                                    <input type="text" name="phone" class="form-control" value="{{ user.phone }}">
+                                    <input type="text" name="phone" class="form-control" value="{{ user.phone|default:'' }}">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Profile Picture</label>
-                                    <input type="file" name="profile_picture" class="form-control">
+                                    <div class="d-flex align-items-center gap-3">
+                                        {% if user.profile_picture %}
+                                            <img src="{{ user.profile_picture.url }}" alt="Current Profile"
+                                                class="rounded-circle shadow-sm"
+                                                style="width: 50px; height: 50px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center bg-light text-muted shadow-sm"
+                                                style="width: 50px; height: 50px;">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                        {% endif %}
+                                        <input type="file" name="profile_picture" class="form-control flex-grow-1"
+                                            accept="image/*">
+                                    </div>
                                 </div>
 
                                 {% if profile_form %}
-                                <div class="col-12 mt-4">
-                                    <h5 class="fw-bold">Professional Teacher Information</h5>
-                                    <hr>
-                                    {% if profile_form.non_field_errors %}
-                                    <div class="alert alert-danger py-2 small">
-                                        {{ profile_form.non_field_errors }}
+                                    <div class="col-12 mt-4">
+                                        <h5 class="fw-bold">Professional Teacher Information</h5>
+                                        <hr>
+                                        {% if profile_form.non_field_errors %}
+                                            <div class="alert alert-danger py-2 small">
+                                                {{ profile_form.non_field_errors }}
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
-                                </div>
 
-                                <div class="col-md-12">
-                                    <label class="form-label fw-semibold">Education</label>
-                                    {{ profile_form.education }}
-                                    {% if profile_form.education.errors %}
-                                    <div class="text-danger small mt-1">
-                                        <i class="fas fa-exclamation-circle me-1"></i>{{
-                                        profile_form.education.errors|striptags }}
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold">Education</label>
+                                        {{ profile_form.education }}
+                                        {% if profile_form.education.errors %}
+                                            <div class="text-danger small mt-1">
+                                                <i class="fas fa-exclamation-circle me-1"></i>{{ profile_form.education.errors|striptags }}
+                                            </div>
+                                        {% endif %}
+                                        {% if profile_form.education.help_text %}
+                                            <div class="text-muted small mt-1">{{ profile_form.education.help_text }}</div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
-                                    {% if profile_form.education.help_text %}
-                                    <div class="text-muted small mt-1">{{ profile_form.education.help_text }}</div>
-                                    {% endif %}
-                                </div>
 
-                                <div class="col-md-12">
-                                    <label class="form-label fw-semibold">Experience</label>
-                                    {{ profile_form.experience }}
-                                    {% if profile_form.experience.errors %}
-                                    <div class="text-danger small mt-1">
-                                        <i class="fas fa-exclamation-circle me-1"></i>{{
-                                        profile_form.experience.errors|striptags }}
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-semibold">Experience</label>
+                                        {{ profile_form.experience }}
+                                        {% if profile_form.experience.errors %}
+                                            <div class="text-danger small mt-1">
+                                                <i class="fas fa-exclamation-circle me-1"></i>{{ profile_form.experience.errors|striptags }}
+                                            </div>
+                                        {% endif %}
+                                        {% if profile_form.experience.help_text %}
+                                            <div class="text-muted small mt-1">{{ profile_form.experience.help_text }}</div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
-                                    {% if profile_form.experience.help_text %}
-                                    <div class="text-muted small mt-1">{{ profile_form.experience.help_text }}</div>
-                                    {% endif %}
-                                </div>
 
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Location</label>
-                                    {{ profile_form.location }}
-                                    {% if profile_form.location.errors %}
-                                    <div class="text-danger small mt-1">
-                                        <i class="fas fa-exclamation-circle me-1"></i>{{
-                                        profile_form.location.errors|striptags }}
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Location</label>
+                                        {{ profile_form.location }}
+                                        {% if profile_form.location.errors %}
+                                            <div class="text-danger small mt-1">
+                                                <i class="fas fa-exclamation-circle me-1"></i>{{ profile_form.location.errors|striptags }}
+                                            </div>
+                                        {% endif %}
+                                        {% if profile_form.location.help_text %}
+                                            <div class="text-muted small mt-1">{{ profile_form.location.help_text }}</div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
-                                    {% if profile_form.location.help_text %}
-                                    <div class="text-muted small mt-1">{{ profile_form.location.help_text }}</div>
-                                    {% endif %}
-                                </div>
 
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Languages (comma separated)</label>
-                                    {{ profile_form.languages }}
-                                    {% if profile_form.languages.errors %}
-                                    <div class="text-danger small mt-1">
-                                        <i class="fas fa-exclamation-circle me-1"></i>{{
-                                        profile_form.languages.errors|striptags }}
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Languages (comma separated)</label>
+                                        {{ profile_form.languages }}
+                                        {% if profile_form.languages.errors %}
+                                            <div class="text-danger small mt-1">
+                                                <i class="fas fa-exclamation-circle me-1"></i>{{ profile_form.languages.errors|striptags }}
+                                            </div>
+                                        {% endif %}
+                                        {% if profile_form.languages.help_text %}
+                                            <div class="text-muted small mt-1">{{ profile_form.languages.help_text }}</div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
-                                    {% if profile_form.languages.help_text %}
-                                    <div class="text-muted small mt-1">{{ profile_form.languages.help_text }}</div>
-                                    {% endif %}
-                                </div>
                                 {% endif %}
 
                                 <div class="col-12 mt-4">

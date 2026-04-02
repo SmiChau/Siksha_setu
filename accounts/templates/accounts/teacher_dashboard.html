@@ -302,8 +302,6 @@
                     style="border-color: var(--mint-green); color: var(--mint-green);">
                     <i class="fas fa-search me-1"></i> Browse Courses
                 </a>
-
-
             </div>
         </div>
     </div>
@@ -404,24 +402,19 @@
                         <td>
                             {% if course.avg_rating %}
                             <div class="d-flex align-items-center">
-                                <div class="star-rating-container">
-                                    <div class="star-rating-display">
-                                        {% with avg_rating=course.avg_rating|floatformat:1 %}
-                                        {% with full_stars=course.avg_rating|floatformat:0 %}
-                                        {% for i in "12345" %}
-                                        {% with star_num=forloop.counter|add:0 %}
-                                        {% if star_num <= full_stars|add:0 %} <i class="fas fa-star text-warning"></i>
-                                            {% else %}
-                                            <i class="far fa-star text-warning"></i>
-                                            {% endif %}
-                                            {% endwith %}
-                                            {% endfor %}
-                                            {% endwith %}
-                                            {% endwith %}
-                                    </div>
-                                    <div class="fw-bold ms-2" style="color: #333;">{{ course.avg_rating|floatformat:1 }}
-                                    </div>
+                                <div class="rating-stars me-2">
+                                    {% with full_stars=course.avg_rating|floatformat:"0" %}
+                                    {% with empty_stars=5|add:"-"|add:full_stars %}
+                                    {% for i in "12345"|slice:full_stars %}
+                                    <i class="fas fa-star"></i>
+                                    {% endfor %}
+                                    {% for i in "12345"|slice:empty_stars %}
+                                    <i class="far fa-star"></i>
+                                    {% endfor %}
+                                    {% endwith %}
+                                    {% endwith %}
                                 </div>
+                                <span class="fw-bold" style="color: #333;">{{ course.avg_rating|floatformat:1 }}</span>
                             </div>
                             {% else %}
                             <span class="text-muted small">No ratings</span>
@@ -495,7 +488,6 @@
                         <th>Trending Score</th>
                         <th>Views</th>
                         <th>Enrollments</th>
-
                     </tr>
                 </thead>
                 <tbody>
@@ -512,11 +504,10 @@
                         </td>
                         <td>{{ item.course.views_count }}</td>
                         <td>{{ item.course.enrollment_count }}</td>
-
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-4 text-muted">No trending data yet.</td>
+                        <td colspan="4" class="text-center py-4 text-muted">No trending data yet.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -613,16 +604,66 @@
                             <span>Enrollments</span>
                         </div>
                     </button>
-                    <button class="nav-link rounded-pill" id="reviews-tab" data-bs-toggle="tab"
+                    <button class="nav-link rounded-pill me-2" id="reviews-tab" data-bs-toggle="tab"
                         data-bs-target="#reviews" style="border-color: var(--mint-green); color: var(--mint-green);">
                         <div class="d-flex align-items-center justify-content-center gap-2">
                             <i class="fas fa-star" style="color: #FFD700;"></i>
                             <span>Reviews</span>
                         </div>
                     </button>
+                    <button class="nav-link rounded-pill" id="profile-tab" data-bs-toggle="tab"
+                        data-bs-target="#profile-settings"
+                        style="border-color: var(--mint-green); color: var(--mint-green);">
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                            <i class="fas fa-user-circle"></i>
+                            <span>Profile</span>
+                        </div>
+                    </button>
                 </div>
 
                 <div class="tab-content">
+                    <!-- Profile Settings Tab -->
+                    <div class="tab-pane fade" id="profile-settings">
+                        <div class="card border-0 bg-light bg-opacity-10 p-3 rounded-3">
+                            <h6 class="fw-bold mb-3" style="color: var(--primary-blue);">Update Profile Photo</h6>
+                            <form action="{% url 'accounts:profile' %}" method="POST" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <div class="text-center mb-3">
+                                    <div class="position-relative d-inline-block">
+                                        {% if user.profile_picture %}
+                                        <img src="{{ user.profile_picture.url }}" alt="Profile"
+                                            class="rounded-circle shadow-sm"
+                                            style="width: 100px; height: 100px; object-fit: cover; border: 3px solid white;">
+                                        {% else %}
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                                            style="width: 100px; height: 100px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%); color: white; font-size: 2.5rem; border: 3px solid white;">
+                                            {{ user.get_short_name|first|upper }}
+                                        </div>
+                                        {% endif %}
+                                        <label for="id_profile_picture_quick"
+                                            class="position-absolute bottom-0 end-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                                            style="width: 32px; height: 32px; cursor: pointer; border: 1px solid #eee;">
+                                            <i class="fas fa-camera text-muted" style="font-size: 0.9rem;"></i>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <input type="file" name="profile_picture" id="id_profile_picture_quick"
+                                        class="form-control form-control-sm rounded-pill" accept="image/*" required>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary w-100 rounded-pill shadow-sm"
+                                    style="background-color: var(--mint-green); border: none;"> Upload Photo
+                                </button>
+                                <div class="text-center mt-3">
+                                    <a href="{% url 'accounts:profile' %}"
+                                        class="small text-muted text-decoration-none">
+                                        <i class="fas fa-cog me-1"></i> Full Profile Settings
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                     <!-- Enrollments Tab -->
                     <div class="tab-pane fade show active" id="enrollments">
                         {% if recent_enrollments %}
@@ -663,13 +704,13 @@
                                         {{ review.user.get_full_name|default:review.user.email|truncatechars:20 }}
                                     </span>
                                     <span class="text-warning small">
-                                        {% for i in "12345" %}
-                                        {% if forloop.counter <= review.rating %} <i class="fas fa-star"
-                                            style="font-size: 0.8rem;"></i>
-                                            {% else %}
-                                            <i class="far fa-star" style="font-size: 0.8rem;"></i>
-                                            {% endif %}
-                                            {% endfor %}
+                                        {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= review.rating %}
+                                        <i class="fas fa-star" style="font-size: 0.8rem;"></i>
+                                        {% else %}
+                                        <i class="far fa-star" style="font-size: 0.8rem;"></i>
+                                        {% endif %}
+                                        {% endfor %}
                                     </span>
                                 </div>
                                 <small class="text-muted d-block mb-1">{{ review.course.title|truncatewords:3 }}</small>

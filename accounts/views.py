@@ -651,6 +651,10 @@ def profile_view(request):
         
         if success:
             messages.success(request, 'Profile updated successfully!')
+            # Support redirecting back to where the user came from (e.g. dashboard)
+            next_url = request.GET.get('next') or request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
             return redirect('accounts:profile')
     
     context = {
