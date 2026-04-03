@@ -4,6 +4,9 @@ from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Avg, Count
+from django.core.exceptions import PermissionDenied, ValidationError, SuspiciousOperation
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.utils.text import slugify
 
@@ -745,9 +748,14 @@ def course_create_step1_view(request, slug=None):
         if form.is_valid():
             course = form.save(commit=False)
             course.instructor = request.user
-            course.save()
-            messages.success(request, "Step 1: Course details saved.")
-            return redirect('courses:course_edit_step2', slug=course.slug)
+            try:
+                course.save()
+                messages.success(request, "Step 1: Course details saved.")
+                return redirect('courses:course_edit_step2', slug=course.slug)
+            except SuspiciousOperation as e:
+                messages.error(request, f"File Error: {str(e)}")
+            except Exception as e:
+                messages.error(request, f"An error occurred: {str(e)}")
         else:
             messages.warning(request, "Please correct the errors below to proceed.")
     else:
@@ -791,9 +799,15 @@ def course_create_step2_view(request, slug):
             else:
                 lesson = form.save(commit=False)
                 lesson.course = course
-                lesson.save()
-                messages.success(request, "Lesson added successfully.")
-                return redirect('courses:course_edit_step2', slug=course.slug)
+                try:
+                    lesson.save()
+                    messages.success(request, "Lesson added successfully.")
+                    return redirect('courses:course_edit_step2', slug=course.slug)
+                except SuspiciousOperation as e:
+                    messages.error(request, f"File Error: {str(e)}")
+                    # Optionally log the error or redirect back with specific message
+                except Exception as e:
+                    messages.error(request, f"An unexpected error occurred while saving the lesson: {str(e)}")
     else:
         # Default the order to the next available one
         form = LessonForm(initial={'order': next_order})
@@ -840,11 +854,14 @@ def update_lesson_view(request, lesson_id):
             if not request.FILES.get("video_file"):
                 form.instance.video_file = lesson.video_file
                 
-            form.save()
-            messages.success(request, "Lesson updated successfully.")
-            return redirect('courses:course_edit_step2', slug=lesson.course.slug)
-        else:
-            messages.error(request, "Error updating lesson. Please check the form.")
+            try:
+                form.save()
+                messages.success(request, "Lesson updated successfully.")
+                return redirect('courses:course_edit_step2', slug=lesson.course.slug)
+            except SuspiciousOperation as e:
+                messages.error(request, f"File Error: {str(e)}")
+            except Exception as e:
+                messages.error(request, f"An unexpected error occurred while updating the lesson: {str(e)}")
             return redirect('courses:course_edit_step2', slug=lesson.course.slug)
 
     return redirect('courses:course_edit_step2', slug=lesson.course.slug)
@@ -869,9 +886,14 @@ def course_create_step3_view(request, slug):
         if form.is_valid():
             resource = form.save(commit=False)
             resource.lesson = lesson
-            resource.save()
-            messages.success(request, f"Resource added to {lesson.title}.")
-            return redirect('courses:course_edit_step3', slug=course.slug)
+            try:
+                resource.save()
+                messages.success(request, f"Resource added to {lesson.title}.")
+                return redirect('courses:course_edit_step3', slug=course.slug)
+            except SuspiciousOperation as e:
+                messages.error(request, f"File Error: {str(e)}")
+            except Exception as e:
+                messages.error(request, f"An unexpected error occurred: {str(e)}")
             
     lessons = course.lessons.all().prefetch_related('resources')
     context = {

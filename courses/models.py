@@ -4,7 +4,30 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
+import os
 import math
+
+
+def get_unique_filename(instance, filename):
+    """
+    Generates a unique filename for uploaded files to avoid long name issues
+    and path injection attempts.
+    """
+    ext = filename.split('.')[-1]
+    # Limit base filename length to 50 characters to stay safe
+    base_name = filename.split('.')[0][:50]
+    # Use UUID for guaranteed uniqueness
+    unique_name = f"{uuid.uuid4().hex[:10]}_{base_name}.{ext}"
+    
+    # Determine the subdirectory based on the model
+    if isinstance(instance, Course):
+        return os.path.join('course_thumbnails', unique_name)
+    elif isinstance(instance, Lesson):
+        return os.path.join('lesson_videos', unique_name)
+    elif isinstance(instance, LessonResource):
+        return os.path.join('lesson_resources', unique_name)
+    
+    return os.path.join('uploads', unique_name)
 
 
 def merge_ranges(ranges):
@@ -75,7 +98,7 @@ class Course(models.Model):
     slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField()
     short_description = models.CharField(max_length=500, blank=True)
-    thumbnail = models.ImageField(upload_to='course_thumbnails/', blank=True, null=True)
+    thumbnail = models.ImageField(upload_to=get_unique_filename, blank=True, null=True, max_length=500)
     thumbnail_url = models.URLField(blank=True, help_text='External thumbnail URL')
     
     instructor = models.ForeignKey(
@@ -248,7 +271,7 @@ class Lesson(models.Model):
         blank=True,
         help_text='YouTube video ID (e.g., dQw4w9WgXcQ) or full URL'
     )
-    video_file = models.FileField(upload_to='lesson_videos/', null=True, blank=True)
+    video_file = models.FileField(upload_to=get_unique_filename, null=True, blank=True, max_length=500)
     video_duration = models.PositiveIntegerField(default=0, help_text='Duration in minutes (Legacy)')
     duration_minutes = models.PositiveIntegerField(default=0)
     duration_seconds = models.PositiveIntegerField(default=0)
@@ -313,7 +336,7 @@ class LessonResource(models.Model):
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='resources')
     title = models.CharField(max_length=255)
     resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPE_CHOICES, default='pdf')
-    file = models.FileField(upload_to='lesson_resources/', blank=True, null=True)
+    file = models.FileField(upload_to=get_unique_filename, blank=True, null=True, max_length=500)
     external_url = models.URLField(blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
