@@ -1672,12 +1672,13 @@
     function checkProgressiveUnlocking() {
         let previousReady = true;
         lessonsData.forEach(function (lesson) {
-            // MASTER OVERRIDE: Unlock if course is mastered OR lesson is already completed OR previous is ready
-            lesson.is_unlocked = lesson.is_preview || isCourseMastered || lesson.video_completed || previousReady;
+            // MONOTONIC FIX: Once unlocked, always stay unlocked.
+            const nowUnlocked = lesson.is_preview || isCourseMastered || lesson.video_completed || previousReady;
+            lesson.is_unlocked = lesson.is_unlocked || nowUnlocked;
             
-            // Requirement: Next is ready if this one reached 60% (quiz_unlocked) 
-            // AND (has no quiz OR quiz is completed)
-            const isThisOneReady = (lesson.quiz_unlocked || lesson.video_completed) && (!lesson.has_quiz || lesson.quiz_completed);
+            // This lesson is ready to unlock the NEXT one only if criteria met:
+            // Video 95%+ watch (video_completed) AND (No Quiz OR Quiz Done)
+            const isThisOneReady = (lesson.video_completed) && (!lesson.has_quiz || lesson.quiz_completed);
             previousReady = isThisOneReady;
         });
     }

@@ -173,8 +173,13 @@ def course_detail_view(request, slug):
 
     for lesson in lessons:
         progress = lesson_progress.get(lesson.id)
+        
         # Load persisted status
+        video_completed = progress.is_completed if progress else False
+        quiz_unlocked = progress.quiz_unlocked if progress else False
+        quiz_completed = progress.quiz_completed if progress else False
         is_persisted_unlocked = progress.is_unlocked if progress else False
+        has_quiz = lesson.mcq_questions.exists()
         
         # Self-healing: Repair stale quiz_unlocked flag at course_detail load time too.
         # Covers old records and zero-duration lessons.
