@@ -215,6 +215,7 @@ def course_detail_view(request, slug):
             'quiz_completed': quiz_completed,
             'is_completed': video_completed, # Legacy compatibility
             'watch_time': progress.watch_time if progress else 0,
+            'max_position': progress.max_position if progress else 0,
             'has_quiz': has_quiz,
             'quiz_count': lesson.mcq_questions.count(),
             'questions': [

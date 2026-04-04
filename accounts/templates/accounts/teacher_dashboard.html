@@ -403,15 +403,14 @@
                             {% if course.avg_rating %}
                             <div class="d-flex align-items-center">
                                 <div class="rating-stars me-2">
-                                    {% with full_stars=course.avg_rating|floatformat:"0" %}
-                                    {% with empty_stars=5|add:"-"|add:full_stars %}
-                                    {% for i in "12345"|slice:full_stars %}
-                                    <i class="fas fa-star"></i>
-                                    {% endfor %}
-                                    {% for i in "12345"|slice:empty_stars %}
-                                    <i class="far fa-star"></i>
-                                    {% endfor %}
-                                    {% endwith %}
+                                    {% with full=course.avg_rating|floatformat:"0"|add:0 %}
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= full %}
+                                                <i class="fas fa-star"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
                                     {% endwith %}
                                 </div>
                                 <span class="fw-bold" style="color: #333;">{{ course.avg_rating|floatformat:1 }}</span>
@@ -611,14 +610,7 @@
                             <span>Reviews</span>
                         </div>
                     </button>
-                    <button class="nav-link rounded-pill" id="profile-tab" data-bs-toggle="tab"
-                        data-bs-target="#profile-settings"
-                        style="border-color: var(--mint-green); color: var(--mint-green);">
-                        <div class="d-flex align-items-center justify-content-center gap-2">
-                            <i class="fas fa-user-circle"></i>
-                            <span>Profile</span>
-                        </div>
-                    </button>
+                    
                 </div>
 
                 <div class="tab-content">
@@ -670,10 +662,16 @@
                         <ul class="list-unstyled mb-0">
                             {% for enrollment in recent_enrollments|slice:":4" %}
                             <li class="d-flex align-items-center py-2 border-bottom">
-                                <div class="activity-badge me-3" style="background-color: rgba(26, 83, 92, 0.1);">
-                                    <span class="fw-bold" style="color: var(--primary-blue);">
-                                        {{ enrollment.student.get_short_name|slice:":1"|upper }}
-                                    </span>
+                                <div class="me-3">
+                                    {% if enrollment.student.profile_picture %}
+                                    <img src="{{ enrollment.student.profile_picture.url }}" alt="{{ enrollment.student.get_short_name }}" 
+                                         class="rounded-circle" style="width: 38px; height: 38px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white shadow-sm"
+                                         style="width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%); font-size: 0.9rem;">
+                                        {{ enrollment.student.get_short_name|first|upper }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 <div class="flex-grow-1">
                                     <div class="fw-bold" style="color: var(--primary-blue);">
@@ -698,7 +696,19 @@
                         {% if recent_reviews %}
                         <ul class="list-unstyled mb-0">
                             {% for review in recent_reviews|slice:":4" %}
-                            <li class="py-2 border-bottom">
+                            <li class="py-2 border-bottom d-flex align-items-start">
+                                <div class="me-3">
+                                    {% if review.user.profile_picture %}
+                                    <img src="{{ review.user.profile_picture.url }}" alt="{{ review.user.get_short_name }}" 
+                                         class="rounded-circle" style="width: 38px; height: 38px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white shadow-sm"
+                                         style="width: 38px; height: 38px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 0.9rem;">
+                                        {{ review.user.get_short_name|first|upper }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="fw-bold" style="color: var(--primary-blue);">
                                         {{ review.user.get_full_name|default:review.user.email|truncatechars:20 }}

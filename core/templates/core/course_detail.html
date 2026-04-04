@@ -1020,6 +1020,24 @@
     
     // FIXED: Current lesson ID syntax - removed spaces
     let currentLessonId = {% if current_lesson %}{{ current_lesson.id }}{% else %}null{% endif %};
+    const userId = "{{ user.id }}";
+
+    // Resume Logic Helpers
+    function getResumeKey(lessonId) {
+        return `SikshaSetu_Resume_${userId}_${lessonId}`;
+    }
+
+    function getResumeTime(lessonId) {
+        const local = localStorage.getItem(getResumeKey(lessonId));
+        if (local) return parseFloat(local);
+        const lesson = lessonsData.find(l => l.id === lessonId);
+        return lesson ? (lesson.max_position || 0) : 0;
+    }
+
+    function saveResumeTime(lessonId, time) {
+        if (!isEnrolled) return;
+        localStorage.setItem(getResumeKey(lessonId), time.toString());
+    }
 
     // Tracking Variables
     let watchTimer = null;
@@ -1112,6 +1130,12 @@
     function onPlayerReady(event) {
         videoDuration = player.getDuration();
         resetTracking();
+        
+        // Resume from last position
+        const resumeTime = getResumeTime(currentLessonId);
+        if (resumeTime > 2) { // 2s threshold
+            player.seekTo(resumeTime, true);
+        }
     }
 
     function onPlayerStateChange(event) {
@@ -1213,7 +1237,7 @@
 
             playerDiv.innerHTML = `
                 <div class="ratio ratio-16x9">
-                    <video id="localVideo" controls autoplay class="w-100 h-100" style="object-fit: contain; background: black;">
+                    <video id="localVideo" controls autoplay preload="metadata" playsinline class="w-100 h-100" style="object-fit: contain; background: black;">
                         <source src="${lesson.video_file_url}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
@@ -1237,19 +1261,32 @@
 
         resetTracking();
 
-        // Use loadedmetadata Event For Duration to prevent incorrect initial display
-        video.addEventListener('loadedmetadata', function () {
-            if (isNaN(video.duration)) return;
+        function updateDurationDisplay() {
+            if (isNaN(video.duration) || !isFinite(video.duration) || video.duration <= 0) return;
+            
+            // Only update if duration has significantly changed or we don't have it yet
+            if (Math.abs(videoDuration - video.duration) < 0.1) return;
+            
             videoDuration = video.duration;
 
-            // Sync UI one last time with EXACT file duration if it differs from DB
+            // Update UI
             const minutes = Math.floor(videoDuration / 60);
             const seconds = Math.floor(videoDuration % 60);
             const durationEl = document.getElementById('currentLessonDuration');
             if (durationEl) {
-                durationEl.innerHTML = `<i class="fas fa-clock me-1"></i> ${minutes > 0 ? minutes + 'm ' : ''}${seconds}s`;
+                durationEl.innerHTML = `<i class="fas fa-clock me-1"></i> ${minutes > 0 ? minutes + "m " : ""}${seconds}s`;
             }
-        });
+        }
+
+        // Fire on both events for maximum compatibility across browsers & server configs
+        video.addEventListener('loadedmetadata', updateDurationDisplay);
+        video.addEventListener('durationchange', updateDurationDisplay);
+
+        // Resume from last position (Local)
+        const resumeTime = getResumeTime(currentLessonId);
+        if (resumeTime > 2 && video.currentTime < 1) {
+            video.currentTime = resumeTime;
+        }
 
         // Tracking events - start tracking only after metadata is likely ready
         video.addEventListener('play', function () {
@@ -1726,5 +1763,23 @@
     const totalCourseDuration = lessonsData.reduce(function(acc, l) { 
         return acc + (l.duration_seconds || 0); 
     }, 0);
+
+    // Final Sync on page refresh/close
+    window.addEventListener('beforeunload', function () {
+        if (isTracking && currentLessonId) {
+            let currentPos = 0;
+            try {
+                currentPos = player ? player.getCurrentTime() : document.getElementById('localVideo')?.currentTime || 0;
+            } catch (e) {}
+            if (currentPos > 0) {
+                // Use beacon if available, otherwise standard fetch (unreliable but best effort)
+                const data = JSON.stringify({ start_time: segmentStart, end_time: currentPos });
+                const url = '/courses/' + courseSlug + '/lesson/' + currentLessonId + '/complete/';
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon(url, data);
+                }
+            }
+        }
+    });
 </script>
 {% endblock %}
