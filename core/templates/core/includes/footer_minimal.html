@@ -1,0 +1,41 @@
+<footer class="footer-minimal py-4" style="background: linear-gradient(135deg, #242327, #3d3d3e); border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
+    <div class="container-fluid px-4">
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 small">
+            <div style="color: rgba(255,255,255,0.7);">
+                &copy; 2026 <strong style="color: white;">SikshaSetu</strong>. All rights reserved.
+            </div>
+            <div class="d-flex gap-4">
+                <a href="{% url 'core:privacy_policy' %}" class="text-decoration-none" style="color: rgba(255,255,255,0.7); transition: all 0.3s ease;">
+                    Privacy Policy
+                </a>
+                <a href="{% url 'core:terms_conditions' %}" class="text-decoration-none" style="color: rgba(255,255,255,0.7); transition: all 0.3s ease;">
+                    Terms
+                </a>
+                <a href="{% url 'core:help_center' %}" class="text-decoration-none" style="color: rgba(255,255,255,0.7); transition: all 0.3s ease;">
+                    Help Center
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<style>
+    .footer-minimal {
+        font-size: 0.85rem;
+    }
+    
+    .footer-minimal a:hover {
+        color: #FFD54F !important;
+        transform: translateY(-1px);
+    }
+    
+    .footer-minimal a {
+        display: inline-block;
+    }
+    
+    @media (max-width: 768px) {
+        .footer-minimal .d-flex {
+            text-align: center;
+        }
+    }
+</style>

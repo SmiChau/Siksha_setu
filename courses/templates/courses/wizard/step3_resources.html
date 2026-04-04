@@ -13,21 +13,35 @@
         <!-- Resource List -->
         <div class="mb-3">
             {% for resource in lesson.resources.all %}
-            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" id="resource-row-{{ resource.id }}">
                 <small class="fw-bold">
-                    <i
-                        class="{% if resource.resource_type == 'pdf' %}far fa-file-pdf text-danger{% else %}fas fa-link text-info{% endif %} me-2"></i>
-                    {{ resource.title }}
+                    <i class="{% if resource.resource_type == 'pdf' %}far fa-file-pdf text-danger{% else %}fas fa-link text-info{% endif %} me-2"></i>
+                    <span id="resource-title-{{ resource.id }}">{{ resource.title }}</span>
+                    {% if resource.resource_type == 'link' and resource.external_url %}
+                    <a href="{{ resource.external_url }}" target="_blank" class="ms-1 text-muted small">({{ resource.external_url|truncatechars:40 }})</a>
+                    {% endif %}
                 </small>
-                <form action="{% url 'courses:course_edit_step3' course.slug %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="delete_resource" value="{{ resource.id }}">
-                    <button type="submit" class="btn btn-link text-danger p-0"
-                        onclick="return confirm('Delete resource?')"><i class="fas fa-times"></i></button>
-                </form>
+                <div class="d-flex gap-2">
+                    <!-- Edit Button -->
+                    <button type="button"
+                        class="btn btn-link text-primary p-0 edit-resource-btn"
+                        title="Edit Resource"
+                        data-resource-id="{{ resource.id }}">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    <!-- Delete Button -->
+                    <form action="{% url 'courses:course_edit_step3' course.slug %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="delete_resource" value="{{ resource.id }}">
+                        <button type="submit" class="btn btn-link text-danger p-0"
+                            onclick="return confirm('Delete this resource?')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
             {% empty %}
-            <small class="text-muted italic">No resources yet.</small>
+            <small class="text-muted fst-italic">No resources yet.</small>
             {% endfor %}
         </div>
 
@@ -71,6 +85,50 @@
 </div>
 {% endfor %}
 
+<!-- ============================================================ -->
+<!-- Shared Resource Edit Panel (slide-in) -->
+<!-- ============================================================ -->
+<div id="editResourceOverlay" class="d-none" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1040;"></div>
+<div id="editResourcePanel" style="position:fixed;top:0;right:-450px;width:440px;height:100vh;background:#fff;z-index:1050;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.15);transition:right .3s ease;padding:28px 24px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold mb-0"><i class="fas fa-pencil-alt text-primary me-2"></i>Edit Resource</h5>
+        <button type="button" id="closeEditResourcePanel" class="btn-close"></button>
+    </div>
+    <form id="editResourceForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" id="editResourceId" name="resource_id" value="">
+        <div class="mb-3">
+            <label class="form-label fw-bold small">Title <span class="text-danger">*</span></label>
+            <input type="text" id="editResourceTitle" name="title" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold small">Type <span class="text-danger">*</span></label>
+            <select id="editResourceType" name="resource_type" class="form-select">
+                <option value="pdf">PDF Document</option>
+                <option value="link">External Link</option>
+                <option value="doc">Word Document</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="mb-3" id="editFileRow">
+            <label class="form-label fw-bold small">Replace File (leave blank to keep existing)</label>
+            <input type="file" name="file" class="form-control form-control-sm">
+            <small id="existingFileNote" class="text-muted mt-1 d-block"></small>
+        </div>
+        <div class="mb-3" id="editUrlRow">
+            <label class="form-label fw-bold small">External URL</label>
+            <input type="url" id="editResourceUrl" name="external_url" class="form-control" placeholder="https://...">
+        </div>
+        <div id="editResourceError" class="alert alert-danger d-none small py-2"></div>
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" id="saveResourceBtn" class="btn btn-primary rounded-pill px-4 fw-bold">
+                <i class="fas fa-check me-1"></i> Save Changes
+            </button>
+            <button type="button" id="cancelEditResource" class="btn btn-light rounded-pill px-4">Cancel</button>
+        </div>
+    </form>
+</div>
+
 <div class="d-flex justify-content-between mt-5">
     <a href="{% url 'courses:course_edit_step2' course.slug %}" class="btn btn-light btn-lg rounded-pill px-5">
         <i class="fas fa-arrow-left me-2"></i> Back
@@ -79,4 +137,131 @@
         Next: MCQs <i class="fas fa-arrow-right ms-2"></i>
     </a>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const panel    = document.getElementById('editResourcePanel');
+    const overlay  = document.getElementById('editResourceOverlay');
+    const form     = document.getElementById('editResourceForm');
+    const errorBox = document.getElementById('editResourceError');
+    const saveBtn  = document.getElementById('saveResourceBtn');
+
+    function openPanel() {
+        panel.style.right = '0';
+        overlay.classList.remove('d-none');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePanel() {
+        panel.style.right = '-450px';
+        overlay.classList.add('d-none');
+        document.body.style.overflow = '';
+        errorBox.classList.add('d-none');
+    }
+
+    document.getElementById('closeEditResourcePanel').addEventListener('click', closePanel);
+    document.getElementById('cancelEditResource').addEventListener('click', closePanel);
+    overlay.addEventListener('click', closePanel);
+
+    // Open edit panel and pre-fill data
+    document.querySelectorAll('.edit-resource-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const resourceId = this.dataset.resourceId;
+            document.getElementById('editResourceId').value = resourceId;
+            errorBox.classList.add('d-none');
+
+            // Show loading state
+            document.getElementById('editResourceTitle').value = 'Loading...';
+            openPanel();
+
+            fetch('/courses/resource/' + resourceId + '/get/', {
+                headers: { 'X-CSRFToken': getCsrf() }
+            })
+            .then(r => r.json())
+            .then(function (data) {
+                document.getElementById('editResourceTitle').value = data.title;
+                document.getElementById('editResourceType').value  = data.resource_type;
+                document.getElementById('editResourceUrl').value   = data.external_url;
+
+                const fileNote = document.getElementById('existingFileNote');
+                if (data.has_file) {
+                    fileNote.textContent = 'Current file: ' + data.file_name;
+                } else {
+                    fileNote.textContent = '';
+                }
+            })
+            .catch(function () {
+                errorBox.textContent = 'Failed to load resource data.';
+                errorBox.classList.remove('d-none');
+            });
+        });
+    });
+
+    // Submit edit form
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const resourceId = document.getElementById('editResourceId').value;
+        errorBox.classList.add('d-none');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+
+        const formData = new FormData(form);
+
+        fetch('/courses/resource/' + resourceId + '/update/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': getCsrf() },
+            credentials: 'same-origin'
+        })
+        .then(r => r.json())
+        .then(function (data) {
+            if (data.success) {
+                closePanel();
+                // Update the row title in-place without a full reload
+                const titleEl = document.getElementById('resource-title-' + resourceId);
+                if (titleEl) {
+                    titleEl.textContent = document.getElementById('editResourceTitle').value;
+                }
+                showToast('Resource updated successfully.', 'success');
+            } else {
+                const msg = data.errors
+                    ? Object.values(data.errors).join(' ')
+                    : (data.error || 'Failed to save.');
+                errorBox.textContent = msg;
+                errorBox.classList.remove('d-none');
+            }
+        })
+        .catch(function () {
+            errorBox.textContent = 'Network error. Please try again.';
+            errorBox.classList.remove('d-none');
+        })
+        .finally(function () {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-check me-1"></i> Save Changes';
+        });
+    });
+
+    function getCsrf() {
+        const el = document.querySelector('[name="csrfmiddlewaretoken"]');
+        return el ? el.value : '';
+    }
+
+    function showToast(message, type) {
+        document.querySelectorAll('.step-toast').forEach(t => t.remove());
+        const t = document.createElement('div');
+        t.className = 'step-toast alert alert-' + (type === 'success' ? 'success' : 'danger') +
+                      ' position-fixed shadow-lg';
+        t.style.cssText = 'top:20px;right:20px;z-index:9999;min-width:260px;';
+        t.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + message;
+        document.body.appendChild(t);
+        setTimeout(function () {
+            t.style.transition = 'opacity .3s';
+            t.style.opacity = '0';
+            setTimeout(() => t.remove(), 300);
+        }, 3000);
+    }
+});
+</script>
 {% endblock %}

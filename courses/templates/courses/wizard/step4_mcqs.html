@@ -17,20 +17,30 @@
         <!-- MCQ List -->
         <div class="mb-3 mcq-list" data-lesson-id="{{ lesson.id }}">
             {% for q in lesson.mcq_questions.all %}
-            <div class="py-2 border-bottom d-flex justify-content-between align-items-center" data-mcq-id="{{ q.id }}">
-                <div>
-                    <small class="fw-bold">{{ forloop.counter }}. {{ q.question_text|truncatechars:80 }}</small>
+            <div class="py-2 border-bottom d-flex justify-content-between align-items-start" data-mcq-id="{{ q.id }}" id="mcq-row-{{ q.id }}">
+                <div class="flex-grow-1 me-2">
+                    <small class="fw-bold" id="mcq-text-{{ q.id }}">{{ forloop.counter }}. {{ q.question_text|truncatechars:80 }}</small>
                     <br>
                     <small class="text-success fw-bold">Ans: {{ q.correct_option }}</small>
                 </div>
-                <form action="{% url 'courses:course_edit_step4' course.slug %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="delete_mcq" value="{{ q.id }}">
-                    <button type="submit" class="btn btn-link text-danger p-0"
-                        onclick="return confirm('Delete this question?')">
-                        <i class="fas fa-times"></i>
+                <div class="d-flex gap-2 flex-shrink-0">
+                    <!-- Edit Button -->
+                    <button type="button"
+                        class="btn btn-link text-primary p-0 edit-mcq-btn"
+                        title="Edit Question"
+                        data-mcq-id="{{ q.id }}">
+                        <i class="fas fa-pencil-alt"></i>
                     </button>
-                </form>
+                    <!-- Delete Button -->
+                    <form action="{% url 'courses:course_edit_step4' course.slug %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="delete_mcq" value="{{ q.id }}">
+                        <button type="submit" class="btn btn-link text-danger p-0"
+                            onclick="return confirm('Delete this question?')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
             {% empty %}
             <small class="text-muted fst-italic no-questions-msg">No questions added for this lesson.</small>
@@ -75,7 +85,7 @@
                     <div class="col-md-4">
                         <label class="form-label small fw-bold">Correct Option</label>
                         <select name="correct_option" class="form-select form-select-sm" required>
-                            <option value="" disabled selected>Select an option</option>
+                            <option value="" disabled selected>Select</option>
                             <option value="A">Option A</option>
                             <option value="B">Option B</option>
                             <option value="C">Option C</option>
@@ -96,6 +106,69 @@
 </div>
 {% endfor %}
 
+<!-- ============================================================ -->
+<!-- Shared MCQ Edit Panel (slide-in) -->
+<!-- ============================================================ -->
+<div id="editMcqOverlay" class="d-none" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1040;"></div>
+<div id="editMcqPanel" style="position:fixed;top:0;right:-520px;width:500px;height:100vh;background:#fff;z-index:1050;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.15);transition:right .3s ease;padding:28px 24px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold mb-0"><i class="fas fa-pencil-alt text-primary me-2"></i>Edit Question</h5>
+        <button type="button" id="closeEditMcqPanel" class="btn-close"></button>
+    </div>
+    <form id="editMcqForm">
+        {% csrf_token %}
+        <input type="hidden" id="editMcqId" value="">
+        <div class="mb-3">
+            <label class="form-label fw-bold small">Question <span class="text-danger">*</span></label>
+            <textarea id="editMcqQuestion" name="question_text" class="form-control" rows="3" required></textarea>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">Option A <span class="text-danger">*</span></label>
+                <input type="text" id="editMcqA" name="option_a" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">Option B <span class="text-danger">*</span></label>
+                <input type="text" id="editMcqB" name="option_b" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">Option C <span class="text-danger">*</span></label>
+                <input type="text" id="editMcqC" name="option_c" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">Option D <span class="text-danger">*</span></label>
+                <input type="text" id="editMcqD" name="option_d" class="form-control form-control-sm" required>
+            </div>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">Correct Option <span class="text-danger">*</span></label>
+                <select id="editMcqCorrect" name="correct_option" class="form-select form-select-sm" required>
+                    <option value="A">Option A</option>
+                    <option value="B">Option B</option>
+                    <option value="C">Option C</option>
+                    <option value="D">Option D</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold small">Order</label>
+                <input type="number" id="editMcqOrder" name="order" class="form-control form-control-sm" min="0" value="0">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold small">Explanation (optional)</label>
+            <textarea id="editMcqExplanation" name="explanation" class="form-control form-control-sm" rows="2"></textarea>
+        </div>
+        <div id="editMcqError" class="alert alert-danger d-none small py-2"></div>
+        <div class="d-flex gap-2 mt-3">
+            <button type="submit" id="saveMcqBtn" class="btn btn-primary rounded-pill px-4 fw-bold">
+                <i class="fas fa-check me-1"></i> Save Changes
+            </button>
+            <button type="button" id="cancelEditMcq" class="btn btn-light rounded-pill px-4">Cancel</button>
+        </div>
+    </form>
+</div>
+
 <div class="d-flex justify-content-between mt-5">
     <a href="{% url 'courses:course_edit_step3' course.slug %}" class="btn btn-light btn-lg rounded-pill px-5">
         <i class="fas fa-arrow-left me-2"></i> Back
@@ -109,101 +182,179 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Get CSRF token from the form
-        function getCsrfToken() {
-            const csrfInput = document.querySelector('[name="csrfmiddlewaretoken"]');
-            return csrfInput ? csrfInput.value : '';
+
+        // ================================================================
+        //  Shared helpers
+        // ================================================================
+        function getCsrf() {
+            const el = document.querySelector('[name="csrfmiddlewaretoken"]');
+            return el ? el.value : '';
         }
 
-        // Function to attach event listener (for dynamically updated forms)
+        function showToast(message, type) {
+            document.querySelectorAll('.step-toast').forEach(t => t.remove());
+            const t = document.createElement('div');
+            t.className = 'step-toast alert alert-' + (type === 'success' ? 'success' : 'danger') +
+                          ' position-fixed shadow-lg';
+            t.style.cssText = 'top:20px;right:20px;z-index:9999;min-width:260px;';
+            t.innerHTML = '<i class="fas fa-' + (type === 'success' ? 'check' : 'exclamation') + '-circle me-2"></i>' + message;
+            document.body.appendChild(t);
+            setTimeout(function () {
+                t.style.transition = 'opacity .3s';
+                t.style.opacity = '0';
+                setTimeout(() => t.remove(), 300);
+            }, 3000);
+        }
+
+        // ================================================================
+        //  Add-MCQ AJAX (unchanged original logic, extracted for reuse)
+        // ================================================================
         function attachFormListener(form) {
             if (form._listenerAttached) return;
-
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                handleFormSubmit(this);
-            });
+                const submitButton = form.querySelector('button[type="submit"]');
+                const originalText = submitButton.innerHTML;
+                const formData = new FormData(form);
+                const questionText = form.querySelector('[name="question_text"]').value.trim();
+                const correctOption = form.querySelector('[name="correct_option"]').value;
 
-            form._listenerAttached = true;
-        }
+                if (!questionText || !correctOption) {
+                    showToast('Please fill all required fields', 'error');
+                    return;
+                }
 
-        // Extract form submission logic
-        function handleFormSubmit(form) {
-            const submitButton = form.querySelector('button[type="submit"]');
-            if (!submitButton) return;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
 
-            const originalButtonText = submitButton.innerHTML;
-            const formData = new FormData(form);
-
-            // Validate form
-            const questionText = form.querySelector('[name="question_text"]').value.trim();
-            const correctOption = form.querySelector('[name="correct_option"]').value;
-
-            if (!questionText || !correctOption) {
-                showToast('Please fill all required fields', 'error');
-                return;
-            }
-
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
-
-            fetch(form.action || window.location.href, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': getCsrfToken()
-                },
-                credentials: 'same-origin'
-            })
-                .then(response => response.json())
-                .then(data => {
+                fetch(form.action || window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': getCsrf() },
+                    credentials: 'same-origin'
+                })
+                .then(r => r.json())
+                .then(function (data) {
                     if (data.success) {
-                        // Reload the page to show updated content
                         window.location.reload();
                     } else {
                         throw new Error(data.error || 'Failed to add question');
                     }
                 })
-                .catch(error => {
-                    console.error('Error:', error);
+                .catch(function (error) {
                     showToast(error.message || 'Failed to add question. Please try again.', 'error');
-
-                    // Re-enable button
                     submitButton.disabled = false;
-                    submitButton.innerHTML = originalButtonText;
+                    submitButton.innerHTML = originalText;
                 });
+            });
+            form._listenerAttached = true;
         }
 
-        // Handle form submission for each MCQ form
-        document.querySelectorAll('.mcq-form').forEach(form => {
-            attachFormListener(form);
+        document.querySelectorAll('.mcq-form').forEach(attachFormListener);
+
+        // ================================================================
+        //  MCQ Edit Panel
+        // ================================================================
+        const panel    = document.getElementById('editMcqPanel');
+        const overlay  = document.getElementById('editMcqOverlay');
+        const editForm = document.getElementById('editMcqForm');
+        const errorBox = document.getElementById('editMcqError');
+        const saveBtn  = document.getElementById('saveMcqBtn');
+
+        function openMcqPanel() {
+            panel.style.right = '0';
+            overlay.classList.remove('d-none');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMcqPanel() {
+            panel.style.right = '-520px';
+            overlay.classList.add('d-none');
+            document.body.style.overflow = '';
+            errorBox.classList.add('d-none');
+        }
+
+        document.getElementById('closeEditMcqPanel').addEventListener('click', closeMcqPanel);
+        document.getElementById('cancelEditMcq').addEventListener('click', closeMcqPanel);
+        overlay.addEventListener('click', closeMcqPanel);
+
+        // Open panel and pre-fill
+        document.querySelectorAll('.edit-mcq-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const mcqId = this.dataset.mcqId;
+                document.getElementById('editMcqId').value = mcqId;
+                errorBox.classList.add('d-none');
+
+                document.getElementById('editMcqQuestion').value = 'Loading...';
+                openMcqPanel();
+
+                fetch('/courses/mcq/' + mcqId + '/get/', {
+                    headers: { 'X-CSRFToken': getCsrf() }
+                })
+                .then(r => r.json())
+                .then(function (data) {
+                    document.getElementById('editMcqQuestion').value    = data.question_text;
+                    document.getElementById('editMcqA').value           = data.option_a;
+                    document.getElementById('editMcqB').value           = data.option_b;
+                    document.getElementById('editMcqC').value           = data.option_c;
+                    document.getElementById('editMcqD').value           = data.option_d;
+                    document.getElementById('editMcqCorrect').value     = data.correct_option;
+                    document.getElementById('editMcqExplanation').value = data.explanation;
+                    document.getElementById('editMcqOrder').value       = data.order;
+                })
+                .catch(function () {
+                    errorBox.textContent = 'Failed to load question data.';
+                    errorBox.classList.remove('d-none');
+                });
+            });
         });
 
-        // Toast notification function
-        function showToast(message, type = 'success') {
-            // Remove existing toasts
-            const existingToasts = document.querySelectorAll('.custom-toast');
-            existingToasts.forEach(toast => toast.remove());
+        // Submit edit
+        editForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const mcqId = document.getElementById('editMcqId').value;
+            errorBox.classList.add('d-none');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
 
-            const toast = document.createElement('div');
-            toast.className = `custom-toast alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed shadow-lg`;
-            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 250px;';
-            toast.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                    <span>${message}</span>
-                </div>
-            `;
+            const formData = new FormData(editForm);
 
-            document.body.appendChild(toast);
-
-            // Auto-remove after 3 seconds
-            setTimeout(() => {
-                toast.style.transition = 'opacity 0.3s';
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
+            fetch('/courses/mcq/' + mcqId + '/update/', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': getCsrf() },
+                credentials: 'same-origin'
+            })
+            .then(r => r.json())
+            .then(function (data) {
+                if (data.success) {
+                    closeMcqPanel();
+                    // Update the question text in the row without full reload
+                    const textEl = document.getElementById('mcq-text-' + mcqId);
+                    if (textEl) {
+                        const newText = document.getElementById('editMcqQuestion').value;
+                        textEl.textContent = newText.length > 80
+                            ? newText.substring(0, 80) + '…'
+                            : newText;
+                    }
+                    showToast('Question updated successfully.', 'success');
+                } else {
+                    const msg = data.errors
+                        ? Object.values(data.errors).join(' ')
+                        : (data.error || 'Failed to save.');
+                    errorBox.textContent = msg;
+                    errorBox.classList.remove('d-none');
+                }
+            })
+            .catch(function () {
+                errorBox.textContent = 'Network error. Please try again.';
+                errorBox.classList.remove('d-none');
+            })
+            .finally(function () {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-check me-1"></i> Save Changes';
+            });
+        });
     });
 </script>
 {% endblock %}

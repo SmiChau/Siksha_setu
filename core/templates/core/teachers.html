@@ -1,4 +1,4 @@
-{% extends "core/base_public.html" %}
+{% extends "core/base.html" %}
 {% load static %}
 
 {% block title %}Meet Our Teachers - SikshaSetu{% endblock %}
@@ -32,6 +32,24 @@
         border: 1px solid var(--mint-green);
         color: var(--primary-blue);
         background: rgba(78, 205, 196, 0.1);
+    }
+
+    .text-mint-green {
+        color: var(--mint-green) !important;
+    }
+
+    .transition-all {
+        transition: all 0.3s ease;
+    }
+
+    .teacher-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+    }
+
+    .teacher-card:hover .teacher-avatar {
+        transform: scale(1.05);
+        transition: all 0.3s ease;
     }
 </style>
 {% endblock %}
@@ -82,69 +100,68 @@
 
             {% for teacher in teachers %}
             <div class="col-md-6 col-lg-4 col-xl-3">
-                <div class="teacher-card card border-0 shadow-sm h-100 position-relative p-4 text-center rounded-4">
+                <div class="teacher-card card border-0 shadow-sm h-100 p-4 text-center rounded-4 d-flex flex-column">
 
                     <!-- Avatar -->
-                    <div class="teacher-avatar-wrapper mb-3">
+                    <div class="teacher-avatar-wrapper mb-3 flex-shrink-0">
                         {% if teacher.profile_picture %}
-                        <img src="{{ teacher.profile_picture.url }}" class="teacher-avatar rounded-circle"
-                            alt="{{ teacher.get_full_name }}" style="width: 150px; height: 150px; object-fit: cover;">
+                        <img src="{{ teacher.profile_picture.url }}" class="teacher-avatar rounded-circle shadow-sm"
+                            alt="{{ teacher.get_full_name }}" style="width: 130px; height: 130px; object-fit: cover; border: 3px solid rgba(78, 205, 196, 0.2);">
                         {% else %}
-                        <div class="teacher-avatar-placeholder rounded-circle mx-auto d-flex align-items-center justify-content-center"
-                            style="width: 150px; height: 150px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%); color: white; font-size: 3rem;">
+                        <div class="teacher-avatar-placeholder rounded-circle mx-auto d-flex align-items-center justify-content-center shadow-sm"
+                            style="width: 130px; height: 130px; background: linear-gradient(135deg, var(--primary-blue) 0%, var(--mint-green) 100%); color: white; font-size: 2.5rem; border: 3px solid rgba(78, 205, 196, 0.2);">
                             {{ teacher.get_short_name|first }}
                         </div>
                         {% endif %}
                     </div>
 
-                    <!-- Name -->
-                    <h5 class="teacher-name fw-bold mb-2">
-                        {{ teacher.get_full_name }}
-                    </h5>
+                    <!-- Main Info Area (Expands to fill space) -->
+                    <div class="teacher-info-content mb-3">
+                        <h5 class="teacher-name fw-bold mb-1 text-truncate" title="{{ teacher.get_full_name }}">
+                            {{ teacher.get_full_name }}
+                        </h5>
 
-                    <!-- Location / Expertise -->
-                    <div class="teacher-expertise text-muted mb-2 small">
-                        {% if teacher.teacher_profile and teacher.teacher_profile.location %}
-                        <i class="fas fa-map-marker-alt me-1"></i>
-                        {{ teacher.teacher_profile.location }}
-                        {% else %}
-                        <i class="fas fa-star me-1"></i>
-                        Expert Instructor
-                        {% endif %}
-                    </div>
-
-                    <!-- Short Bio -->
-                    <p class="teacher-bio-short text-muted mb-3">{{ teacher.bio|default:"Experienced educator specializing in their field."|truncatechars:120 }}</p>
-
-                    <!-- Stats -->
-                    <div class="teacher-stats-mini d-flex justify-content-between text-muted small mb-3">
-
-                        <!-- Courses -->
-                        <span class="d-flex align-items-center">
-                            <i class="fas fa-video me-1"></i>
-                            {{ teacher.course_count|default:0 }} Courses
-                        </span>
-
-                        <!-- Divider -->
-                        <span class="mx-2">•</span>
-
-                        <!-- Education -->
-                        <span class="d-flex align-items-center">
-                            <i class="fas fa-graduation-cap me-1"></i>
-                            {% if teacher.teacher_profile and teacher.teacher_profile.education %}
-                            {{ teacher.teacher_profile.education|truncatechars:15 }}
+                        <div class="teacher-expertise text-muted mb-2 small text-truncate">
+                            {% if teacher.teacher_profile and teacher.teacher_profile.location %}
+                            <i class="fas fa-map-marker-alt me-1 text-mint-green"></i>
+                            {{ teacher.teacher_profile.location }}
                             {% else %}
-                            Qualified
+                            <i class="fas fa-certificate me-1 text-mint-green"></i>
+                            Expert Instructor
                             {% endif %}
-                        </span>
+                        </div>
+
+                        <p class="teacher-bio-short text-muted mb-0 small" style="display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; height: 4.5em; line-height: 1.5em;">
+                            {{ teacher.bio|default:"Experienced educator specializing in their field with a passion for teaching." }}
+                        </p>
                     </div>
 
-                    <!-- View Profile -->
-                    <a href="{% url 'core:teacher_profile' teacher.id %}"
-                        class="btn btn-outline-primary rounded-pill px-4 mt-2"
-                        style="border-color: var(--mint-green); color: var(--mint-green);">
-                        View Profile
-                    </a>
+                    <!-- Stats Section (Locked at bottom of info) -->
+                    <div class="teacher-stats-mini mt-auto pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center text-muted small px-1" style="height: 24px;">
+                            <span class="d-flex align-items-center">
+                                <i class="fas fa-play-circle me-1 text-mint-green"></i>
+                                {{ teacher.course_count|default:0 }} Courses
+                            </span>
+                            <span class="mx-1 text-muted-50">|</span>
+                            <span class="d-flex align-items-center text-truncate" style="max-width: 90px;">
+                                <i class="fas fa-graduation-cap me-1 text-mint-green"></i>
+                                {% if teacher.teacher_profile and teacher.teacher_profile.education %}
+                                {{ teacher.teacher_profile.education }}
+                                {% else %}
+                                Certified
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- View Profile Button (Hard-Stuck to bottom) -->
+                    <div class="mt-4 pt-2">
+                        <a href="{% url 'core:teacher_profile' teacher.id %}"
+                            class="btn btn-outline-mint-green rounded-pill btn-sm w-100 fw-bold py-2 shadow-sm transition-all">
+                            View Profile
+                        </a>
+                    </div>
 
                 </div>
             </div>

@@ -1,0 +1,71 @@
+{% load static %}
+<footer class="footer pt-5 pb-4 bg-dark text-white border-top border-secondary shadow-lg">
+    <div class="container text-md-left">
+        <div class="row text-md-left">
+            <div class="col-md-3 col-lg-3 col-xl-3 mx-auto mt-3">
+                <h5 class="text-uppercase mb-4 fw-bold text-primary">SikshaSetu</h5>
+                <p class="small text-white-50">SikshaSetu is a premium Learning Management System designed to bridge the gap between world-class knowledge and learners everywhere. Empowering you with every lesson.</p>
+                <div class="mt-4">
+                    <a href="https://facebook.com" class="text-white me-4" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://instagram.com" class="text-white me-4" target="_blank"><i class="fab fa-instagram"></i></a>
+                    <a href="https://linkedin.com" class="text-white me-4" target="_blank"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="https://youtube.com" class="text-white me-4" target="_blank"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+
+            <div class="col-md-2 col-lg-2 col-xl-2 mx-auto mt-3">
+                <h5 class="text-uppercase mb-4 fw-bold text-info">Platform</h5>
+                <p><a href="{% url 'core:about' %}" class="text-white-50 text-decoration-none small hover-link">About SikshaSetu</a></p>
+                <p><a href="{% url 'core:mission' %}" class="text-white-50 text-decoration-none small hover-link">Our Mission</a></p>
+                <p><a href="{% url 'core:contact' %}" class="text-white-50 text-decoration-none small hover-link">Contact Us</a></p>
+                <p><a href="{% url 'core:faq' %}" class="text-white-50 text-decoration-none small hover-link">FAQs</a></p>
+            </div>
+
+            <div class="col-md-2 col-lg-2 col-xl-2 mx-auto mt-3">
+                <h5 class="text-uppercase mb-4 fw-bold text-info">Courses</h5>
+                <p><a href="{% url 'courses:course_list' %}" class="text-white-50 text-decoration-none small hover-link">Browse Courses</a></p>
+                <p><a href="{% url 'courses:course_list' %}" class="text-white-50 text-decoration-none small hover-link">Categories</a></p>
+                <p><a href="{% url 'courses:course_list' %}?sort=popular" class="text-white-50 text-decoration-none small hover-link">Popular Courses</a></p>
+                <p><a href="{% url 'core:contact' %}?type=instructor" class="text-white-50 text-decoration-none small hover-link">Become an Instructor</a></p>
+            </div>
+
+            <div class="col-md-2 col-lg-2 col-xl-2 mx-auto mt-3">
+                <h5 class="text-uppercase mb-4 fw-bold text-info">User Links</h5>
+                <p><a href="{% url 'accounts:student_dashboard' %}" class="text-white-50 text-decoration-none small hover-link">Student Dashboard</a></p>
+                <p><a href="{% url 'courses:teacher_dashboard' %}" class="text-white-50 text-decoration-none small hover-link">Teacher Dashboard</a></p>
+                <p><a href="{% url 'courses:my_courses' %}" class="text-white-50 text-decoration-none small hover-link">My Courses</a></p>
+                <p><a href="{% url 'reviews:my_certificates' %}" class="text-white-50 text-decoration-none small hover-link">Certificates</a></p>
+            </div>
+
+            <div class="col-md-3 col-lg-2 col-xl-2 mx-auto mt-3">
+                <h5 class="text-uppercase mb-4 fw-bold text-info">Support</h5>
+                <p><a href="{% url 'core:help_center' %}" class="text-white-50 text-decoration-none small hover-link">Help Center</a></p>
+                <p><a href="{% url 'core:terms_conditions' %}" class="text-white-50 text-decoration-none small hover-link">Terms & Conditions</a></p>
+                <p><a href="{% url 'core:privacy_policy' %}" class="text-white-50 text-decoration-none small hover-link">Privacy Policy</a></p>
+                <p><a href="{% url 'core:refund_policy' %}" class="text-white-50 text-decoration-none small hover-link">Refund Policy</a></p>
+            </div>
+        </div>
+
+        <hr class="mb-4 mt-5 border-secondary">
+
+        <div class="row align-items-center">
+            <div class="col-md-7 col-lg-8">
+                <p class="small text-white-50">Copyright &copy; 2026 <strong>SikshaSetu</strong>. All Rights Reserved.</p>
+            </div>
+            <div class="col-md-5 col-lg-4 text-md-end">
+                <p class="small text-white-50">Developed with <i class="fas fa-heart text-danger"></i> for Knowledge.</p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<style>
+    .hover-link:hover {
+        color: var(--bs-info) !important;
+        padding-left: 5px;
+        transition: all 0.3s ease;
+    }
+    .footer a {
+        transition: all 0.3s ease;
+    }
+</style>

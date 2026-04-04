@@ -1,5 +1,6 @@
-{% extends "core/base_public.html" %}
+{% extends "core/base.html" %}
 {% load static %}
+{% load course_extras %}
 
 {% block title %}{{ lesson.title }} - {{ course.title }}{% endblock %}
 
@@ -52,6 +53,14 @@
                     <h5>Video Unavailable</h5>
                     <p>We're unable to play this video right now. It may have been removed or is restricted.</p>
                 </div>
+                {% elif lesson.video_file %}
+                <!-- LOCAL VIDEO PLAYER -->
+                <div class="ratio ratio-16x9">
+                    <video id="localVideo" controls autoplay preload="metadata" playsinline class="w-100 h-100" style="object-fit: contain; background: black;">
+                        <source src="{% url 'courses:stream_video' lesson.id %}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
                 {% else %}
                 <div class="d-flex align-items-center justify-content-center h-100 text-white">
                     <p>No video available for this lesson.</p>
@@ -91,37 +100,64 @@
 
             <!-- MCQs Section -->
             {% if mcq_questions %}
-            <div class="mt-5">
-                <h3 class="fw-bold mb-4">Lesson Assessment</h3>
+            <div class="mt-5" id="assessmentSection">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="fw-bold mb-0">Lesson Assessment</h3>
+                    <span id="quizCompletedBadge" class="badge bg-success py-2 px-3 rounded-pill fw-bold {% if not lesson_progress.quiz_completed %}d-none{% endif %}" style="font-size: 0.9rem;">
+                       <i class="fas fa-check-circle me-1"></i> Assessment Completed
+                    </span>
+                </div>
                 {% for q in mcq_questions %}
                 <div class="card mcq-card border-0 shadow-sm rounded-4 p-4 mb-3" id="q{{ q.id }}">
+                    {% with attempt=mcq_attempts|get_item:q.id %}
                     <p class="fw-bold mb-3">{{ forloop.counter }}. {{ q.question_text }}</p>
                     <div class="row g-2">
 
                         <div class="col-md-6">
-                            <button class="btn btn-outline-primary w-100 text-start py-3 px-4 rounded-3 mcq-opt"
+                            <button class="btn {% if attempt and attempt.selected_option == 'A' %}{% if attempt.is_correct %}btn-success{% else %}btn-danger{% endif %}{% else %}btn-outline-primary{% endif %} w-100 text-start py-3 px-4 rounded-3 mcq-opt {% if lesson_progress.quiz_completed or attempt %}disabled{% endif %}"
                                 data-q="{{ q.id }}" data-opt="A">A. {{ q.option_a }}</button>
                         </div>
                         <div class="col-md-6">
-                            <button class="btn btn-outline-primary w-100 text-start py-3 px-4 rounded-3 mcq-opt"
+                            <button class="btn {% if attempt and attempt.selected_option == 'B' %}{% if attempt.is_correct %}btn-success{% else %}btn-danger{% endif %}{% else %}btn-outline-primary{% endif %} w-100 text-start py-3 px-4 rounded-3 mcq-opt {% if lesson_progress.quiz_completed or attempt %}disabled{% endif %}"
                                 data-q="{{ q.id }}" data-opt="B">B. {{ q.option_b }}</button>
                         </div>
                         <div class="col-md-6">
-                            <button class="btn btn-outline-primary w-100 text-start py-3 px-4 rounded-3 mcq-opt"
+                            <button class="btn {% if attempt and attempt.selected_option == 'C' %}{% if attempt.is_correct %}btn-success{% else %}btn-danger{% endif %}{% else %}btn-outline-primary{% endif %} w-100 text-start py-3 px-4 rounded-3 mcq-opt {% if lesson_progress.quiz_completed or attempt %}disabled{% endif %}"
                                 data-q="{{ q.id }}" data-opt="C">C. {{ q.option_c }}</button>
                         </div>
                         <div class="col-md-6">
-                            <button class="btn btn-outline-primary w-100 text-start py-3 px-4 rounded-3 mcq-opt"
+                            <button class="btn {% if attempt and attempt.selected_option == 'D' %}{% if attempt.is_correct %}btn-success{% else %}btn-danger{% endif %}{% else %}btn-outline-primary{% endif %} w-100 text-start py-3 px-4 rounded-3 mcq-opt {% if lesson_progress.quiz_completed or attempt %}disabled{% endif %}"
                                 data-q="{{ q.id }}" data-opt="D">D. {{ q.option_d }}</button>
                         </div>
                     </div>
-                    <div class="mt-3 feedback-box d-none">
-                        <div class="alert mb-0 small"></div>
+                    <div class="mt-3 feedback-box {% if not attempt %}d-none{% endif %}">
+                        <div class="alert {% if attempt.is_correct %}alert-success{% else %}alert-danger{% endif %} mb-0 small">
+                            {% if attempt %}
+                                {% if attempt.is_correct %}
+                                    <strong>Correct!</strong> Well done.
+                                {% else %}
+                                    <strong>Incorrect.</strong> Correct answer was {{ q.correct_option }}. <br> {{ q.explanation|default:"" }}
+                                {% endif %}
+                            {% endif %}
+                        </div>
                     </div>
+                    {% endwith %}
                 </div>
                 {% endfor %}
+
+                <!-- Submit Assessment Button: shown only when quiz NOT yet submitted -->
+                {% if not lesson_progress.quiz_completed %}
+                <div class="text-center mt-4" id="submitAssessmentWrap">
+                    <button id="submitAssessmentBtn" class="btn btn-success btn-lg rounded-pill px-5 fw-bold"
+                        onclick="submitLessonAssessment()">
+                        <i class="fas fa-check-circle me-2"></i>Submit Assessment
+                    </button>
+                    <p class="text-muted small mt-2">Answer all questions above before submitting.</p>
+                </div>
+                {% endif %}
             </div>
             {% endif %}
+
         </div>
 
         <!-- Sidebar: Lesson List -->
@@ -151,6 +187,57 @@
 </div>
 
 <script>
+    // ---------------------------------------------------------------
+    // Submit Assessment Handler (lesson.html)
+    // Calls submit-quiz endpoint and updates UI to read-only on success
+    // ---------------------------------------------------------------
+    function submitLessonAssessment() {
+        const btn = document.getElementById('submitAssessmentBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+        }
+
+        fetch("{% url 'courses:submit_lesson_quiz' course.slug lesson.id %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success || data.error === 'Assessment already submitted.') {
+                // Show the completed badge
+                const badge = document.getElementById('quizCompletedBadge');
+                if (badge) badge.classList.remove('d-none');
+
+                // Hide the submit button wrapper
+                const wrap = document.getElementById('submitAssessmentWrap');
+                if (wrap) wrap.style.display = 'none';
+
+                // Lock all MCQ option buttons
+                document.querySelectorAll('.mcq-opt').forEach(function(b) {
+                    b.classList.add('disabled');
+                    b.setAttribute('disabled', 'disabled');
+                });
+            } else {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Submit Assessment';
+                }
+                alert(data.error || 'Submission failed. Please try again.');
+            }
+        })
+        .catch(function() {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Submit Assessment';
+            }
+            alert('Network error. Please check your connection and try again.');
+        });
+    }
+
     // Video Security Deterrents
     const videoWrapper = document.getElementById('video-wrapper');
     if (videoWrapper) {
@@ -168,6 +255,33 @@
 
     var player;
     var playerReady = false;
+
+    // Capture Left/Right arrows for seeking across BOTH players
+    document.addEventListener('keydown', function(e) {
+        // Ensure we are not typing in a comment or search box
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            seekVideo(-5);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            seekVideo(5);
+        }
+    });
+
+    function seekVideo(seconds) {
+        const localVideo = document.getElementById('localVideo');
+        if (localVideo) {
+            // Local Player Seek
+            const newPos = Math.max(0, Math.min(localVideo.duration, (localVideo.currentTime || 0) + seconds));
+            localVideo.currentTime = newPos;
+        } else if (playerReady && player && typeof player.getCurrentTime === 'function') {
+            // YouTube Player Seek
+            const currentPos = player.getCurrentTime();
+            player.seekTo(currentPos + seconds, true);
+        }
+    }
 
     function onYouTubeIframeAPIReady() {
         if ("{{ lesson.youtube_video_id|escapejs }}") {
@@ -286,4 +400,7 @@
         });
     });
 </script>
+{% block footer %}
+<!-- No footer for lesson view to avoid distraction -->
+{% endblock %}
 {% endblock %}

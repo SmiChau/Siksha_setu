@@ -1,0 +1,136 @@
+{% extends 'core/base.html' %}
+
+{% block title %}FAQs - SikshaSetu{% endblock %}
+
+{% block content %}
+<section class="py-5" style="background: linear-gradient(135deg, #f0f9f8 0%, #e0f2f1 100%);">
+    <div class="container py-5">
+        <div class="row text-center mb-5">
+            <div class="col-lg-6 mx-auto">
+                <span class="badge px-3 py-2 rounded-pill mb-3" style="background: #1A535C; color: white;">Help Center</span>
+                <h1 class="display-5 fw-bold" style="color: #1A535C;">Frequently Asked Questions</h1>
+                <p class="lead" style="color: #3d7c86;">Find answers to common questions about our platform, courses, and certifications.</p>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+               
+                <!-- FAQ Accordion -->
+                <div class="bg-white rounded-4 shadow-lg p-4 p-lg-5" style="border: 1px solid rgba(26, 83, 92, 0.1);">
+                    <div class="accordion" id="faqAccordion">
+                        <div class="accordion-item border-0 shadow-sm mb-3 rounded-3" style="background: #fafdfc;">
+                            <h2 class="accordion-header" id="flush-headingOne">
+                                <button class="accordion-button collapsed fw-bold py-4 px-4 rounded-3" style="color: #1A535C; background: #fafdfc; font-size: 1.1rem;" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne">
+                                    <i class="fas fa-graduation-cap me-3" style="color: #4ECDC4;"></i>
+                                    How do I enroll in a course?
+                                </button>
+                            </h2>
+                            <div id="flush-collapseOne" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body px-4 pb-4" style="color: #3d7c86;">
+                                    To enroll in a course, create a student account, browse the course catalog, and click the "Enroll Now" button on any course page. If it's a paid course, you will be redirected to our secure payment gateway. All your enrolled courses will appear in your dashboard.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item border-0 shadow-sm mb-3 rounded-3" style="background: #fafdfc;">
+                            <h2 class="accordion-header" id="flush-headingTwo">
+                                <button class="accordion-button collapsed fw-bold py-4 px-4 rounded-3" style="color: #1A535C; background: #fafdfc; font-size: 1.1rem;" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseTwo">
+                                    <i class="fas fa-certificate me-3" style="color: #4ECDC4;"></i>
+                                    Are the certificates recognized?
+                                </button>
+                            </h2>
+                            <div id="flush-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body px-4 pb-4" style="color: #3d7c86;">
+                                    SikshaSetu certificates verify that you have completed a specific course and mastered the core concepts as measured by our weighted scoring algorithm. They are excellent for showcasing your skills on LinkedIn, resumes, and portfolios. Many employers recognize our certification program.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item border-0 shadow-sm mb-3 rounded-3" style="background: #fafdfc;">
+                            <h2 class="accordion-header" id="flush-headingThree">
+                                <button class="accordion-button collapsed fw-bold py-4 px-4 rounded-3" style="color: #1A535C; background: #fafdfc; font-size: 1.1rem;" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseThree">
+                                    <i class="fas fa-dollar-sign me-3" style="color: #4ECDC4;"></i>
+                                    Can I take courses for free?
+                                </button>
+                            </h2>
+                            <div id="flush-collapseThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body px-4 pb-4" style="color: #3d7c86;">
+                                    Yes! We offer a variety of free courses. You can easily filter the course catalog by selecting the "Free" option in the pricing filter. Free courses still provide full access to video content and quizzes, though some advanced features may require a premium subscription.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item border-0 shadow-sm mb-3 rounded-3" style="background: #fafdfc;">
+                            <h2 class="accordion-header" id="flush-headingFour">
+                                <button class="accordion-button collapsed fw-bold py-4 px-4 rounded-3" style="color: #1A535C; background: #fafdfc; font-size: 1.1rem;" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseFour">
+                                    <i class="fas fa-chalkboard-teacher me-3" style="color: #4ECDC4;"></i>
+                                    How do I become an instructor?
+                                </button>
+                            </h2>
+                            <div id="flush-collapseFour" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body px-4 pb-4" style="color: #3d7c86;">
+                                    If you are an expert in your field, visit the "Become an Instructor" link in the footer, or the "Apply as Instructor" tab on the Contact page to submit your application. Our team will review your credentials and get back to you within 5-7 business days.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item border-0 shadow-sm mb-3 rounded-3" style="background: #fafdfc;">
+                            <h2 class="accordion-header" id="flush-headingFive">
+                                <button class="accordion-button collapsed fw-bold py-4 px-4 rounded-3" style="color: #1A535C; background: #fafdfc; font-size: 1.1rem;" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseFive">
+                                    <i class="fas fa-clock me-3" style="color: #4ECDC4;"></i>
+                                    How long do I have access to courses?
+                                </button>
+                            </h2>
+                            <div id="flush-collapseFive" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body px-4 pb-4" style="color: #3d7c86;">
+                                    Once enrolled, you have lifetime access to all course materials, including any future updates. Learn at your own pace, anytime, anywhere. No subscription fees or recurring charges for courses you've purchased.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Support Section -->
+                    <div class="mt-5 pt-4 text-center" style="border-top: 2px solid #e0f2f1;">
+                        <div class="bg-light rounded-4 p-4 p-lg-5" style="background: linear-gradient(135deg, #e0f2f1, #fafdfc);">
+                            <i class="fas fa-headset fa-3x mb-3" style="color: #4ECDC4;"></i>
+                            <h3 class="h4 mb-3" style="color: #1A535C;">Still have questions?</h3>
+                            <p class="text-muted mb-4">We're here to help you succeed in your learning journey.</p>
+                            <a href="{% url 'core:contact' %}" class="btn btn-lg rounded-pill px-5 py-3" style="background: #1A535C; color: white; box-shadow: 0 4px 15px rgba(26, 83, 92, 0.3);">
+                                Contact Support <i class="fas fa-arrow-right ms-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .accordion-button:not(.collapsed) {
+        background: #fafdfc !important;
+        color: #1A535C !important;
+        box-shadow: none !important;
+    }
+    
+    .accordion-button:focus {
+        box-shadow: none !important;
+        border-color: transparent !important;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        transition: all 0.3s ease;
+    }
+    
+    .accordion-button:hover {
+        background: #f0f9f8 !important;
+    }
+    
+    input:focus {
+        box-shadow: none !important;
+        border-color: #1A535C !important;
+    }
+</style>
+{% endblock %}

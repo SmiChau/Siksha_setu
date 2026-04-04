@@ -1,0 +1,178 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Help Center - SikshaSetu{% endblock %}
+
+{% block content %}
+<section class="py-5" style="background: linear-gradient(135deg, #f0f9f8 0%, #e0f2f1 100%);">
+    <div class="container py-5">
+        <!-- Hero Section -->
+        <div class="row text-center mb-5">
+            <div class="col-lg-8 mx-auto">
+                <div class="mb-4">
+                    <span class="badge px-3 py-2 rounded-pill mb-3" style="background: #1A535C; color: white;">
+                        <i class="fas fa-life-ring me-1"></i> Support Center
+                    </span>
+                </div>
+                <h1 class="display-4 fw-bold mb-4" style="color: #1A535C;">How Can We Help You?</h1>
+                <p class="lead mb-4" style="color: #3d7c86;">Explore our help center, documentation, and guides to learn more about the platform.</p>
+                
+                
+            </div>
+        </div>
+
+        <!-- Help Categories Cards -->
+        <div class="row g-4 mt-4">
+            <div class="col-md-4">
+                <div class="card border-0 rounded-4 shadow-lg h-100 overflow-hidden" style="transition: transform 0.3s ease;">
+                    <div class="card-body p-5 text-center" style="background: white;">
+                        <div class="mb-4">
+                            <div class="d-inline-flex p-3 rounded-3" style="background: #f0f9f8;">
+                                <i class="fas fa-book-reader fa-3x" style="color: #1A535C;"></i>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold mb-3" style="color: #1A535C;">Student Guides</h3>
+                        <p class="text-muted mb-4">Find instructions on enrollment, progress tracking, and mastery score.</p>
+                        <a href="{% url 'core:faq' %}" class="btn rounded-pill px-4 py-2" style="background: #1A535C; color: white;">
+                            View Guides <i class="fas fa-arrow-right ms-2"></i>
+                        </a>
+                    </div>
+                    <div style="height: 4px; background: linear-gradient(90deg, #1A535C, #4ECDC4);"></div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card border-0 rounded-4 shadow-lg h-100 overflow-hidden" style="transition: transform 0.3s ease;">
+                    <div class="card-body p-5 text-center" style="background: white;">
+                        <div class="mb-4">
+                            <div class="d-inline-flex p-3 rounded-3" style="background: #f0f9f8;">
+                                <i class="fas fa-chalkboard-teacher fa-3x" style="color: #1A535C;"></i>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold mb-3" style="color: #1A535C;">Instructor Hub</h3>
+                        <p class="text-muted mb-4">Learn how to create, manage, and publish high-engaging courses for your students.</p>
+                        <a href="{% url 'core:contact' %}?type=instructor" class="btn rounded-pill px-4 py-2" style="background: #1A535C; color: white;">
+                            Join Hub <i class="fas fa-arrow-right ms-2"></i>
+                        </a>
+                    </div>
+                    <div style="height: 4px; background: linear-gradient(90deg, #1A535C, #4ECDC4);"></div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card border-0 rounded-4 shadow-lg h-100 overflow-hidden" style="transition: transform 0.3s ease;">
+                    <div class="card-body p-5 text-center" style="background: white;">
+                        <div class="mb-4">
+                            <div class="d-inline-flex p-3 rounded-3" style="background: #f0f9f8;">
+                                <i class="fas fa-headset fa-3x" style="color: #1A535C;"></i>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold mb-3" style="color: #1A535C;">Direct Support</h3>
+                        <p class="text-muted mb-4">Can't find what you are looking for? Our support team is here to help you 24/7.</p>
+                        <a href="{% url 'core:contact' %}" class="btn rounded-pill px-4 py-2" style="background: #1A535C; color: white;">
+                            Submit Ticket <i class="fas fa-arrow-right ms-2"></i>
+                        </a>
+                    </div>
+                    <div style="height: 4px; background: linear-gradient(90deg, #1A535C, #4ECDC4);"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links Section -->
+        <div class="mt-5 pt-4">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="rounded-4 p-4 p-lg-5" style="background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="me-3">
+                                <i class="fas fa-question-circle fa-2x" style="color: #1A535C;"></i>
+                            </div>
+                            <h3 class="fw-bold mb-0" style="color: #1A535C;">Common Issues</h3>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-credit-card mt-1 me-3" style="color: #4ECDC4;"></i>
+                                    <div>
+                                        <h6 class="fw-bold mb-2" style="color: #1A535C;">Payment Failures?</h6>
+                                        <p class="small text-muted mb-0">Ensure your card supports international payments or contact your bank.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-certificate mt-1 me-3" style="color: #4ECDC4;"></i>
+                                    <div>
+                                        <h6 class="fw-bold mb-2" style="color: #1A535C;">Where's my Certificate?</h6>
+                                        <p class="small text-muted mb-0">Certificates are generated when you reach 80% mastery score.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-video mt-1 me-3" style="color: #4ECDC4;"></i>
+                                    <div>
+                                        <h6 class="fw-bold mb-2" style="color: #1A535C;">Video Not Loading?</h6>
+                                        <p class="small text-muted mb-0">Check your internet connection or try a different browser.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-envelope mt-1 me-3" style="color: #4ECDC4;"></i>
+                                    <div>
+                                        <h6 class="fw-bold mb-2" style="color: #1A535C;">Not Receiving Emails?</h6>
+                                        <p class="small text-muted mb-0">Check your spam folder or update your email preferences.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="rounded-4 p-4 p-lg-5 text-center" style="background: linear-gradient(135deg, #1A535C, #3d7c86); box-shadow: 0 10px 30px rgba(26, 83, 92, 0.3);">
+                        <i class="fas fa-rocket fa-3x mb-3" style="color: #4ECDC4;"></i>
+                        <h3 class="fw-bold mb-3" style="color: white;">Need Personalized Help?</h3>
+                        <p class="mb-4" style="color: rgba(255,255,255,0.9);">Our support team is available 24/7 to assist you with any platform-related questions.</p>
+                        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+                            
+                            <a href="{% url 'core:contact' %}" class="btn btn-outline-light rounded-pill px-4 py-2">
+                                <i class="fas fa-comment-dots me-2"></i> Contact Us
+                            </a>
+                        </div>
+                        <div class="mt-4 pt-3">
+                            <p class="small mb-0" style="color: rgba(255,255,255,0.7);">
+                                <i class="fas fa-clock me-1"></i> Response time: &lt; 24 hours
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<style>
+    .card:hover {
+        transform: translateY(-5px);
+        transition: transform 0.3s ease;
+    }
+    
+    .popular-article:hover {
+        background: #f0f9f8 !important;
+        transform: translateX(5px);
+        transition: all 0.3s ease;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        transition: all 0.3s ease;
+    }
+    
+    input:focus {
+        box-shadow: none !important;
+        border-color: #1A535C !important;
+    }
+</style>
+{% endblock %}

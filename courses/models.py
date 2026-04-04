@@ -421,7 +421,6 @@ class Enrollment(models.Model):
         all_lessons = self.course.lessons.all()
         total_course_seconds = sum(l.total_duration_seconds for l in all_lessons)
 
-        # Sum unique watched seconds from all lesson progress records
         progress_records = LessonProgress.objects.filter(enrollment=self)
         total_unique_seconds = sum(lp.watch_time for lp in progress_records)
 
@@ -506,7 +505,8 @@ class LessonProgress(models.Model):
         related_name='progress_records'
     )
 
-    is_completed = models.BooleanField(default=False)
+    is_completed = models.BooleanField(default=False, help_text='Video criteria met (95% watch)')
+    is_unlocked = models.BooleanField(default=False, help_text='Lesson is accessible (persistent)')
     quiz_unlocked = models.BooleanField(default=False)
     quiz_completed = models.BooleanField(default=False)
     watch_time = models.PositiveIntegerField(default=0, help_text='Total unique covered seconds')
@@ -565,17 +565,28 @@ class LessonProgress(models.Model):
                 self.quiz_unlocked = True
 
             # Threshold + 3s Tolerance Check: Complete Lesson
-            # Tolerance: If they are within 3s of the end, we can be more lenient
             tolerance_threshold = max(0, video_duration_seconds - 3)
-            
-            # Condition 1: High enough coverage (>95%)
-            # Condition 2: Reached the end (within tolerance) AND have significant coverage (>80%)
             if progress_ratio >= 0.95 or (self.max_position >= tolerance_threshold and progress_ratio >= 0.80):
                 if not self.is_completed:
                     self.is_completed = True
-                    self.watch_time = video_duration_seconds  # Cap at full duration
+                    self.watch_time = video_duration_seconds
                     self.completed_at = timezone.now()
-                    # If lesson is completed, quiz MUST be unlocked too
+                    self.quiz_unlocked = True
+        else:
+            # Duration not configured in DB — use max_position as estimated length.
+            # This is a safety fallback; instructors should set duration on lessons.
+            estimated_duration = max(self.max_position, int(segment_end), 1)
+            progress_ratio = total_unique / estimated_duration
+
+            # After 30s of unique watch, unlock quiz (can't compute % without known duration)
+            if total_unique >= 30 or self.max_position >= 30:
+                self.quiz_unlocked = True
+
+            # After 5 minutes of unique watch OR very far position, mark complete
+            if total_unique >= 300 or self.max_position >= 300:
+                if not self.is_completed:
+                    self.is_completed = True
+                    self.completed_at = timezone.now()
                     self.quiz_unlocked = True
         
         self.save()

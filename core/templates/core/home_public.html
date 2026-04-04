@@ -1,7 +1,40 @@
-{% extends "core/base_public.html" %}
+{% extends "core/base.html" %}
 {% load static %}
 
 {% block title %}SikshaSetu - Your Bridge to Boundless Knowledge{% endblock %}
+
+{% block extra_css %}
+<style>
+    .teacher-card-home {
+        transition: all 0.3s ease;
+    }
+    .teacher-card-home:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+    }
+    .course-card {
+        transition: all 0.3s ease;
+    }
+    .course-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
@@ -9,7 +42,6 @@
     <div class="container" style="margin-top: -7rem;">
         <div class="row align-items-center">
             <div class="col-lg-6">
-
                 <h1 class="hero-title">
                     Bridge to <br>
                     <span style="color: var(--mint-green);">Boundless Knowledge</span>
@@ -30,19 +62,11 @@
                             background-color: transparent;
                             transition: all 0.3s ease;
                         "
-                        onmouseover="
-                            this.style.backgroundColor='var(--mint-green)';
-                            this.style.borderColor='var(--primary-blue)';
-                            this.style.color='var(--primary-blue)';
-                        "
-                        onmouseout="
-                            this.style.backgroundColor='transparent';
-                            this.style.borderColor='var(--primary-blue)';
-                            this.style.color='var(--primary-blue)';
-                        ">
+                        onmouseover="this.style.backgroundColor='var(--mint-green)'; this.style.borderColor='var(--primary-blue)'; this.style.color='var(--primary-blue)';"
+                        onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='var(--primary-blue)'; this.style.color='var(--primary-blue)';"
+>
                         Learn More
-</a>
-
+                    </a>
                 </div>
 
                 <div class="mt-5 d-flex gap-4 text-muted">
@@ -77,7 +101,7 @@
 
         <div class="row g-4">
             <div class="col-md-4">
-                <div class="p-4 rounded-4" style="background: var(--bg-light); height: 100%;">
+                <div class="p-4 rounded-4 shadow-sm" style="background: var(--bg-light); height: 100%;">
                     <div class="mb-4 d-inline-block p-3 rounded-circle" style="background: rgba(26, 83, 92, 0.1);">
                         <i class="fas fa-video fa-2x" style="color: var(--primary-blue);" aria-hidden="true"></i>
                     </div>
@@ -86,7 +110,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="p-4 rounded-4" style="background: var(--bg-light); height: 100%;">
+                <div class="p-4 rounded-4 shadow-sm" style="background: var(--bg-light); height: 100%;">
                     <div class="mb-4 d-inline-block p-3 rounded-circle" style="background: rgba(255, 224, 102, 0.2);">
                         <i class="fas fa-certificate fa-2x" style="color: #e6c200;" aria-hidden="true"></i>
                     </div>
@@ -95,7 +119,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="p-4 rounded-4" style="background: var(--bg-light); height: 100%;">
+                <div class="p-4 rounded-4 shadow-sm" style="background: var(--bg-light); height: 100%;">
                     <div class="mb-4 d-inline-block p-3 rounded-circle" style="background: rgba(78, 205, 196, 0.1);">
                         <i class="fas fa-users fa-2x" style="color: var(--mint-green);" aria-hidden="true"></i>
                     </div>
@@ -122,36 +146,44 @@
         <div class="row g-4">
             {% for course in top_courses %}
             <div class="col-md-4">
-                <div class="course-card h-100 position-relative">
-                    <img src="{{ course.get_thumbnail }}" class="card-img-top" alt="{{ course.title }}" loading="lazy">
-                    <div class="p-4">
+                <div class="course-card card border-0 h-100 position-relative shadow-sm rounded-4 overflow-hidden">
+                    {% if course.get_thumbnail %}
+                    <img src="{{ course.get_thumbnail }}" class="card-img-top" alt="{{ course.title }}" loading="lazy" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="fas fa-image fa-3x text-white-50"></i>
+                    </div>
+                    {% endif %}
+                    <div class="p-4 d-flex flex-column" style="flex: 1;">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="badge bg-light text-dark border">{{ course.category.name }}</span>
-                            <span class="text-warning">
-                                <i class="fas fa-star" aria-hidden="true"></i> {{ course.get_average_rating }}
+                            <span class="badge bg-light text-dark border">{{ course.category.name|default:"General" }}</span>
+                            <span class="text-warning small fw-bold">
+                                <i class="fas fa-star" aria-hidden="true"></i> {{ course.get_average_rating|default:"0.0" }}
                             </span>
                         </div>
-                        <h5 class="fw-bold mb-2">{{ course.title }}</h5>
-                        <p class="text-muted small mb-3">{{ course.short_description|truncatechars:80 }}</p>
-                        <hr class="opacity-10">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center gap-2">
-                                {% if course.instructor.profile_picture %}
-                                <div class="bg-secondary rounded-circle" style="width: 30px; height: 30px; overflow: hidden;">
-                                    <img src="{{ course.instructor.profile_picture.url }}" alt="{{ course.instructor.get_full_name }}" 
-                                         style="width: 100%; height: 100%; object-fit: cover;">
+                        <h5 class="fw-bold mb-2 line-clamp-2" style="height: 3em;">{{ course.title }}</h5>
+                        <p class="text-muted small mb-3 line-clamp-2" style="height: 3em;">{{ course.short_description|default:course.description|truncatewords:15 }}</p>
+                        <div class="mt-auto">
+                            <hr class="opacity-10 mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if course.instructor.profile_picture %}
+                                    <div class="bg-secondary rounded-circle" style="width: 25px; height: 25px; overflow: hidden;">
+                                        <img src="{{ course.instructor.profile_picture.url }}" alt="{{ course.instructor.get_full_name }}" 
+                                             style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                    {% else %}
+                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white small"
+                                         style="width: 25px; height: 25px;">
+                                        {{ course.instructor.get_short_name|first|default:"U" }}
+                                    </div>
+                                    {% endif %}
+                                    <small class="fw-bold text-truncate" style="max-width: 100px;">{{ course.instructor.get_full_name|default:"Instructor" }}</small>
                                 </div>
-                                {% else %}
-                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white"
-                                     style="width: 30px; height: 30px;">
-                                    {{ course.instructor.get_short_name|first }}
-                                </div>
-                                {% endif %}
-                                <small class="fw-bold">{{ course.instructor.get_full_name }}</small>
+                                <h6 class="text-primary mb-0 fw-bold">
+                                    {% if course.is_free %}Free{% else %}Rs. {{ course.price }}{% endif %}
+                                </h6>
                             </div>
-                            <h5 class="text-primary mb-0 fw-bold">
-                                {% if course.is_free %}Free{% else %}Rs. {{ course.price }}{% endif %}
-                            </h5>
                         </div>
                         <a href="{% url 'courses:course_detail' course.slug %}" class="stretched-link" aria-label="View {{ course.title }} course"></a>
                     </div>
@@ -159,7 +191,10 @@
             </div>
             {% empty %}
             <div class="col-12 text-center">
-                <p class="text-muted">No popular courses yet.</p>
+                <div class="py-5">
+                    <i class="fas fa-book-open fa-4x text-muted opacity-25 mb-3"></i>
+                    <p class="text-muted">No popular courses yet.</p>
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -174,44 +209,57 @@
             <p class="text-muted w-50 mx-auto">Learn from industry experts and passionate educators committed to your success.</p>
         </div>
 
-        <div class="row g-4">
+        <div class="row g-4 justify-content-center">
             {% for teacher in teachers %}
             <div class="col-md-3">
-                <div class="card border-0 shadow-sm text-center p-4 h-100 rounded-4">
+                <div class="teacher-card-home card border-0 shadow-sm text-center p-4 h-100 rounded-4 d-flex flex-column">
                     <div class="mb-3">
                         {% if teacher.profile_picture %}
                         <img src="{{ teacher.profile_picture.url }}" 
-                             class="rounded-circle" 
-                             width="100" 
-                             height="100"
-                             style="object-fit: cover;"
+                             class="rounded-circle shadow-sm" 
+                             width="90" 
+                             height="90"
+                             style="object-fit: cover; border: 3px solid rgba(78, 205, 196, 0.2);"
                              alt="Profile picture of {{ teacher.get_full_name }}">
                         {% else %}
-                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white mx-auto"
-                             style="width: 100px; height: 100px;">
-                            <span class="fs-1">{{ teacher.get_short_name|first }}</span>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white mx-auto shadow-sm"
+                             style="width: 90px; height: 90px; background: linear-gradient(135deg, var(--primary-blue), var(--mint-green));">
+                            <span class="fs-1">{{ teacher.get_short_name|first|default:"T" }}</span>
                         </div>
                         {% endif %}
                     </div>
-                    <h5 class="fw-bold mb-1">{{ teacher.get_full_name }}</h5>
-                    <p class="text-muted small mb-3">
-                        {{ teacher.teacher_profile.location|default:"Global Instructor" }}
-                    </p>
-                    <p class="small mb-4 text-muted">
-                        {{ teacher.bio|default:"Experienced educator specializing in their field."|truncatechars:60 }}
-                    </p>
-                    <div class="d-flex justify-content-center gap-3 text-muted mb-4">
-                        <small><i class="fas fa-video me-1" aria-hidden="true"></i> {{ teacher.course_count }} Courses</small>
+                    <div class="teacher-info flex-grow-1">
+                        <h5 class="fw-bold mb-1 text-truncate">{{ teacher.get_full_name|default:"Teacher" }}</h5>
+                        <p class="text-muted small mb-3 text-truncate">
+                            <i class="fas fa-map-marker-alt me-1 small" style="color: var(--mint-green);"></i>
+                            {% if teacher.teacher_profile.location %}
+                                {{ teacher.teacher_profile.location }}
+                            {% else %}
+                                Global Instructor
+                            {% endif %}
+                        </p>
+                        <p class="small mb-3 text-muted line-clamp-2" style="height: 3em;">
+                            {{ teacher.bio|default:"Experienced educator specializing in their field." }}
+                        </p>
+                        <div class="d-flex justify-content-center gap-3 text-muted mb-4 pt-2 border-top">
+                            <small><i class="fas fa-video me-1" style="color: var(--mint-green);"></i> {{ teacher.course_count|default:0 }} Courses</small>
+                        </div>
                     </div>
-                    <a href="{% url 'core:teacher_profile' teacher.id %}" 
-                       class="btn btn-outline-primary rounded-pill btn-sm px-4" style="border-color: var(--mint-green); color: var(--mint-green);">
-                        View Profile
-                    </a>
+                    <div class="mt-auto">
+                        <a href="{% url 'core:teacher_profile' teacher.id %}" 
+                           class="btn btn-outline-primary rounded-pill btn-sm px-4 w-100" 
+                           style="border-color: var(--mint-green); color: var(--mint-green); font-weight: 600;">
+                            View Profile
+                        </a>
+                    </div>
                 </div>
             </div>
             {% empty %}
             <div class="col-12 text-center">
-                <p class="text-muted">More teachers joining soon!</p>
+                <div class="py-5">
+                    <i class="fas fa-chalkboard-teacher fa-4x text-muted opacity-25 mb-3"></i>
+                    <p class="text-muted">More teachers joining soon!</p>
+                </div>
             </div>
             {% endfor %}
         </div>

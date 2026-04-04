@@ -26,10 +26,21 @@ urlpatterns = [
     path('lesson/<int:lesson_id>/get/', views.get_lesson_data_view, name='get_lesson_data'),
     path('lesson/<int:lesson_id>/update/', views.update_lesson_view, name='update_lesson'),
 
+    # Resource Edit API for Wizard Step 3
+    path('resource/<int:resource_id>/get/', views.get_resource_data_view, name='get_resource_data'),
+    path('resource/<int:resource_id>/update/', views.update_resource_view, name='update_resource'),
+
+    # MCQ Edit API for Wizard Step 4
+    path('mcq/<int:mcq_id>/get/', views.get_mcq_data_view, name='get_mcq_data'),
+    path('mcq/<int:mcq_id>/update/', views.update_mcq_view, name='update_mcq'),
+
     path('<slug:course_slug>/lesson/<int:lesson_id>/', views.lesson_view, name='lesson_view'),
     path('<slug:course_slug>/lesson/<int:lesson_id>/complete/', views.mark_lesson_complete_view, name='mark_lesson_complete'),
     path('<slug:course_slug>/lesson/<int:lesson_id>/submit-quiz/', views.submit_lesson_quiz_view, name='submit_lesson_quiz'),
     path('<slug:course_slug>/submit-mcq/', views.submit_mcq_answer, name='submit_mcq_answer'),
     path('<slug:course_slug>/review/', views.submit_review_view, name='submit_review'),
     path('<slug:course_slug>/review/<int:review_id>/delete/', views.delete_review_view, name='delete_review'),
+
+    # Video Streaming
+    path('lesson/<int:lesson_id>/stream/', views.stream_video_view, name='stream_video'),
 ]

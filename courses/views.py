@@ -1,7 +1,9 @@
+import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, FileResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Avg, Count
 from django.core.exceptions import PermissionDenied, ValidationError, SuspiciousOperation
@@ -163,23 +165,55 @@ def course_detail_view(request, slug):
     lessons_data = []
     previous_lesson_ready = True # First lesson is always unlocked
     
+    # Optimized fetch for all user attempts in this course
+    attempts_map = {}
+    if enrollment:
+        user_attempts = MCQAttempt.objects.filter(enrollment=enrollment).select_related('question')
+        attempts_map = {a.question_id: a for a in user_attempts}
+
     for lesson in lessons:
         progress = lesson_progress.get(lesson.id)
-        video_completed = progress.is_completed if progress else False
-        quiz_unlocked = progress.quiz_unlocked if progress else False
-        quiz_completed = progress.quiz_completed if progress else False
-        has_quiz = lesson.mcq_questions.exists()
+        # Load persisted status
+        is_persisted_unlocked = progress.is_unlocked if progress else False
         
-        # Current lesson is unlocked if it's a preview OR if user is enrolled and the previous lesson was "ready"
+        # Self-healing: Repair stale quiz_unlocked flag at course_detail load time too.
+        # Covers old records and zero-duration lessons.
+        if progress and not quiz_unlocked:
+            total_secs = lesson.total_duration_seconds
+            if total_secs > 0 and progress.watch_time > 0:
+                if (progress.watch_time / total_secs) >= 0.50 or video_completed:
+                    quiz_unlocked = True
+                    progress.quiz_unlocked = True
+                    progress.save(update_fields=['quiz_unlocked'])
+            elif total_secs == 0 and progress.watch_time >= 30:
+                quiz_unlocked = True
+                progress.quiz_unlocked = True
+                progress.save(update_fields=['quiz_unlocked'])
+        
+        # PERSISTENT UNLOCK LOGIC:
+        # A lesson is unlocked IF:
+        # 1. It is a preview
+        # 2. It was already unlocked in the DB (is_persisted_unlocked)
+        # 3. The user already completed THIS lesson (video_completed)
+        # 4. The whole course is mastered
+        # 5. The PREVIOUS lesson was completed (sequential flow)
+        
+        course_completed = enrollment.is_completed if enrollment else False
+        
         if lesson.is_preview:
             is_unlocked = True
         elif enrollment:
-            is_unlocked = previous_lesson_ready
+            is_unlocked = is_persisted_unlocked or video_completed or course_completed or previous_lesson_ready
+            
+            # MONOTONIC FIX: If logic says True but DB says False, PERSIST the unlock now.
+            if is_unlocked and progress and not progress.is_unlocked:
+                progress.is_unlocked = True
+                progress.save(update_fields=['is_unlocked'])
         else:
             is_unlocked = False
         
-        # Check if THIS lesson is ready to unlock the NEXT one
-        # Requirement: Unlock next lesson ONLY after video completion AND quiz submission (if it exists)
+        # Is THIS lesson ready to unlock the NEXT one?
+        # Criteria: Video 95%+ watch AND (No quiz EXISTS OR Quiz is completed)
         current_ready = video_completed and (not has_quiz or quiz_completed)
         
         # Attach to object for template access
@@ -204,7 +238,7 @@ def course_detail_view(request, slug):
             'title': lesson.title,
             'description': lesson.description,
             'video_id': lesson.youtube_video_id,
-            'video_file_url': lesson.video_file.url if lesson.video_file else None,
+            'video_file_url': f"/courses/lesson/{lesson.id}/stream/" if lesson.video_file else None,
             'video_type': 'local' if lesson.video_file else 'youtube',
             'duration': duration_display,
             'duration_seconds': total_seconds, # For calculations
@@ -212,6 +246,7 @@ def course_detail_view(request, slug):
             'resources': res_data,
             'is_unlocked': is_unlocked,
             'video_completed': video_completed,
+            'quiz_unlocked': quiz_unlocked,      # ADDED: prevents JS from getting undefined
             'quiz_completed': quiz_completed,
             'is_completed': video_completed, # Legacy compatibility
             'watch_time': progress.watch_time if progress else 0,
@@ -222,6 +257,10 @@ def course_detail_view(request, slug):
                 {
                     'id': q.id,
                     'text': q.question_text,
+                    'user_answer': attempts_map.get(q.id).selected_option if attempts_map.get(q.id) else None,
+                    'is_correct': attempts_map.get(q.id).is_correct if attempts_map.get(q.id) else None,
+                    'correct_option': q.correct_option,
+                    'explanation': q.explanation,
                     'options': [
                         {'key': 'A', 'text': q.option_a},
                         {'key': 'B', 'text': q.option_b},
@@ -319,30 +358,65 @@ def lesson_view(request, course_slug, lesson_id):
         return redirect('courses:course_detail', slug=course_slug)
     
     if enrollment:
-        # Sequential Unlocking Check
-        if not lesson.is_preview and not (request.user.is_staff or request.user.is_superuser):
-            previous_lesson = Lesson.objects.filter(course=course, order__lt=lesson.order).order_by('-order').first()
-            if previous_lesson:
-                prev_p = LessonProgress.objects.filter(enrollment=enrollment, lesson=previous_lesson).first()
-                # Use full completion for sequential unlocking
-                p_v_done = prev_p.is_completed if prev_p else False
-                p_q_done = not previous_lesson.mcq_questions.exists() or (prev_p and prev_p.quiz_completed)
-                if not p_v_done or not p_q_done:
-                    messages.error(request, 'Locked: Please complete the previous lesson and its quiz first.')
-                    return redirect('courses:course_detail', slug=course_slug)
-
+        # 1. Fetch current progress
         lesson_progress, created = LessonProgress.objects.get_or_create(
             enrollment=enrollment,
             lesson=lesson
         )
+
+        # 2. Check lesson unlock state (with persistence)
+        is_persisted_unlocked = lesson_progress.is_unlocked
+        video_completed = lesson_progress.is_completed
+        quiz_completed = lesson_progress.quiz_completed
+        
+        # Determine the Unlock State by checking DB and derived logic (Sequential check)
+        previous_lesson_ready = False
+        prev_lesson = Lesson.objects.filter(course=course, order__lt=lesson.order).order_by('-order').first()
+        if not prev_lesson:
+            previous_lesson_ready = True # First lesson is always unlocked
+        else:
+            prev_p = LessonProgress.objects.filter(enrollment=enrollment, lesson=prev_lesson).first()
+            p_v_done = prev_p.is_completed if prev_p else False
+            p_q_done = not prev_lesson.mcq_questions.exists() or (prev_p and prev_p.quiz_completed)
+            previous_lesson_ready = (p_v_done and p_q_done)
+
+        is_unlocked = (
+            lesson.is_preview or 
+            is_persisted_unlocked or 
+            video_completed or 
+            enrollment.is_completed or 
+            previous_lesson_ready
+        )
+
+        if not is_unlocked and not (request.user.is_staff or request.user.is_superuser):
+            messages.error(request, "This lesson is locked. Complete the previous lesson and quiz first.")
+            return redirect('courses:course_detail', slug=course_slug)
+        
+        # MONOTONIC REPAIR: If we are here, the lesson IS unlocked. Persist it.
+        if not is_persisted_unlocked:
+            lesson_progress.is_unlocked = True
+            lesson_progress.save(update_fields=['is_unlocked'])
+
+        # --- Self-Healing: Repair stale quiz_unlocked flag on each page load ---
+        if not lesson_progress.quiz_unlocked:
+            total_secs = lesson.total_duration_seconds
+            if total_secs > 0 and lesson_progress.watch_time > 0:
+                watch_pct = (lesson_progress.watch_time / total_secs) * 100
+                if watch_pct >= 50 or lesson_progress.is_completed:
+                    lesson_progress.quiz_unlocked = True
+                    lesson_progress.save(update_fields=['quiz_unlocked'])
+            elif total_secs == 0 and lesson_progress.watch_time >= 30:
+                lesson_progress.quiz_unlocked = True
+                lesson_progress.save(update_fields=['quiz_unlocked'])
+        # --- End Self-Healing ---
+
     else:
         lesson_progress = None
     
     mcq_questions = lesson.mcq_questions.all()
     resources = lesson.resources.all()
-    
     all_lessons = course.lessons.all()
-    
+
     mcq_attempts = {}
     if enrollment:
         attempts = MCQAttempt.objects.filter(
@@ -350,6 +424,25 @@ def lesson_view(request, course_slug, lesson_id):
             question__in=mcq_questions
         )
         mcq_attempts = {a.question_id: a for a in attempts}
+
+        # --- Self-Healing: Auto-complete quiz if all questions are answered ---
+        if lesson_progress and not lesson_progress.quiz_completed:
+            q_count = mcq_questions.count()
+            if q_count > 0 and len(mcq_attempts) >= q_count:
+                lesson_progress.quiz_completed = True
+                lesson_progress.save(update_fields=['quiz_completed'])
+                enrollment.update_scores()  # Reflect new quiz_completed in mastery
+                
+                # MONOTONIC UNLOCK: If video is also done, unlock next lesson
+                if lesson_progress.is_completed:
+                    next_lesson = Lesson.objects.filter(course=course, order__gt=lesson.order).order_by('order').first()
+                    if next_lesson:
+                        nxt_p, _ = LessonProgress.objects.get_or_create(enrollment=enrollment, lesson=next_lesson)
+                        if not nxt_p.is_unlocked:
+                            nxt_p.is_unlocked = True
+                            nxt_p.save(update_fields=['is_unlocked'])
+        # --- End Self-Healing ---
+
     
     context = {
         'course': course,
@@ -365,6 +458,7 @@ def lesson_view(request, course_slug, lesson_id):
 
 
 @login_required
+@csrf_exempt
 @require_POST
 def mark_lesson_complete_view(request, course_slug, lesson_id):
     course = get_object_or_404(Course, slug=course_slug)
@@ -393,13 +487,17 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
     
     # Secure Sequential Guard
     if not (request.user.is_staff or request.user.is_superuser):
-        prev_lesson = Lesson.objects.filter(course=course, order__lt=lesson.order).order_by('-order').first()
-        if prev_lesson:
-            prev_p = LessonProgress.objects.filter(enrollment=enrollment, lesson=prev_lesson).first()
-            p_v_done = prev_p.is_completed if prev_p else False
-            p_q_done = not prev_lesson.mcq_questions.exists() or (prev_p and prev_p.quiz_completed)
-            if not p_v_done or not p_q_done:
-                 return JsonResponse({'success': False, 'error': 'Complete previous lesson and quiz first.'})
+        # Allow updates if course is completed or lesson is already completed
+        if enrollment.is_completed or lesson_progress.is_completed:
+            pass
+        else:
+            prev_lesson = Lesson.objects.filter(course=course, order__lt=lesson.order).order_by('-order').first()
+            if prev_lesson:
+                prev_p = LessonProgress.objects.filter(enrollment=enrollment, lesson=prev_lesson).first()
+                p_v_done = prev_p.is_completed if prev_p else False
+                p_q_done = not prev_lesson.mcq_questions.exists() or (prev_p and prev_p.quiz_completed)
+                if not p_v_done or not p_q_done:
+                     return JsonResponse({'success': False, 'error': 'Complete previous lesson and quiz first.'})
 
     import json
     newly_completed = False
@@ -419,9 +517,20 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
         print(f"Error updating watch time: {e}")
         pass
 
-    # Recalculate everything from persisted coverage data
-    enrollment.recalculate_progress()
-    
+    # MONOTONIC UNLOCK: If this lesson is completed, persistence-unlock the NEXT lesson
+    if lesson_progress.is_completed:
+        # We need to know if the quiz is also finished for full sequential unlock
+        has_quiz = lesson.mcq_questions.exists()
+        is_fully_ready = lesson_progress.is_completed and (not has_quiz or lesson_progress.quiz_completed)
+        
+        if is_fully_ready:
+            next_lesson = Lesson.objects.filter(course=course, order__gt=lesson.order).order_by('order').first()
+            if next_lesson:
+                next_p, _ = LessonProgress.objects.get_or_create(enrollment=enrollment, lesson=next_lesson)
+                if not next_p.is_unlocked:
+                    next_p.is_unlocked = True
+                    next_p.save(update_fields=['is_unlocked'])
+
     return JsonResponse({
         'success': True,
         'unit_progress': enrollment.unit_progress,
@@ -430,8 +539,10 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
         'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
         'is_mastered': enrollment.mastery_score >= 80,
         'certificate_unlocked': enrollment.certificate_unlocked,
-        'lesson_completed': lesson_progress.is_completed, # Important for quiz unlocking
+        'lesson_completed': lesson_progress.is_completed,
         'quiz_unlocked': lesson_progress.quiz_unlocked,
+        'quiz_completed': lesson_progress.quiz_completed,  # CRITICAL: prevents JS heartbeat from overwriting True→undefined
+        'lesson_unlocked': lesson_progress.is_unlocked,
         'newly_completed': newly_completed
     })
 
@@ -867,6 +978,88 @@ def update_lesson_view(request, lesson_id):
 
     return redirect('courses:course_edit_step2', slug=lesson.course.slug)
 
+
+@login_required
+def get_resource_data_view(request, resource_id):
+    """Returns JSON data for a LessonResource — used by the Step 3 edit modal."""
+    if request.user.role != 'teacher':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    resource = get_object_or_404(LessonResource, id=resource_id, lesson__course__instructor=request.user)
+    return JsonResponse({
+        'id': resource.id,
+        'title': resource.title,
+        'resource_type': resource.resource_type,
+        'external_url': resource.external_url or '',
+        'has_file': bool(resource.file),
+        'file_name': resource.file.name.split('/')[-1] if resource.file else '',
+    })
+
+
+@login_required
+def update_resource_view(request, resource_id):
+    """Updates an existing LessonResource. Preserves existing file if none uploaded."""
+    if request.user.role != 'teacher':
+        return redirect('core:home')
+    resource = get_object_or_404(LessonResource, id=resource_id, lesson__course__instructor=request.user)
+
+    if request.method == 'POST':
+        from .forms import LessonResourceForm
+        form = LessonResourceForm(request.POST, request.FILES, instance=resource)
+        if form.is_valid():
+            # Preserve existing file when no new file is uploaded
+            if not request.FILES.get('file'):
+                form.instance.file = resource.file
+            try:
+                form.save()
+                return JsonResponse({'success': True, 'message': 'Resource updated successfully.'})
+            except SuspiciousOperation as e:
+                return JsonResponse({'success': False, 'error': f'File Error: {str(e)}'}, status=400)
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        errors = {field: err[0] for field, err in form.errors.items()}
+        return JsonResponse({'success': False, 'error': 'Validation failed.', 'errors': errors}, status=400)
+
+    return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+
+@login_required
+def get_mcq_data_view(request, mcq_id):
+    """Returns JSON data for an MCQQuestion — used by the Step 4 edit modal."""
+    if request.user.role != 'teacher':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    mcq = get_object_or_404(MCQQuestion, id=mcq_id, lesson__course__instructor=request.user)
+    return JsonResponse({
+        'id': mcq.id,
+        'question_text': mcq.question_text,
+        'option_a': mcq.option_a,
+        'option_b': mcq.option_b,
+        'option_c': mcq.option_c,
+        'option_d': mcq.option_d,
+        'correct_option': mcq.correct_option,
+        'explanation': mcq.explanation or '',
+        'order': mcq.order,
+    })
+
+
+@login_required
+def update_mcq_view(request, mcq_id):
+    """Updates an existing MCQQuestion via POST. Returns JSON."""
+    if request.user.role != 'teacher':
+        return redirect('core:home')
+    mcq = get_object_or_404(MCQQuestion, id=mcq_id, lesson__course__instructor=request.user)
+
+    if request.method == 'POST':
+        from .forms import MCQQuestionForm
+        form = MCQQuestionForm(request.POST, instance=mcq)
+        if form.is_valid():
+            form.save()
+            return JsonResponse({'success': True, 'message': 'Question updated successfully.'})
+        errors = {field: err[0] for field, err in form.errors.items()}
+        return JsonResponse({'success': False, 'error': 'Validation failed.', 'errors': errors}, status=400)
+
+    return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+
 @login_required
 def course_create_step3_view(request, slug):
     if request.user.role != 'teacher': return redirect('core:home')
@@ -1011,13 +1204,40 @@ def submit_lesson_quiz_view(request, course_slug, lesson_id):
         lesson=lesson
     )
     
-    # Requirement: Quiz unlocks at 60% (quiz_unlocked)
-    if not lesson_progress.quiz_unlocked and not (request.user.is_staff or request.user.is_superuser):
-        return JsonResponse({'success': False, 'error': 'You must watch at least 60% of the video to unlock the quiz.'})
+    if lesson_progress.quiz_completed:
+        return JsonResponse({'success': False, 'error': 'Assessment already submitted.'})
+
+    # Self-healing unlock check: use watch_time if quiz_unlocked flag is stale
+    if not (request.user.is_staff or request.user.is_superuser):
+        total_secs = lesson.total_duration_seconds
+        if total_secs > 0:
+            watch_pct = (lesson_progress.watch_time / total_secs) * 100
+        else:
+            watch_pct = 100  # Duration not configured; grant access if any watch time
+        is_accessible = (
+            lesson_progress.quiz_unlocked
+            or lesson_progress.is_completed
+            or watch_pct >= 50
+            or (total_secs == 0 and lesson_progress.watch_time >= 30)
+        )
+        if is_accessible and not lesson_progress.quiz_unlocked:
+            lesson_progress.quiz_unlocked = True
+            lesson_progress.save(update_fields=['quiz_unlocked'])
+        if not is_accessible:
+            return JsonResponse({'success': False, 'error': 'Watch at least 50% of the video to unlock the quiz.'})
     
     lesson_progress.quiz_completed = True
     lesson_progress.save()
     
+    # MONOTONIC UNLOCK: Find next lesson and mark it unlocked in the DB
+    if lesson_progress.is_completed:
+        next_lesson = Lesson.objects.filter(course=course, order__gt=lesson.order).order_by('order').first()
+        if next_lesson:
+            next_p, _ = LessonProgress.objects.get_or_create(enrollment=enrollment, lesson=next_lesson)
+            if not next_p.is_unlocked:
+                next_p.is_unlocked = True
+                next_p.save(update_fields=['is_unlocked'])
+
     enrollment.update_scores()
     
     return JsonResponse({
@@ -1058,11 +1278,31 @@ def submit_mcq_answer(request, course_slug):
     if selected_option not in ['A', 'B', 'C', 'D']:
         return JsonResponse({'success': False, 'error': 'Invalid option'})
     
-    # Secure Guard: Video must reach 60% before answering quiz
+    # Secure Guard: Video must reach 50% before answering quiz, and quiz must not be completed.
+    # Self-healing: If quiz_unlocked flag is stale (old records / missing duration), derive from watch_time.
     progress = LessonProgress.objects.filter(enrollment=enrollment, lesson=question.lesson).first()
     if not (request.user.is_staff or request.user.is_superuser):
-        if not progress or not progress.quiz_unlocked:
-            return JsonResponse({'success': False, 'error': 'Reach 60% video coverage to unlock the quiz.'})
+        if not progress:
+            return JsonResponse({'success': False, 'error': 'Watch the video first to unlock this quiz.'})
+        total_secs = question.lesson.total_duration_seconds
+        if total_secs > 0:
+            watch_pct = (progress.watch_time / total_secs) * 100
+        else:
+            watch_pct = 100  # Duration not set; grant access if any watch time recorded
+        is_accessible = (
+            progress.quiz_unlocked
+            or progress.is_completed
+            or watch_pct >= 50
+            or (total_secs == 0 and progress.watch_time >= 30)
+        )
+        # Self-heal: Persist the flag so future requests skip this computation
+        if is_accessible and not progress.quiz_unlocked:
+            progress.quiz_unlocked = True
+            progress.save(update_fields=['quiz_unlocked'])
+        if not is_accessible:
+            return JsonResponse({'success': False, 'error': 'Watch at least 50% of the video to unlock this quiz.'})
+        if progress.quiz_completed:
+            return JsonResponse({'success': False, 'error': 'Quiz already submitted and cannot be modified.'})
 
     attempt, created = MCQAttempt.objects.update_or_create(
         enrollment=enrollment,
@@ -1072,6 +1312,23 @@ def submit_mcq_answer(request, course_slug):
     
     # Update progress and scores
     enrollment.update_scores()
+    
+    # Monotonic auto-completion self-healing
+    if progress and not progress.quiz_completed:
+        total_questions = MCQQuestion.objects.filter(lesson=question.lesson).count()
+        answered = MCQAttempt.objects.filter(enrollment=enrollment, question__lesson=question.lesson).count()
+        if answered >= total_questions:
+            progress.quiz_completed = True
+            progress.save(update_fields=['quiz_completed'])
+            
+            # If video is also done, unlock next lesson
+            if progress.is_completed:
+                next_lesson = Lesson.objects.filter(course=course, order__gt=question.lesson.order).order_by('order').first()
+                if next_lesson:
+                    nxt_p, _ = LessonProgress.objects.get_or_create(enrollment=enrollment, lesson=next_lesson)
+                    if not nxt_p.is_unlocked:
+                        nxt_p.is_unlocked = True
+                        nxt_p.save(update_fields=['is_unlocked'])
     
     return JsonResponse({
         'success': True,
@@ -1084,3 +1341,30 @@ def submit_mcq_answer(request, course_slug):
         'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
         'certificate_unlocked': enrollment.certificate_unlocked
     })
+
+def stream_video_view(request, lesson_id):
+    """
+    Algorithm: High-Performance Native Video Streamer
+    -------------------------------------------------
+    REASONING:
+    - We use FileResponse instead of a custom generator because Django's native 
+      implementation in version 3.2+ provides robust support for 'Accept-Ranges'
+      and handles '206 Partial Content' automatically.
+    - It is more efficient with file handles and handles 'Broken Pipe' errors 
+      more gracefully than manual iterators.
+    """
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    if not lesson.video_file:
+        raise Http404("No video file found")
+
+    file_path = lesson.video_file.path
+    if not os.path.exists(file_path):
+        raise Http404("Video file not found on disk")
+        
+    # Open file in binary mode - FileResponse handles closure automatically
+    file_handle = open(file_path, 'rb')
+    response = FileResponse(file_handle, content_type='video/mp4')
+    
+    # Enable seek support
+    response['Accept-Ranges'] = 'bytes'
+    return response

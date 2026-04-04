@@ -263,3 +263,27 @@ def teacher_profile(request, teacher_id):
         'message_form': message_form,
     }
     return render(request, 'core/teacher_profile.html', context)
+
+
+def mission(request):
+    return render(request, 'core/mission.html')
+
+
+def faq(request):
+    return render(request, 'core/faq.html')
+
+
+def help_center(request):
+    return render(request, 'core/help_center.html')
+
+
+def terms_conditions(request):
+    return render(request, 'core/terms.html')
+
+
+def privacy_policy(request):
+    return render(request, 'core/privacy.html')
+
+
+def refund_policy(request):
+    return render(request, 'core/refund.html')
