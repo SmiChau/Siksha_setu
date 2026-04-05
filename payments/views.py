@@ -52,7 +52,8 @@ def initiate_payment_view(request, course_slug):
     
     # Handle free courses
     if course.is_free:
-        Enrollment.objects.create(student=request.user, course=course)
+        # FIX: is_paid=True because free courses are fully settled at enrollment time
+        Enrollment.objects.create(student=request.user, course=course, is_paid=True)
         messages.success(request, f'Successfully enrolled in {course.title}!')
         return redirect('courses:course_detail', slug=course_slug)
     
@@ -200,8 +201,6 @@ def khalti_callback_view(request):
     purchase_order_name = request.GET.get('purchase_order_name')
     status = request.GET.get('status')
     
-    logger.info(f"Khalti callback received: pidx={pidx}, status={status}")
-    
     if not pidx:
         messages.error(request, "Invalid payment callback.")
         return redirect('core:home')
@@ -222,6 +221,22 @@ def khalti_callback_view(request):
         logger.error(f"Payment not found for pidx: {pidx}")
         messages.error(request, "Payment record not found.")
         return redirect('core:home')
+    
+    # MANDATORY DEBUGGING LOGS (Payment Handler)
+    print("--- PAYMENT CALLBACK DEBUG ---")
+    print(f"USER: {request.user.id}")
+    print(f"ROLE: {getattr(request.user, 'role', 'N/A')}")
+    print(f"GATEWAY: khalti")
+    print(f"PIDX: {pidx}")
+    print(f"STATUS: {status}")
+    
+    # Check current enrollment state before verification
+    # Using 'from courses.models import Enrollment' if needed (it is already in the file)
+    from courses.models import Enrollment
+    current_enrollment = Enrollment.objects.filter(student=request.user, course=payment.course).first()
+    print(f"EXISTING ENROLLMENT: {current_enrollment}")
+    print(f"EXISTING IS_PAID: {current_enrollment.is_paid if current_enrollment else 'N/A'}")
+    print("-------------------------------")
     
     # If payment already completed, redirect to course
     if payment.status == 'completed':
@@ -285,13 +300,15 @@ def verify_khalti_payment(pidx, payment):
                 payment.mark_failed(resp_data)
                 return {'success': False, 'error': 'Amount mismatch'}
             
-            # Mark payment as completed and create enrollment
-            payment.mark_completed(
-                gateway_transaction_id=resp_data.get('transaction_id'),
-                gateway_response=resp_data
+            # ARCHITECTURAL FIX: Force always-valid Enrollment
+            from courses.models import Enrollment
+            Enrollment.objects.update_or_create(
+                student=payment.user,
+                course=payment.course,
+                defaults={'is_paid': True}
             )
             
-            logger.info(f"Payment completed successfully: {payment.transaction_id}")
+            logger.info(f"Payment completed and Enrollment verified: {payment.transaction_id}")
             return {'success': True}
             
         else:
@@ -436,8 +453,21 @@ def esewa_callback_view(request):
                     gateway_transaction_id=transaction_code,
                     gateway_response=resp
                 )
-                # Ensure Enrollment
-                Enrollment.objects.get_or_create(student=payment.user, course=payment.course)
+                
+                # ARCHITECTURAL FIX: Force always-valid Enrollment
+                Enrollment.objects.update_or_create(
+                    student=payment.user,
+                    course=payment.course,
+                    defaults={'is_paid': True}
+                )
+             
+            # MANDATORY DEBUGGING LOGS (eSewa Success)
+            print("--- ESEWA SUCCESS DEBUG ---")
+            print(f"USER: {payment.user.id}")
+            print(f"COURSE: {payment.course.id}")
+            print(f"PAYMENT: {payment.id}")
+            print(f"ENROLLMENT: Verified & Updated")
+            print("----------------------------")
                 
             messages.success(request, f"Successfully enrolled in {payment.course.title}!")
             

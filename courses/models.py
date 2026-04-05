@@ -233,18 +233,16 @@ class Course(models.Model):
         from django.utils import timezone
         import math
         
-        # Calculate time since publish in hours
-        # published_at fallback to created_at if not set
+        # Calculate time since finish-published in hours
+        # published_at fallback and negative-protection
         start_time = self.published_at or self.created_at
-        age_hours = (timezone.now() - start_time).total_seconds() / 3600
+        age_hours = max((timezone.now() - start_time).total_seconds() / 3600, 0)
         
-        # Step 1: Engagement Score (Excluding admins)
-        # We use real counts to be immune to dummy field manipulation
+        # Step 1: Safe Engagement Score (+1 buffer for freshness ranking)
         actual_enrollments = self.enrollments.filter(student__is_staff=False, student__is_superuser=False).count()
-        engagement_score = (actual_enrollments * 3) + (self.views_count * 1) + (self.likes_count * 2)
+        engagement_score = (actual_enrollments * 3) + (self.views_count * 1) + (self.likes_count * 2) + 1
         
-        # Step 2 & 3: Gravity Calculation
-        # Gravity constant 1.5 ensures moderate time-based decay
+        # Step 2 & 3: Gravity Calculation (Non-zero decay)
         gravity = 1.5
         score = engagement_score / math.pow(age_hours + 2, gravity)
         
@@ -389,14 +387,14 @@ class Enrollment(models.Model):
     enrolled_at = models.DateTimeField(auto_now_add=True)
     
     # Simple Mastery Algorithm Fields
-    completed_units = models.PositiveIntegerField(default=0, help_text='Number of fully watched videos')
-    unit_progress = models.FloatField(default=0.0, help_text='(completed_units / total_units) * 100')
-    quiz_score = models.FloatField(default=0.0, help_text='Average quiz performance (0-100)')
-    mastery_score = models.FloatField(default=0.0, help_text='(unit_progress * 0.6) + (quiz_score * 0.4)')
+    completed_units = models.PositiveIntegerField(default=0, help_text='Total lessons fully watched (used for UI metadata)')
+    unit_progress = models.FloatField(default=0.0, help_text='Engagement index: (total_unique_watched_seconds / total_course_seconds) * 100')
+    quiz_score = models.FloatField(default=0.0, help_text='Average quiz performance (0-100) across all questions')
+    mastery_score = models.FloatField(default=0.0, help_text='Weighted index: (unit_progress * 0.6) + (quiz_score * 0.4)')
     certificate_unlocked = models.BooleanField(default=False)
     
     # Legacy / Compatibility Fields
-    is_completed = models.BooleanField(default=False)
+    is_completed = models.BooleanField(default=False, help_text='Monotonic course completion status (True once thresholds met)')
     completed_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
@@ -411,73 +409,87 @@ class Enrollment(models.Model):
         Single source of truth for all progress computation.
         Recomputes from persisted unique watch coverage data.
 
-        Rules:
-        - video_progress = floor( (total_unique_seconds / total_course_seconds) * 100 )
-        - NEVER decreases (monotonic)
-        - mastery_score = (video_progress * 0.6) + (quiz_score * 0.4)
-        - mastery_score NEVER decreases
-        - certificate_unlocked/is_completed once set is NEVER revoked
+        ACADEMIC & INDUSTRY JUSTIFICATION:
+        1.  **Engagement-Based Tracking**: Percentage reflects real unique coverage 
+            (seconds/total), preventing "skip-to-end" cheating.
+        2.  **Monotonic Integrity**: Progress NEVER decreases. Once a milestone is 
+            reached, it is permanently locked in the database.
+        3.  **Thresholded Mastery**: Graduation requires meeting discrete minimums 
+            for both content consumption and assessment accuracy.
         """
+        # Threshold Constants
+        MIN_VIDEO_PCT = 80
+        MIN_QUIZ_PCT = 60
+        MIN_MASTERY_PCT = 80
+
         all_lessons = self.course.lessons.all()
         total_course_seconds = sum(l.total_duration_seconds for l in all_lessons)
 
         progress_records = LessonProgress.objects.filter(enrollment=self)
         total_unique_seconds = sum(lp.watch_time for lp in progress_records)
 
-        # Count completed units
+        # Count completed units (used for UI metadata)
         self.completed_units = progress_records.filter(is_completed=True).count()
 
-        # Compute video progress with 1% floor increments
+        # 1. Video Progress Calculation (Based on unique watch coverage)
+        # video_progress (%) = (unique_watched_seconds / total_video_seconds) × 100
         if total_course_seconds > 0:
             raw_progress = (total_unique_seconds / total_course_seconds) * 100
-            new_progress = float(min(math.floor(raw_progress), 100))
-            new_progress = max(new_progress, 0.0)
+            new_v_progress = float(min(math.floor(raw_progress), 100))
+            new_v_progress = max(new_v_progress, 0.0)
         else:
-            # No lessons or all zero-duration => 100%
-            new_progress = 100.0
-            self.completed_units = all_lessons.count()
+            new_v_progress = 100.0 if all_lessons.count() > 0 else 0.0
+            
+        # MONOTONIC GUARD: Video progress never decreases
+        if new_v_progress > self.unit_progress:
+            self.unit_progress = new_v_progress
 
-        # All lessons completed => force 100%
-        if all_lessons.count() > 0 and self.completed_units == all_lessons.count():
-            new_progress = 100.0
-
-        # NEVER DECREASE unit_progress
-        if new_progress < self.unit_progress:
-            new_progress = self.unit_progress
-        self.unit_progress = new_progress
-
-        # Quiz Score: average of all MCQ questions across the course
+        # 2. Quiz Score Calculation
+        # quiz_progress (%) = (correct_answers / total_questions) × 100
         total_q = MCQQuestion.objects.filter(lesson__course=self.course).count()
         if total_q > 0:
             correct_attempts = MCQAttempt.objects.filter(
                 enrollment=self,
                 is_correct=True
             ).count()
-            self.quiz_score = round((correct_attempts / total_q) * 100, 1)
+            new_q_score = round((correct_attempts / total_q) * 100, 1)
         else:
-            # No quizzes => full quiz score
-            self.quiz_score = 100.0
+            new_q_score = 100.0 # No quizzes => full score by default
 
-        # Weighted Mastery Score (60% video + 40% quiz)
-        new_mastery = round((self.unit_progress * 0.6) + (self.quiz_score * 0.4), 1)
+        # MONOTONIC GUARD: Quiz score never decreases
+        if new_q_score > self.quiz_score:
+            self.quiz_score = new_q_score
 
-        # NEVER DECREASE mastery_score
-        if new_mastery < self.mastery_score:
-            new_mastery = self.mastery_score
-        self.mastery_score = new_mastery
+        # 3. Weighted Mastery Score Calculation
+        # mastery_score = (video_progress × 0.6) + (quiz_score × 0.4)
+        new_ma_score = round((self.unit_progress * 0.6) + (self.quiz_score * 0.4), 1)
 
-        # PERSISTENCE GUARD: Never downgrade completion once reached
-        if self.is_completed:
-            self.certificate_unlocked = True
+        # MONOTONIC GUARD: Mastery score never decreases
+        if new_ma_score > self.mastery_score:
+            self.mastery_score = new_ma_score
 
-        # Certificate Unlock (>= 80) — once unlocked, NEVER relock
-        if self.mastery_score >= 80 or self.certificate_unlocked:
-            self.certificate_unlocked = True
-            self.is_completed = True
-            if not self.completed_at:
+        # 4. Certificate & Course Completion Enforcement
+        # Condition: video >= 80% AND quiz >= 60% AND mastery >= 80%
+        # NOTE: Once certificate_unlocked is set, it is NEVER revoked (Monotonic truth).
+        meets_thresholds = (
+            self.unit_progress >= MIN_VIDEO_PCT and 
+            self.quiz_score >= MIN_QUIZ_PCT and 
+            self.mastery_score >= MIN_MASTERY_PCT
+        )
+
+        if meets_thresholds or self.certificate_unlocked:
+            if not self.certificate_unlocked:
+                self.certificate_unlocked = True
+                self.is_completed = True
                 self.completed_at = timezone.now()
+            
+            # Persistent check for is_completed flag
+            self.is_completed = True
 
-        self.save(update_fields=["completed_units", "unit_progress", "quiz_score", "mastery_score", "certificate_unlocked", "is_completed", "completed_at"])
+        self.save(update_fields=[
+            "completed_units", "unit_progress", "quiz_score", 
+            "mastery_score", "certificate_unlocked", "is_completed", "completed_at"
+        ])
         return self.mastery_score
 
     # Keep backward compat alias
@@ -519,6 +531,26 @@ class LessonProgress(models.Model):
     class Meta:
         unique_together = ['enrollment', 'lesson']
 
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        
+        # MONOTONIC GUARD: Prevent regression of critical status flags
+        if not is_new:
+            try:
+                original = LessonProgress.objects.get(pk=self.pk)
+                if original.is_completed: self.is_completed = True
+                if original.is_unlocked: self.is_unlocked = True
+                if original.quiz_unlocked: self.quiz_unlocked = True
+                if original.quiz_completed: self.quiz_completed = True
+            except LessonProgress.DoesNotExist:
+                pass
+        
+        super().save(*args, **kwargs)
+        
+        # PERSISTENCE: Recalculate enrollment scores whenever progress is updated
+        if self.enrollment:
+            self.enrollment.recalculate_progress()
+
     def __str__(self):
         return f"{self.enrollment.student.email} - {self.lesson.title}"
 
@@ -548,10 +580,13 @@ class LessonProgress(models.Model):
         ranges.append([round(segment_start, 1), round(segment_end, 1)])
         
         # Merge overlaps and calculate unique coverage
-        # FIX: merge_ranges returns (merged_list, total_seconds)
         merged_list, total_unique = merge_ranges(ranges)
         self.watched_ranges = merged_list
-        self.watch_time = int(total_unique)
+        
+        # MONOTONIC GUARD: ensure watch_time never decreases
+        new_watch_time = int(total_unique)
+        if new_watch_time > self.watch_time:
+            self.watch_time = new_watch_time
 
         if segment_end > self.max_position:
             self.max_position = int(segment_end)
@@ -615,5 +650,10 @@ class MCQAttempt(models.Model):
         return f"{self.enrollment.student.email} - Q{self.question.id}"
     
     def save(self, *args, **kwargs):
-        self.is_correct = self.selected_option.upper() == self.question.correct_option
+        # Determine if answer is correct before saving
+        self.is_correct = str(self.selected_option).upper() == str(self.question.correct_option).upper()
         super().save(*args, **kwargs)
+        
+        # PERSISTENCE: Sync enrollment scores whenever a quiz answer is submitted
+        if self.enrollment:
+            self.enrollment.recalculate_progress()

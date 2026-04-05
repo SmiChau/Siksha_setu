@@ -48,10 +48,13 @@
 
                 <div id="player"></div>
 
-                <div id="video-error" class="video-error-native d-none">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <h5>Video Unavailable</h5>
-                    <p>We're unable to play this video right now. It may have been removed or is restricted.</p>
+                <div id="video-error" class="video-error-native d-none p-4 text-center">
+                    <i class="fas fa-exclamation-triangle mb-3 fa-3x text-warning"></i>
+                    <h5 class="fw-bold">Video Unavailable in Player</h5>
+                    <p class="mb-3">This video might have embedding disabled by the owner, is age-restricted, or is no longer available.</p>
+                    <a href="https://www.youtube.com/watch?v={{ lesson.youtube_video_id }}" target="_blank" class="btn btn-primary rounded-pill px-4">
+                        <i class="fab fa-youtube me-2"></i> Watch directly on YouTube
+                    </a>
                 </div>
                 {% elif lesson.video_file %}
                 <!-- LOCAL VIDEO PLAYER -->
@@ -167,12 +170,16 @@
                     <h6 class="mb-0 fw-bold">Course Curriculum</h6>
                 </div>
                 <div class="list-group list-group-flush">
-                    {% for l in all_lessons %}
-                    <a href="{% url 'courses:lesson_view' course.slug l.id %}"
-                        class="list-group-item list-group-item-action py-3 border-0 {% if l.id == lesson.id %}bg-primary-subtle text-primary fw-bold{% endif %}">
+                    {% for l in lessons_info %}
+                    <a href="{% if l.is_unlocked %}{% url 'courses:lesson_view' course.slug l.id %}{% else %}#{% endif %}"
+                        class="list-group-item list-group-item-action py-3 border-0 {% if l.id == lesson.id %}bg-primary-subtle text-primary fw-bold{% endif %} {% if not l.is_unlocked %}opacity-50{% endif %}">
                         <div class="d-flex align-items-center">
-                            <i
-                                class="fas {% if l.id == lesson.id %}fa-play-circle{% else %}fa-check-circle text-muted{% endif %} me-3"></i>
+                            <i class="fas 
+                                {% if l.id == lesson.id %}fa-play-circle
+                                {% elif not l.is_unlocked %}fa-lock text-muted
+                                {% elif l.is_completed %}fa-check-circle text-success
+                                {% else %}fa-circle text-muted
+                                {% endif %} me-3"></i>
                             <div>
                                 <small class="d-block text-muted ls-1">LESSON {{ l.order }}</small>
                                 <span>{{ l.title }}</span>
@@ -187,55 +194,26 @@
 </div>
 
 <script>
-    // ---------------------------------------------------------------
-    // Submit Assessment Handler (lesson.html)
-    // Calls submit-quiz endpoint and updates UI to read-only on success
-    // ---------------------------------------------------------------
     function submitLessonAssessment() {
+        // PRG Flow: Native Form Submission for Instant UX
         const btn = document.getElementById('submitAssessmentBtn');
         if (btn) {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
         }
 
-        fetch("{% url 'courses:submit_lesson_quiz' course.slug lesson.id %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
-        })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            if (data.success || data.error === 'Assessment already submitted.') {
-                // Show the completed badge
-                const badge = document.getElementById('quizCompletedBadge');
-                if (badge) badge.classList.remove('d-none');
-
-                // Hide the submit button wrapper
-                const wrap = document.getElementById('submitAssessmentWrap');
-                if (wrap) wrap.style.display = 'none';
-
-                // Lock all MCQ option buttons
-                document.querySelectorAll('.mcq-opt').forEach(function(b) {
-                    b.classList.add('disabled');
-                    b.setAttribute('disabled', 'disabled');
-                });
-            } else {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Submit Assessment';
-                }
-                alert(data.error || 'Submission failed. Please try again.');
-            }
-        })
-        .catch(function() {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Submit Assessment';
-            }
-            alert('Network error. Please check your connection and try again.');
-        });
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{% url 'courses:submit_lesson_quiz' course.slug lesson.id %}";
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
     }
 
     // Video Security Deterrents
@@ -329,14 +307,21 @@
     }
 
     function onPlayerError(event) {
-        // Errors: 2 (invalid param), 5 (HTML5 error), 100 (not found/removed), 101/150 (not embeddable)
-        console.error("YouTube Player Error:", event.data);
+        /* YouTube Error Codes:
+           2: The request contains an invalid parameter value.
+           100: The video requested was not found or was private.
+           101/150: The owner of the requested video does not allow it to be played in embedded players.
+        */
+        const errCode = event.data;
+        console.warn("YouTube Player Error Code:", errCode);
+        
         const errorBox = document.getElementById('video-error');
         const playerEl = document.getElementById('player');
         const overlay = document.getElementById('customPlayOverlay');
         const loading = document.getElementById('videoLoading');
 
         if (errorBox && playerEl) {
+            // Show appropriate message if needed based on errCode
             errorBox.classList.remove('d-none');
             playerEl.classList.add('d-none');
             if (overlay) overlay.classList.add('hidden');

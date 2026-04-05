@@ -518,8 +518,9 @@ def teacher_dashboard_view(request):
     unread_count = messages_received.filter(is_read=False).count()
     
     # Trending Courses Analytics (Algorithm 2 - Global)
-    from courses.utils import get_trending_courses as get_global_trending
-    trending_courses = get_global_trending(5)
+    # Switched back to Global scope to ensure consistent platform analytics
+    from courses.utils import get_trending_courses
+    trending_courses = get_trending_courses(6)
     
     context = {
         'user': request.user,

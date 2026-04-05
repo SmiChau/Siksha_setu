@@ -142,20 +142,47 @@ def course_detail_view(request, slug):
     mastery_status = "In Progress"
     is_mastered = False
     
+    # ARCHITECTURAL ACCESS CHECK
+    # 1. Privileged Access (Staff / Superuser / Instructor)
+    is_privileged = request.user.is_authenticated and (
+        request.user.is_staff or 
+        request.user.is_superuser or 
+        request.user == course.instructor
+    )
+    
+    # 2. Enrollment Access
+    enrollment = None
     if request.user.is_authenticated:
-        enrollment = Enrollment.objects.filter(student=request.user, course=course).first()
-        if enrollment:
-            can_access = True
-            progress_records = LessonProgress.objects.filter(enrollment=enrollment)
-            lesson_progress = {p.lesson_id: p for p in progress_records}
-            
-            # Recalculate if needed to be fresh
-            enrollment.update_scores() 
-            unit_progress = enrollment.unit_progress
-            quiz_score = enrollment.quiz_score
-            mastery_score = enrollment.mastery_score
-            is_mastered = enrollment.mastery_score >= 80
-            mastery_status = "Mastered" if is_mastered else "In Progress"
+        enrollment = Enrollment.objects.filter(
+            student=request.user, 
+            course=course,
+            is_paid=True
+        ).first()
+
+    # MANDATORY DEBUGGING LOGS (Senior Debugger)
+    print("--- ACCESS DEBUG ---")
+    print(f"USER: {request.user.id if request.user.is_authenticated else 'Anonymous'}")
+    print(f"ROLE: {getattr(request.user, 'role', 'N/A')}")
+    print(f"COURSE: {course.id} ({course.slug})")
+    print(f"ENROLLMENT: {enrollment}")
+    print(f"IS_PAID: {enrollment.is_paid if enrollment else 'N/A'}")
+    print(f"PRIVILEGED: {is_privileged}")
+    print("--------------------")
+
+    if is_privileged:
+        can_access = True
+    elif enrollment:
+        can_access = True
+        progress_records = LessonProgress.objects.filter(enrollment=enrollment)
+        lesson_progress = {p.lesson_id: p for p in progress_records}
+        
+        # Recalculate if needed to be fresh
+        enrollment.update_scores() 
+        unit_progress = enrollment.unit_progress
+        quiz_score = enrollment.quiz_score
+        mastery_score = enrollment.mastery_score
+        is_mastered = enrollment.mastery_score >= 80
+        mastery_status = "Mastered" if is_mastered else "In Progress"
             
     # Progressive Unlocking Logic
     # -----------------------------
@@ -182,10 +209,9 @@ def course_detail_view(request, slug):
         has_quiz = lesson.mcq_questions.exists()
         
         # Self-healing: Repair stale quiz_unlocked flag at course_detail load time too.
-        # Covers old records and zero-duration lessons.
         if progress and not quiz_unlocked:
             total_secs = lesson.total_duration_seconds
-            if total_secs > 0 and progress.watch_time > 0:
+            if total_secs > 0:
                 if (progress.watch_time / total_secs) >= 0.50 or video_completed:
                     quiz_unlocked = True
                     progress.quiz_unlocked = True
@@ -207,13 +233,29 @@ def course_detail_view(request, slug):
         
         if lesson.is_preview:
             is_unlocked = True
+        elif is_privileged:
+            # Staff, superusers, and course instructors have full access
+            is_unlocked = True
         elif enrollment:
+            # Regular enrolled users must have is_paid=True (handled in query above)
             is_unlocked = is_persisted_unlocked or video_completed or course_completed or previous_lesson_ready
             
-            # MONOTONIC FIX: If logic says True but DB says False, PERSIST the unlock now.
-            if is_unlocked and progress and not progress.is_unlocked:
-                progress.is_unlocked = True
-                progress.save(update_fields=['is_unlocked'])
+            # MONOTONIC FIX: Persist unlock whenever logic grants it.
+            if is_unlocked:
+                if progress is None:
+                    # No LessonProgress row yet — create it and immediately mark unlocked.
+                    progress, _ = LessonProgress.objects.get_or_create(
+                        enrollment=enrollment,
+                        lesson=lesson
+                    )
+                    progress.is_unlocked = True
+                    progress.save(update_fields=['is_unlocked'])
+                    # Refresh local dict so later iterations have updated data
+                    lesson_progress[lesson.id] = progress
+                    is_persisted_unlocked = True
+                elif not progress.is_unlocked:
+                    progress.is_unlocked = True
+                    progress.save(update_fields=['is_unlocked'])
         else:
             is_unlocked = False
         
@@ -331,8 +373,17 @@ def enroll_course_view(request, slug):
         messages.error(request, 'Instructors cannot enroll in their own course.')
         return redirect('courses:course_detail', slug=slug)
     
-    # Debug Guard
-    print("ROLE:", request.user, "Staff:", request.user.is_staff, "Superuser:", request.user.is_superuser, "Role:", getattr(request.user, 'role', 'N/A'))
+    # DEBUG: Log access context for diagnosing teacher enrollment issues
+    import logging
+    _logger = logging.getLogger(__name__)
+    _logger.info(
+        "[ENROLL] user=%s role=%s is_staff=%s is_superuser=%s course=%s",
+        request.user.email,
+        getattr(request.user, 'role', 'N/A'),
+        request.user.is_staff,
+        request.user.is_superuser,
+        slug,
+    )
     
     # Only true superusers or explicit 'admin' role users are blocked from enrollment
     if request.user.is_superuser or getattr(request.user, 'role', None) == 'admin':
@@ -344,7 +395,10 @@ def enroll_course_view(request, slug):
         return redirect('courses:course_detail', slug=slug)
     
     if course.is_free:
-        Enrollment.objects.create(student=request.user, course=course)
+        # FIX: Free courses are fully settled — mark is_paid=True so all access
+        # guards that check is_paid treat this enrollment as fully valid, regardless
+        # of whether the learner is a student or a teacher enrolling in a peer course.
+        Enrollment.objects.create(student=request.user, course=course, is_paid=True)
         messages.success(request, f'Successfully enrolled in {course.title}!')
         return redirect('courses:course_detail', slug=slug)
     else:
@@ -356,9 +410,14 @@ def lesson_view(request, course_slug, lesson_id):
     course = get_object_or_404(Course, slug=course_slug, status='published')
     lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
     
-    enrollment = Enrollment.objects.filter(student=request.user, course=course).first()
+    enrollment = Enrollment.objects.filter(
+        student=request.user, 
+        course=course,
+        is_paid=True
+    ).first()
     
-    if not lesson.is_preview and not enrollment:
+    # 3. Access Guard (Delegated to view logic but reinforced by is_paid)
+    if not lesson.is_preview and not enrollment and not (request.user.is_staff or request.user.is_superuser or request.user == course.instructor):
         messages.error(request, 'Please enroll in this course to access this lesson.')
         return redirect('courses:course_detail', slug=course_slug)
     
@@ -443,12 +502,62 @@ def lesson_view(request, course_slug, lesson_id):
                     next_lesson = Lesson.objects.filter(course=course, order__gt=lesson.order).order_by('order').first()
                     if next_lesson:
                         nxt_p, _ = LessonProgress.objects.get_or_create(enrollment=enrollment, lesson=next_lesson)
-                        if not nxt_p.is_unlocked:
-                            nxt_p.is_unlocked = True
-                            nxt_p.save(update_fields=['is_unlocked'])
         # --- End Self-Healing ---
 
+        # --- Calculate Sidebar Status for ALL lessons in this view ---
+    all_lessons = course.lessons.all().order_by('order')
+    lessons_info = []
     
+    # We need a progress map for all lessons to render the sidebar correctly
+    progress_map = {}
+    if enrollment:
+        p_records = LessonProgress.objects.filter(enrollment=enrollment)
+        progress_map = {p.lesson_id: p for p in p_records}
+
+    previous_lesson_ready_iter = True  # Helper for sequential calculation
+    for l in all_lessons:
+        l_progress = progress_map.get(l.id)
+        
+        # State logic
+        l_v_done = l_progress.is_completed if l_progress else False
+        l_q_done = not l.mcq_questions.exists() or (l_progress and l_progress.quiz_completed)
+        l_persisted_unlocked = l_progress.is_unlocked if l_progress else False
+        
+        l_unlocked = (
+            l.is_preview or 
+            l_persisted_unlocked or 
+            l_v_done or 
+            (enrollment and enrollment.is_completed) or 
+            (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser or request.user == course.instructor)) or
+            previous_lesson_ready_iter
+        )
+        
+        # MONOTONIC REPAIR: Persist if it should be unlocked.
+        # FIX: Same guard bug as course_detail — if no LessonProgress row yet, create it.
+        if l_unlocked:
+            if l_progress is None:
+                l_progress, _ = LessonProgress.objects.get_or_create(
+                    enrollment=enrollment,
+                    lesson=l
+                )
+                l_progress.is_unlocked = True
+                l_progress.save(update_fields=['is_unlocked'])
+                progress_map[l.id] = l_progress
+            elif not l_persisted_unlocked:
+                l_progress.is_unlocked = True
+                l_progress.save(update_fields=['is_unlocked'])
+
+        lessons_info.append({
+            'id': l.id,
+            'title': l.title,
+            'order': l.order,
+            'is_unlocked': l_unlocked,
+            'is_completed': l_v_done and l_q_done,
+        })
+        
+        # Update ready status for NEXT lesson in loop
+        previous_lesson_ready_iter = l_v_done and l_q_done
+
     context = {
         'course': course,
         'lesson': lesson,
@@ -456,7 +565,7 @@ def lesson_view(request, course_slug, lesson_id):
         'lesson_progress': lesson_progress,
         'mcq_questions': mcq_questions,
         'resources': resources,
-        'all_lessons': all_lessons,
+        'lessons_info': lessons_info,
         'mcq_attempts': mcq_attempts,
     }
     return render(request, 'courses/lesson.html', context)
@@ -468,7 +577,9 @@ def lesson_view(request, course_slug, lesson_id):
 def mark_lesson_complete_view(request, course_slug, lesson_id):
     course = get_object_or_404(Course, slug=course_slug)
     lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
-    enrollment = get_object_or_404(Enrollment, student=request.user, course=course)
+    
+    # SENIOR DEBUGGING: Data consistency guard
+    enrollment = get_object_or_404(Enrollment, student=request.user, course=course, is_paid=True)
     
     lesson_progress, created = LessonProgress.objects.get_or_create(
         enrollment=enrollment,
@@ -476,7 +587,7 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
     )
     
     # Logic Guard: Admin/Staff do not affect progress
-    if request.user.is_staff or request.user.is_superuser:
+    if request.user.is_staff or request.user.is_superuser or enrollment.is_completed or lesson_progress.is_completed:
         import json
         return JsonResponse({
             'success': True,
@@ -487,6 +598,8 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
             'is_mastered': enrollment.mastery_score >= 80,
             'certificate_unlocked': enrollment.certificate_unlocked,
             'lesson_completed': True,
+            'lesson_unlocked': lesson_progress.is_unlocked, # MONOTONIC: Use DB state
+            'quiz_completed': lesson_progress.quiz_completed, # MONOTONIC: Use DB state
             'newly_completed': False
         })
     
@@ -536,20 +649,26 @@ def mark_lesson_complete_view(request, course_slug, lesson_id):
                     next_p.is_unlocked = True
                     next_p.save(update_fields=['is_unlocked'])
 
-    return JsonResponse({
-        'success': True,
-        'unit_progress': enrollment.unit_progress,
-        'quiz_score': enrollment.quiz_score,
-        'mastery_score': enrollment.mastery_score,
-        'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
-        'is_mastered': enrollment.mastery_score >= 80,
-        'certificate_unlocked': enrollment.certificate_unlocked,
-        'lesson_completed': lesson_progress.is_completed,
-        'quiz_unlocked': lesson_progress.quiz_unlocked,
-        'quiz_completed': lesson_progress.quiz_completed,  # CRITICAL: prevents JS heartbeat from overwriting True→undefined
-        'lesson_unlocked': lesson_progress.is_unlocked,
-        'newly_completed': newly_completed
-    })
+    # Sync Enrollment scores
+    enrollment.recalculate_progress()
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+        return JsonResponse({
+            'success': True,
+            'unit_progress': enrollment.unit_progress,
+            'quiz_score': enrollment.quiz_score,
+            'mastery_score': enrollment.mastery_score,
+            'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
+            'is_mastered': enrollment.mastery_score >= 80,
+            'certificate_unlocked': enrollment.certificate_unlocked,
+            'lesson_completed': lesson_progress.is_completed,
+            'lesson_unlocked': lesson_progress.is_unlocked,
+            'quiz_completed': lesson_progress.quiz_completed,
+            'newly_completed': newly_completed
+        })
+    else:
+        messages.success(request, f"Lesson '{lesson.title}' marked as completed.")
+        return redirect('courses:lesson_view', course_slug=course_slug, lesson_id=lesson.id)
 
 
 @login_required
@@ -558,7 +677,7 @@ def submit_mcq_answer_view(request, course_slug, lesson_id, question_id):
     course = get_object_or_404(Course, slug=course_slug)
     lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
     question = get_object_or_404(MCQQuestion, id=question_id, lesson=lesson)
-    enrollment = get_object_or_404(Enrollment, student=request.user, course=course)
+    enrollment = get_object_or_404(Enrollment, student=request.user, course=course, is_paid=True)
     
     selected_option = request.POST.get('option', '').upper()
     
@@ -610,17 +729,16 @@ def submit_review_view(request, course_slug):
         messages.error(request, "Instructors cannot submit reviews on their own course.")
         return redirect('courses:course_detail', slug=course.slug)
     
-    # Safe enrollment check
-    enrolled = Enrollment.objects.filter(
+    # Safe architectural enrollment check
+    enrollment = Enrollment.objects.filter(
         student=request.user,
-        course=course
-    ).exists()
+        course=course,
+        is_paid=True
+    ).first()
 
-    if not enrolled:
-        messages.error(request, "You must be enrolled in this course to submit a review.")
+    if not enrollment:
+        messages.error(request, "You must be enrolled and fully paid for this course to submit a review.")
         return redirect('courses:course_detail', slug=course.slug)
-
-    enrollment = Enrollment.objects.get(student=request.user, course=course)
     
     if request.method == 'POST':
         rating = request.POST.get('rating')
@@ -1194,8 +1312,11 @@ def course_delete_view(request, slug):
     return redirect('courses:teacher_dashboard')
 
 
+from django.db import transaction
+
 @login_required
 @require_POST
+@transaction.atomic
 def submit_lesson_quiz_view(request, course_slug, lesson_id):
     """
     Marks a quiz for a specific lesson as completed/submitted.
@@ -1204,13 +1325,17 @@ def submit_lesson_quiz_view(request, course_slug, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
     enrollment = get_object_or_404(Enrollment, student=request.user, course=course)
     
-    lesson_progress, created = LessonProgress.objects.get_or_create(
+    lesson_progress, created = LessonProgress.objects.select_for_update().get_or_create(
         enrollment=enrollment,
         lesson=lesson
     )
     
     if lesson_progress.quiz_completed:
-        return JsonResponse({'success': False, 'error': 'Assessment already submitted.'})
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+             return JsonResponse({'success': False, 'error': 'Assessment already submitted.'})
+        from django.contrib import messages
+        messages.info(request, "Assessment submitted.")
+        return redirect(request.META.get('HTTP_REFERER', 'courses:course_detail'))
 
     # Self-healing unlock check: use watch_time if quiz_unlocked flag is stale
     if not (request.user.is_staff or request.user.is_superuser):
@@ -1229,10 +1354,14 @@ def submit_lesson_quiz_view(request, course_slug, lesson_id):
             lesson_progress.quiz_unlocked = True
             lesson_progress.save(update_fields=['quiz_unlocked'])
         if not is_accessible:
-            return JsonResponse({'success': False, 'error': 'Watch at least 50% of the video to unlock the quiz.'})
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Watch at least 50% of the video to unlock the quiz.'})
+            from django.contrib import messages
+            messages.error(request, 'Watch at least 50% of the video to unlock the quiz.')
+            return redirect(request.META.get('HTTP_REFERER', 'courses:course_detail'))
     
     lesson_progress.quiz_completed = True
-    lesson_progress.save()
+    lesson_progress.save(update_fields=['quiz_completed', 'quiz_unlocked'])
     
     # MONOTONIC UNLOCK: Find next lesson and mark it unlocked in the DB
     if lesson_progress.is_completed:
@@ -1243,16 +1372,25 @@ def submit_lesson_quiz_view(request, course_slug, lesson_id):
                 next_p.is_unlocked = True
                 next_p.save(update_fields=['is_unlocked'])
 
-    enrollment.update_scores()
+    # Synchronize enrollment scores
+    enrollment.recalculate_progress()
     
-    return JsonResponse({
-        'success': True,
-        'quiz_completed': True,
-        'unit_progress': enrollment.unit_progress,
-        'quiz_score': enrollment.quiz_score,
-        'mastery_score': enrollment.mastery_score,
-        'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
-    })
+    from django.contrib import messages
+    messages.success(request, "Assessment submitted successfully!")
+
+    # Check if request is AJAX
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'quiz_completed': True,
+            'unit_progress': enrollment.unit_progress,
+            'quiz_score': enrollment.quiz_score,
+            'mastery_score': enrollment.mastery_score,
+            'mastery_status': "Mastered" if enrollment.mastery_score >= 80 else "In Progress",
+        })
+
+    # Standard PRG: Redirect back to the lesson page
+    return redirect(request.META.get('HTTP_REFERER', 'courses:course_detail'))
 
 @login_required
 @require_POST
@@ -1316,7 +1454,7 @@ def submit_mcq_answer(request, course_slug):
     )
     
     # Update progress and scores
-    enrollment.update_scores()
+    enrollment.recalculate_progress()
     
     # Monotonic auto-completion self-healing
     if progress and not progress.quiz_completed:

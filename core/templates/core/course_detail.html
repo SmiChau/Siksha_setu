@@ -1016,6 +1016,7 @@
     const courseSlug = "{{ course.slug }}";
     const isEnrolled = {{ enrollment|yesno:"true,false" }};
     const isInstructor = {{ is_instructor|yesno:"true,false" }};
+    const isStaff = {{ request.user.is_staff|yesno:"true,false" }} || {{ request.user.is_superuser|yesno:"true,false" }};
     let player;
     
     // FIXED: Current lesson ID syntax - removed spaces
@@ -1100,6 +1101,34 @@
     // YouTube API
     function onYouTubeIframeAPIReady() {
         // Init happens on startVideo
+    }
+
+    function showToast(title, message, type) {
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            toastContainer.style.zIndex = '1100';
+            document.body.appendChild(toastContainer);
+        }
+        
+        const toastId = 'toast-' + Date.now();
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <strong>${title}</strong><br>${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        const toastEl = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
     }
 
     function initPlayer(videoId) {
@@ -1265,7 +1294,7 @@
         const lesson = lessonsData.find(function (l) { return l.id === currentLessonId; });
         if (!lesson) return;
 
-        if (!isEnrolled && !lesson.is_preview) {
+        if (!isEnrolled && !lesson.is_preview && !isInstructor && !isStaff) {
             alert("Enroll to watch this lesson.");
             return;
         }
@@ -1539,6 +1568,11 @@
 
     function renderQuizQuestions(lesson) {
         const container = document.getElementById('quizContent');
+        
+        // Force check fresh data from lessonsData
+        const currentLesson = lessonsData.find(l => l.id === lesson.id);
+        const isQuizCompleted = currentLesson ? currentLesson.quiz_completed : lesson.quiz_completed;
+
         if (!lesson.questions || lesson.questions.length === 0) {
             container.innerHTML = "<p class='text-white-50 text-center py-4'>No questions found for this quiz.</p>";
             return;
@@ -1560,14 +1594,17 @@
         let html = "";
         
         // Show completion header if submitted
-        if (lesson.quiz_completed) {
+        if (isQuizCompleted) {
             html += `
                 <div class="text-center py-5 mb-4">
                     <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-20 mb-3" style="width: 80px; height: 80px;">
                         <i class="fas fa-check-circle fa-3x text-success"></i>
                     </div>
-                    <h3 class="fw-bold text-white">Assessment Completed</h3>
-                    <p class="text-white-50 text-uppercase ls-1">Results Stored Permanently</p>
+                    <h3 class="fw-bold text-white">Assessment Completed!</h3>
+                    <p class="text-white-50">Your quiz has been successfully submitted.</p>
+                    <div class="mt-3">
+                        <span class="badge bg-success fs-6 px-4 py-2">Score: ${currentLesson.quiz_score || 100}%</span>
+                    </div>
                 </div>
             `;
         }
@@ -1622,11 +1659,11 @@
         });
 
         // Add Final Submit Button ONLY if not submitted
-        if (!lesson.quiz_completed && !isInstructor) {
+        if (!isQuizCompleted && !isInstructor) {
             html += `
                 <div class="text-center mt-4">
-                    <button class="btn btn-success btn-lg rounded-pill px-5" onclick="submitLessonQuiz(${lesson.id})">
-                        Submit Final Quiz
+                    <button class="btn btn-success btn-lg rounded-pill px-5" onclick="submitLessonQuiz(${lesson.id})" id="finalSubmitBtn">
+                        <i class="fas fa-check-circle me-2"></i>Submit Final Quiz
                     </button>
                 </div>
             `;
@@ -1639,48 +1676,49 @@
     }
 
     window.submitLessonQuiz = function (lessonId) {
-        if (!confirm("Are you sure you want to submit the quiz?")) return;
+        // Instant Behavior: Disable button and submit form directly (PRG Flow)
+        const submitBtn = document.getElementById('finalSubmitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+        }
 
-        fetch('/courses/' + courseSlug + '/lesson/' + lessonId + '/submit-quiz/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
-        })
-            .then(function (res) { return res.json(); })
-            .then(function (data) {
-                if (data.success) {
-                    const lesson = lessonsData.find(function (l) { return l.id === lessonId; });
-                    lesson.quiz_completed = true;
-
-                    // Important: Trigger progressive unlocking check
-                    checkProgressiveUnlocking();
-
-                    // Re-render current quiz view
-                    renderQuizQuestions(lesson);
-
-                    // Update Dashboard
-                    updateDashboard(data);
-
-                    // Update Sidebar icons
-                    updateSidebarUI();
-                }
-            });
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/courses/' + courseSlug + '/lesson/' + lessonId + '/submit-quiz/';
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
     };
 
     function checkProgressiveUnlocking() {
         let previousReady = true;
+        let hasChanges = false;
+        
         lessonsData.forEach(function (lesson) {
-            // MONOTONIC FIX: Once unlocked, always stay unlocked.
+            const wasLocked = !lesson.is_unlocked;
             const nowUnlocked = lesson.is_preview || isCourseMastered || lesson.video_completed || previousReady;
+            
+            if (!lesson.is_unlocked && nowUnlocked) {
+                hasChanges = true;
+            }
+            
             lesson.is_unlocked = lesson.is_unlocked || nowUnlocked;
             
-            // This lesson is ready to unlock the NEXT one only if criteria met:
-            // Video 95%+ watch (video_completed) AND (No Quiz OR Quiz Done)
             const isThisOneReady = (lesson.video_completed) && (!lesson.has_quiz || lesson.quiz_completed);
             previousReady = isThisOneReady;
         });
+
+        // Update UI if any changes occurred
+        if (hasChanges) {
+            updateSidebarUI();
+        }
     }
 
     function updateSidebarUI() {

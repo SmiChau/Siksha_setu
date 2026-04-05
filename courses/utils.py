@@ -16,13 +16,18 @@ def calculate_gravity_score(enrollments, views, likes, created_at):
     """
     import math
     
-    # Time since created in hours
-    age_hours = (timezone.now() - created_at).total_seconds() / 3600
+    # 1. Time since published (or created) in hours
+    # Ensure it's not negative to avoid math domain errors
+    age_hours = max((timezone.now() - created_at).total_seconds() / 3600, 0)
     
-    # Engagement Score
-    engagement_score = (enrollments * 3) + (views * 1) + (likes * 2)
+    # 2. Safe Engagement Score (+1 to ensure new items have non-zero score)
+    # This ensures freshness ranking even for 0-engagement items
+    safe_enrollments = enrollments or 0
+    safe_views = views or 0
+    safe_likes = likes or 0
+    engagement_score = (safe_enrollments * 3) + (safe_views * 1) + (safe_likes * 2) + 1
     
-    # Gravity Calculation
+    # 3. Gravity Calculation
     gravity = 1.5
     score = engagement_score / math.pow(age_hours + 2, gravity)
     
@@ -32,27 +37,12 @@ def get_trending_courses(limit=5):
     """
     Algorithm 2: Hacker News Gravity Algorithm (Global Source of Truth)
     ------------------------------------------------------------------
-    ACADEMIC & INDUSTRY JUSTIFICATION:
-    1.  **Why fake analytics are invalid?** 
-        - Analytics must provide actionable intelligence. Fabricated metrics (dummy views/enrollments) 
-          destabilize the Trust Layer of the platform, leading to poor decision-making by 
-          instructors and misleading signals for students.
-    2.  **Why global ranking is required?**
-        - 'Trending' is a competitive relative metric. Scoping trending data to an 
-          individual instructor (local) provides a vacuum-based result that lacks 
-          market context. A global list is the only way to measure true platform-wide momentum.
-    3.  **Why Hacker News Gravity ensures fairness?**
-        - The Time-Decay component (hours_since_created) prevents "legacy entrenchment" where 
-          old popular courses stay top-ranked regardless of current relevance. 
-          It gives new, high-quality content a fair chance to reach the front page.
-
-    This function calculates trending scores GLOBALLY for all published courses.
-    It uses REAL DATA by counting actual enrollment records to ensure accuracy.
+    Returns trending courses GLOBALLY for all published content.
+    Same results for every user (student/teacher/admin).
     """
     from .models import Course
     
-    # Query all published courses and annotate with real enrollment counts
-    # We use select_related to get instructor/category for the dashboard UI
+    # Global Query: Only published courses across ALL instructors
     courses = Course.objects.filter(status='published').annotate(
         actual_enrollments=Count('enrollments', filter=~Q(enrollments__student__is_staff=True, enrollments__student__is_superuser=True), distinct=True)
     ).select_related('instructor', 'category')
@@ -60,22 +50,26 @@ def get_trending_courses(limit=5):
     trending_list = []
 
     for course in courses:
-        # Use actual_enrollments (Real Data) instead of potentially stale enrollment_count field
+        # Use published_at for decay calculation if available, else created_at
+        start_time = course.published_at or course.created_at
+        
         score = calculate_gravity_score(
             enrollments=course.actual_enrollments,
             views=course.views_count,
             likes=course.likes_count,
-            created_at=course.created_at
+            created_at=start_time
         )
+        
+        # MANDATORY ANALYTICS LOGGING (Ranking Stable Fix)
+        # print(f"[ANALYTICS] Course: {course.id} | Engagement: {course.actual_enrollments}e/{course.views_count}v | Age: {round((timezone.now() - start_time).total_seconds()/3600, 2)}h | Score: {score}")
         
         trending_list.append({
             'course': course,
             'trending_score': score,
-            'score': score # Compatibility for various dashboard templates
+            'score': score 
         })
 
     # Sort GLOBALLY by gravity score (Highest to Lowest)
-    # This fulfills the RANKING ORDER requirement (Most Popular -> Least Popular)
     trending_list.sort(key=lambda x: x['trending_score'], reverse=True)
 
     return trending_list[:limit]
