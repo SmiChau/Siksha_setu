@@ -51,8 +51,8 @@
     background: var(--white);
     border-radius: 20px;
     padding: 30px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    box-shadow: 0 5px 15px rgba(6, 5, 5, 0.05);
+    border: 1px solid rgba(5, 5, 5, 0.03);
 }
 
 .cta-section {
