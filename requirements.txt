@@ -4,3 +4,4 @@ Pillow>=11.0.0
 requests==2.31.0
 tzdata; sys_platform == 'win32'
 xhtml2pdf==0.2.17
+weasyprint==60.0
