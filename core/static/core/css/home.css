@@ -3,7 +3,7 @@
 /* Public Navbar Specifics */
 .public-navbar {
     background: var(--white);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     padding: 10px 0;
     /* Reduced padding for compact look */
 }
