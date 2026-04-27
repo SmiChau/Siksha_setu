@@ -9,7 +9,7 @@
 }
 
 .img-fluid {
-    max-width: 99%;
+    max-width: 100%;
     height: auto;
     animation: float 6s ease-in-out infinite;
 }
