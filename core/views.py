@@ -156,7 +156,7 @@ def contact_view(request):
                 if request.user.is_authenticated:
                     message.user = request.user
                 message.save()
-                messages.success(request, "Your message has been sent successfully!")
+                messages.success(request, "Your message has been sent successfully!!")
                 return redirect('core:contact')
             else:
                 messages.error(request, "Please correct the errors in the contact form.")
