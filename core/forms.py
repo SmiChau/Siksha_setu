@@ -11,7 +11,7 @@ class TeacherMessageForm(forms.ModelForm):
         widgets = {
             'message': forms.Textarea(attrs={
                 'class': 'form-control',
-                'placeholder': 'Writee your message to the teacher...',
+                'placeholder': 'Write your message to the teacher...',
                 'rows': 4
             }),
         }
