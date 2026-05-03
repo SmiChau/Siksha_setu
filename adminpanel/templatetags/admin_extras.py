@@ -4,7 +4,7 @@ register = template.Library()
 
 @register.filter(name='getattr')
 def get_attribute(obj, attr):
-    """Surgical attribute getter for templates."""
+    """Surgical attribute getter for templates...."""
     return getattr(obj, attr, None)
 
 @register.filter
